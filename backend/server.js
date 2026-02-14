@@ -16,15 +16,23 @@ connectDB();
 // Middlewares
 const allowedOrigins = [
   process.env.FRONTEND_URL,
+  'https://banoqabil-quiz-portal.vercel.app',
   'http://localhost:5173',
-  'http://localhost:3000'
-];
+  'http://127.0.0.1:5173',
+  'http://localhost:3000',
+  'http://localhost:5000'
+].filter(Boolean).map(url => url.replace(/\/$/, ""));
 
 app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
+    
+    // Normalize incoming origin by removing trailing slash
+    const normalizedOrigin = origin.replace(/\/$/, "");
+    
+    if (allowedOrigins.indexOf(normalizedOrigin) === -1) {
+      console.log('CORS blocked for origin:', origin);
       const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
       return callback(new Error(msg), false);
     }
