@@ -44,19 +44,19 @@ const AdminResultsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex">
       <Navbar />
       <main className="flex-1 ml-64 p-8">
         <header className="mb-10">
-          <h1 className="text-3xl font-extrabold text-gray-900">Student Results</h1>
-          <p className="text-gray-500">Track performance metrics across all quizzes</p>
+          <h1 className="text-3xl font-extrabold text-slate-100">Student Results</h1>
+          <p className="text-slate-400">Track performance metrics across all quizzes</p>
         </header>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8 flex flex-col md:flex-row gap-6 items-end">
+        <div className="bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-800 mb-8 flex flex-col md:flex-row gap-6 items-end">
             <div className="flex-1 w-full">
-                <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Search Student ID</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Search Student ID</label>
                 <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
                     <input 
                       className="input-field pl-10" 
                       placeholder="e.g. STU123"
@@ -66,9 +66,9 @@ const AdminResultsPage = () => {
                 </div>
             </div>
             <div className="flex-1 w-full">
-                <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Filter by Quiz</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Filter by Quiz</label>
                 <div className="relative">
-                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
                     <select 
                       className="input-field pl-10"
                       value={filter.quizId}
@@ -80,9 +80,9 @@ const AdminResultsPage = () => {
                 </div>
             </div>
             <div className="flex-1 w-full">
-                <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Campus</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Campus</label>
                 <div className="relative">
-                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
                     <select 
                       className="input-field pl-10"
                       value={filter.campus}
@@ -94,9 +94,9 @@ const AdminResultsPage = () => {
                 </div>
             </div>
             <div className="flex-1 w-full">
-                <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Batch</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Batch</label>
                 <div className="relative">
-                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
                     <select 
                       className="input-field pl-10"
                       value={filter.batch}
@@ -115,9 +115,9 @@ const AdminResultsPage = () => {
             </button>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="bg-slate-900 rounded-2xl shadow-sm border border-slate-800 overflow-hidden">
           <table className="w-full text-left">
-            <thead className="bg-gray-50 text-gray-500 text-xs font-bold uppercase tracking-wider">
+            <thead className="bg-slate-900 text-slate-400 text-xs font-bold uppercase tracking-wider">
               <tr>
                 <th className="px-6 py-4">Student</th>
                 <th className="px-6 py-4">Quiz</th>
@@ -128,26 +128,26 @@ const AdminResultsPage = () => {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {results.map((res) => (
-                <tr key={res._id} className="hover:bg-gray-50 transition-colors">
+                <tr key={res._id} className="hover:bg-slate-900 transition-colors">
                   <td className="px-6 py-4">
-                    <p className="font-bold text-gray-800">{res.studentName}</p>
-                    <p className="text-xs text-gray-500">{res.studentId}</p>
+                    <p className="font-bold text-slate-200">{res.studentName}</p>
+                    <p className="text-xs text-slate-400">{res.studentId}</p>
                   </td>
-                  <td className="px-6 py-4 text-gray-600 font-medium">{res.quizId?.title || 'Deleted Quiz'}</td>
+                  <td className="px-6 py-4 text-slate-400 font-medium">{res.quizId?.title || 'Deleted Quiz'}</td>
                   <td className="px-6 py-4 font-mono font-bold">
-                    <span className={res.percentage >= 50 ? 'text-green-600' : 'text-red-500'}>
+                    <span className={res.percentage >= 50 ? 'text-emerald-400' : 'text-rose-500'}>
                         {res.score} / {res.totalPossibleMarks}
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                        <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden max-w-[80px]">
+                        <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden max-w-[80px]">
                             <div className="h-full bg-primary-500" style={{ width: `${res.percentage}%` }}></div>
                         </div>
-                        <span className="text-sm font-bold text-gray-700">{res.percentage}%</span>
+                        <span className="text-sm font-bold text-slate-300">{res.percentage}%</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-gray-500 text-sm">
+                  <td className="px-6 py-4 text-slate-400 text-sm">
                     {new Date(res.submittedAt).toLocaleDateString()}
                   </td>
                 </tr>
@@ -156,8 +156,8 @@ const AdminResultsPage = () => {
           </table>
           {results.length === 0 && (
               <div className="p-16 text-center">
-                  <Users className="mx-auto text-gray-200 mb-4" size={56} />
-                  <p className="text-gray-400 font-medium">No results found matching your criteria</p>
+                  <Users className="mx-auto text-slate-700 mb-4" size={56} />
+                  <p className="text-slate-500 font-medium">No results found matching your criteria</p>
               </div>
           )}
         </div>

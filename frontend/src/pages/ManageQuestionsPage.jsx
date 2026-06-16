@@ -76,18 +76,18 @@ const ManageQuestionsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex">
       <Navbar />
       <main className="flex-1 ml-64 p-8">
-        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-500 hover:text-gray-800 mb-6 transition-colors">
+        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-400 hover:text-slate-200 mb-6 transition-colors">
           <ArrowLeft size={20} /> Back to Dashboard
         </button>
 
         <header className="flex justify-between items-end mb-10">
           <div>
             <span className="text-primary-600 font-bold uppercase tracking-widest text-sm">Managing Content For</span>
-            <h1 className="text-3xl font-black text-gray-900 mt-1">{quiz?.title}</h1>
-            <p className="text-gray-500">{questions.length} Questions Added So Far</p>
+            <h1 className="text-3xl font-black text-slate-100 mt-1">{quiz?.title}</h1>
+            <p className="text-slate-400">{questions.length} Questions Added So Far</p>
           </div>
           <button 
             onClick={() => setShowAdd(!showAdd)}
@@ -98,10 +98,10 @@ const ManageQuestionsPage = () => {
         </header>
 
         {showAdd && (
-          <form onSubmit={handleAddQuestion} className="card bg-white p-8 mb-10 border-2 border-primary-100 animate-in fade-in slide-in-from-top-4 duration-300">
+          <form onSubmit={handleAddQuestion} className="card bg-slate-900 p-8 mb-10 border-2 border-primary-100 animate-in fade-in slide-in-from-top-4 duration-300">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div className="md:col-span-2">
-                <label className="block text-sm font-bold text-gray-700 mb-2">Question Text</label>
+                <label className="block text-sm font-bold text-slate-300 mb-2">Question Text</label>
                 <textarea
                   className="input-field h-24"
                   value={newQuestion.questionText}
@@ -110,7 +110,7 @@ const ManageQuestionsPage = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Question Type</label>
+                <label className="block text-sm font-bold text-slate-300 mb-2">Question Type</label>
                 <select 
                   className="input-field" 
                   value={newQuestion.type}
@@ -121,7 +121,7 @@ const ManageQuestionsPage = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Marks</label>
+                <label className="block text-sm font-bold text-slate-300 mb-2">Marks</label>
                 <input
                   type="number"
                   className="input-field"
@@ -134,7 +134,7 @@ const ManageQuestionsPage = () => {
 
             {newQuestion.type === 'mcq' ? (
               <div className="space-y-4 mb-6">
-                <label className="block text-sm font-bold text-gray-700">Options (Select the correct one)</label>
+                <label className="block text-sm font-bold text-slate-300">Options (Select the correct one)</label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {newQuestion.options.map((opt, i) => (
                     <div key={i} className="flex items-center gap-3">
@@ -159,7 +159,7 @@ const ManageQuestionsPage = () => {
               </div>
             ) : (
               <div className="mb-6">
-                <label className="block text-sm font-bold text-gray-700 mb-2">Correct Answer (Exact Match)</label>
+                <label className="block text-sm font-bold text-slate-300 mb-2">Correct Answer (Exact Match)</label>
                 <input
                   type="text"
                   className="input-field"
@@ -179,26 +179,26 @@ const ManageQuestionsPage = () => {
             <div key={q._id} className="card relative group hover:border-primary-300 transition-all border-l-4 border-l-primary-600">
                <button 
                   onClick={() => handleDelete(q._id)}
-                  className="absolute top-4 right-4 text-gray-300 hover:text-red-500 transition-colors"
+                  className="absolute top-4 right-4 text-slate-600 hover:text-rose-500 transition-colors"
                 >
                   <Trash2 size={20} />
                 </button>
 
                 <div className="flex items-start gap-4">
-                  <div className="bg-primary-50 text-primary-700 w-10 h-10 rounded-full flex items-center justify-center font-bold flex-shrink-0">
+                  <div className="bg-primary-500/10 text-primary-700 w-10 h-10 rounded-full flex items-center justify-center font-bold flex-shrink-0">
                     {idx + 1}
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                       <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[10px] font-bold uppercase">{q.type}</span>
-                       <span className="text-gray-400 text-xs font-medium">{q.marks} Marks</span>
+                       <span className="bg-slate-800 text-slate-400 px-2 py-0.5 rounded text-[10px] font-bold uppercase">{q.type}</span>
+                       <span className="text-slate-500 text-xs font-medium">{q.marks} Marks</span>
                     </div>
-                    <h4 className="text-lg font-semibold text-gray-800 pr-10">{q.questionText}</h4>
+                    <h4 className="text-lg font-semibold text-slate-200 pr-10">{q.questionText}</h4>
                     
                     {q.type === 'mcq' && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
                         {q.options.map((opt, i) => (
-                          <div key={i} className={`flex items-center gap-2 text-sm p-3 rounded-lg border ${q.correctAnswer === opt ? 'bg-green-50 border-green-200 text-green-700 font-bold' : 'bg-gray-50 border-gray-100 text-gray-600'}`}>
+                          <div key={i} className={`flex items-center gap-2 text-sm p-3 rounded-lg border ${q.correctAnswer === opt ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 font-bold' : 'bg-slate-900 border-slate-800 text-slate-400'}`}>
                              {q.correctAnswer === opt ? <CheckCircle2 size={16} /> : <div className="w-4 h-4 rounded-full border border-gray-300" />}
                              {opt}
                           </div>
@@ -207,7 +207,7 @@ const ManageQuestionsPage = () => {
                     )}
 
                     {q.type === 'short' && (
-                       <div className="mt-4 p-3 bg-green-50 border border-green-100 rounded-lg text-sm text-green-700 font-medium">
+                       <div className="mt-4 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-sm text-emerald-400 font-medium">
                           Correct Answer: {q.correctAnswer}
                        </div>
                     )}
@@ -217,10 +217,10 @@ const ManageQuestionsPage = () => {
           ))}
 
           {questions.length === 0 && !showAdd && (
-            <div className="text-center py-20 bg-white rounded-2xl border-2 border-dashed border-gray-200">
-               <HelpCircle size={48} className="mx-auto text-gray-300 mb-4" />
-               <p className="text-gray-500 font-medium text-lg">Empty Quiz</p>
-               <p className="text-gray-400">Click the button above to add your first question.</p>
+            <div className="text-center py-20 bg-slate-900 rounded-2xl border-2 border-dashed border-slate-700">
+               <HelpCircle size={48} className="mx-auto text-slate-600 mb-4" />
+               <p className="text-slate-400 font-medium text-lg">Empty Quiz</p>
+               <p className="text-slate-500">Click the button above to add your first question.</p>
             </div>
           )}
         </div>

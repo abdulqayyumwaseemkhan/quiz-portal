@@ -157,7 +157,7 @@ const QuizAttemptPage = () => {
            </div>
         </div>
         
-        <div className={`flex items-center gap-3 px-6 py-3 rounded-xl shadow-inner transition-all duration-500 ${timeLeft < 60 ? 'bg-red-500/20 text-red-500 animate-pulse' : 'bg-slate-800 text-slate-300'}`}>
+        <div className={`flex items-center gap-3 px-6 py-3 rounded-xl shadow-inner transition-all duration-500 ${timeLeft < 60 ? 'bg-red-500/20 text-rose-500 animate-pulse' : 'bg-slate-800 text-slate-300'}`}>
           <Clock size={22} className={timeLeft < 60 ? 'animate-bounce' : ''} />
           <span className="font-mono text-2xl font-black tracking-tighter">{getFormatTime(timeLeft)}</span>
         </div>
@@ -224,7 +224,7 @@ const QuizAttemptPage = () => {
               <button
                 onClick={() => submitQuiz()}
                 disabled={submitting}
-                className="h-16 px-12 rounded-xl bg-green-600 text-white font-black uppercase text-sm tracking-[0.2em] shadow-xl shadow-green-500/20 hover:bg-green-500 transition-all flex items-center gap-3"
+                className="h-16 px-12 rounded-xl bg-green-600 text-white font-black uppercase text-sm tracking-[0.2em] shadow-xl shadow-green-500/20 hover:bg-emerald-500 transition-all flex items-center gap-3"
               >
                 {submitting ? 'Transmitting...' : 'Final Submission'}
               </button>
@@ -241,7 +241,7 @@ const QuizAttemptPage = () => {
       </main>
 
       <footer className="p-10 text-center">
-        <div className="inline-flex items-center gap-2 px-6 py-2 bg-amber-500/10 rounded-full border border-amber-500/20 text-[10px] font-black uppercase tracking-widest text-amber-500 shadow-sm animate-pulse">
+        <div className="inline-flex items-center gap-2 px-6 py-2 bg-amber-500/10 rounded-full border border-amber-500/20 text-[10px] font-black uppercase tracking-widest text-amber-400 shadow-sm animate-pulse">
           <AlertCircle size={14} />
           Session Integrity Monitor: Do not refresh this interface
         </div>

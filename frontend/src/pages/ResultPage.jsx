@@ -38,7 +38,7 @@ const ResultPage = () => {
   
   if (!result) return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
-       <div className="bg-red-500/10 p-6 rounded-full text-red-500 mb-6">
+       <div className="bg-red-500/10 p-6 rounded-full text-rose-500 mb-6">
           <XCircle size={48} />
        </div>
        <h1 className="text-2xl font-black text-slate-100 mb-2 uppercase">Result Not Found</h1>
@@ -61,7 +61,7 @@ const ResultPage = () => {
             className="max-w-xl w-full bg-slate-900 rounded-2xl shadow-2xl p-12 text-center border border-slate-800"
           >
             <div className="w-24 h-24 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
-              <Award className="text-amber-500" size={48} />
+              <Award className="text-amber-400" size={48} />
             </div>
             <h1 className="text-4xl font-black text-slate-100 mb-4">Results Pending</h1>
             <p className="text-xl text-slate-400 font-medium mb-10 leading-relaxed">
@@ -90,13 +90,13 @@ const ResultPage = () => {
           animate={{ opacity: 1, scale: 1 }}
           className="card text-center mb-12 relative overflow-hidden p-10 border border-slate-800 shadow-2xl bg-slate-900 rounded-2xl"
         >
-          <div className={`absolute top-0 left-0 w-full h-3 ${isPassed ? 'bg-green-500' : 'bg-red-500'}`}></div>
+          <div className={`absolute top-0 left-0 w-full h-3 ${isPassed ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
           <div className="flex justify-center mb-6 pt-4">
             <motion.div 
               initial={{ rotate: -20, opacity: 0 }}
               animate={{ rotate: 0, opacity: 1 }}
               transition={{ type: "spring", stiffness: 200 }}
-              className={`p-6 rounded-full ${isPassed ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}
+              className={`p-6 rounded-full ${isPassed ? 'bg-emerald-500/20 text-emerald-500' : 'bg-red-500/20 text-rose-500'}`}
             >
               <Trophy size={64} />
             </motion.div>
@@ -111,11 +111,11 @@ const ResultPage = () => {
             </motion.div>
             <motion.div whileHover={{ y: -5 }} className="bg-slate-800 p-8 rounded-xl shadow-sm border border-slate-700">
               <p className="text-slate-500 text-xs font-black mb-1 uppercase tracking-widest">Percentage</p>
-              <p className={`text-4xl font-black ${isPassed ? 'text-green-500' : 'text-red-500'}`}>{result.percentage}%</p>
+              <p className={`text-4xl font-black ${isPassed ? 'text-emerald-500' : 'text-rose-500'}`}>{result.percentage}%</p>
             </motion.div>
             <motion.div whileHover={{ y: -5 }} className="bg-slate-800 p-8 rounded-xl shadow-sm border border-slate-700">
               <p className="text-slate-500 text-xs font-black mb-1 uppercase tracking-widest">Result</p>
-              <p className={`text-3xl font-extrabold ${isPassed ? 'text-green-500' : 'text-red-500'}`}>{isPassed ? 'PASSED' : 'FAILED'}</p>
+              <p className={`text-3xl font-extrabold ${isPassed ? 'text-emerald-500' : 'text-rose-500'}`}>{isPassed ? 'PASSED' : 'FAILED'}</p>
             </motion.div>
           </div>
 
@@ -145,7 +145,7 @@ const ResultPage = () => {
                   {item.questionId?.questionText}
                 </h4>
                 {item.isCorrect ? (
-                  <span className="inline-flex items-center gap-2 bg-green-500/20 text-green-400 px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider">
+                  <span className="inline-flex items-center gap-2 bg-emerald-500/20 text-green-400 px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider">
                     <CheckCircle2 size={16} /> Correct
                   </span>
                 ) : (

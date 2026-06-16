@@ -28,21 +28,21 @@ const AdminLoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8">
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-slate-900 rounded-2xl shadow-2xl p-8">
         <div className="text-center mb-10">
-          <div className="bg-primary-100 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 rotate-3">
-            <ShieldAlert className="text-primary-600" size={32} />
+          <div className="bg-primary-500/10 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 rotate-3">
+            <ShieldAlert className="text-primary-400" size={32} />
           </div>
-          <h2 className="text-3xl font-bold text-gray-900">BanoQabil Admin</h2>
-          <p className="text-gray-500 mt-2 uppercase tracking-widest text-xs font-bold">Web Dev Portal Access</p>
+          <h2 className="text-3xl font-bold text-slate-100">BanoQabil Admin</h2>
+          <p className="text-slate-400 mt-2 uppercase tracking-widest text-xs font-bold">Web Dev Portal Access</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Work Email</label>
+            <label className="block text-sm font-semibold text-slate-300 mb-2">Work Email</label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
               <input
                 type="email"
                 placeholder="admin@portal.com"
@@ -55,9 +55,9 @@ const AdminLoginPage = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
+            <label className="block text-sm font-semibold text-slate-300 mb-2">Password</label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
               <input
                 type="password"
                 placeholder="••••••••"
