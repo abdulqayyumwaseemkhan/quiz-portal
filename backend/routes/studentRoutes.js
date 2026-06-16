@@ -4,7 +4,6 @@ const {
   getAvailableQuizzes,
   getQuizForAttempt,
   submitQuiz,
-  submitQuiz,
   getStudentResult,
   checkAttemptStatus,
   verifyStudentId
