@@ -61,7 +61,7 @@ const EditQuizPage = () => {
         </button>
 
         <header className="mb-10">
-          <h1 className="text-4xl font-black text-gray-900 italic tracking-tighter">Modify Program Registry</h1>
+          <h1 className="text-4xl font-black text-gray-900 tracking-tighter">Modify Program Registry</h1>
           <p className="text-gray-500 font-medium">Update configurations for {formData.title}</p>
         </header>
 

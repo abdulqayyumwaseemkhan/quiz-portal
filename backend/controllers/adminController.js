@@ -56,7 +56,7 @@ const registerAdmin = asyncHandler(async (req, res) => {
 // --- Student Management (Admin) ---
 
 const addStudent = asyncHandler(async (req, res) => {
-  const { studentId, fullName } = req.body;
+  const { studentId, fullName, campus, batch } = req.body;
   
   const studentExists = await Student.findOne({ studentId });
   if (studentExists) {
@@ -66,7 +66,9 @@ const addStudent = asyncHandler(async (req, res) => {
   
   const student = await Student.create({ 
     studentId, 
-    fullName, 
+    fullName,
+    campus,
+    batch,
     addedBy: req.admin?._id 
   });
   
@@ -74,8 +76,20 @@ const addStudent = asyncHandler(async (req, res) => {
 });
 
 const getStudents = asyncHandler(async (req, res) => {
-  const students = await Student.find({}).sort({ createdAt: -1 });
+  const { campus, batch } = req.query;
+  let query = {};
+  if (campus) query.campus = campus;
+  if (batch) query.batch = batch;
+  
+  const students = await Student.find(query).sort({ createdAt: -1 });
   res.json(students);
+});
+
+const getStudentMeta = asyncHandler(async (req, res) => {
+  res.json({ 
+    campuses: await Student.distinct('campus'), 
+    batches: await Student.distinct('batch') 
+  });
 });
 
 const deleteStudent = asyncHandler(async (req, res) => {
@@ -93,6 +107,7 @@ module.exports = {
   loginAdmin, 
   registerAdmin, 
   addStudent, 
-  getStudents, 
+  getStudents,
+  getStudentMeta,
   deleteStudent 
 };

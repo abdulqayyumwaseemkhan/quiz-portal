@@ -55,12 +55,12 @@ const ResultPage = () => {
           <div className="w-24 h-24 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
             <Award className="text-amber-500" size={48} />
           </div>
-          <h1 className="text-4xl font-black text-gray-900 mb-4 italic">Results Pending</h1>
+          <h1 className="text-4xl font-black text-gray-900 mb-4">Results Pending</h1>
           <p className="text-xl text-gray-500 font-medium mb-10 leading-relaxed">
             Great job, <span className="text-gray-900 font-black">{result.studentName}</span>! Your answers have been recorded.
           </p>
           <div className="bg-gray-50 rounded-2xl p-6 mb-10 border border-dashed border-gray-200">
-            <p className="text-gray-600 font-bold italic">"{result.message || 'Results are being processed and will be released soon!'}"</p>
+            <p className="text-gray-600 font-bold">"{result.message || 'Results are being processed and will be released soon!'}"</p>
           </div>
           <Link to="/quizzes" className="btn-primary w-full h-16 text-lg flex items-center justify-center gap-3">
              <Home size={24} /> Back to Quizzes
@@ -91,7 +91,7 @@ const ResultPage = () => {
               <Trophy size={64} />
             </motion.div>
           </div>
-          <h1 className="text-4xl font-black text-gray-800 mb-2 italic">Quiz Completed!</h1>
+          <h1 className="text-4xl font-black text-gray-800 mb-2">Quiz Completed!</h1>
           <p className="text-xl text-gray-500 mb-10 font-medium">Great effort, {result.studentName}!</p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
@@ -131,7 +131,7 @@ const ResultPage = () => {
             >
               <div className="flex justify-between items-start mb-6">
                 <h4 className="text-xl font-bold text-gray-800 leading-tight">
-                  <span className="text-gray-400 mr-2 text-sm italic">Question {idx + 1}</span><br/>
+                  <span className="text-gray-400 mr-2 text-sm">Question {idx + 1}</span><br/>
                   {item.questionId?.questionText}
                 </h4>
                 {item.isCorrect ? (

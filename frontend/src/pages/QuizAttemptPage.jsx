@@ -149,7 +149,7 @@ const QuizAttemptPage = () => {
               <CheckCircle2 className="text-primary-600" size={24} />
            </div>
            <div>
-              <h2 className="text-xl font-black text-gray-800 tracking-tight uppercase italic">{quiz.title}</h2>
+              <h2 className="text-xl font-black text-gray-800 tracking-tight uppercase">{quiz.title}</h2>
               <div className="flex gap-4 mt-0.5">
                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Question {currentIdx + 1} of {questions.length}</p>
                  <p className="text-[10px] text-primary-500 font-black uppercase tracking-widest">• {student?.fullName}</p>
@@ -171,7 +171,7 @@ const QuizAttemptPage = () => {
             <span className="inline-flex items-center px-4 py-1.5 bg-gray-100 text-gray-500 text-[10px] font-black rounded-full mb-6 uppercase tracking-[0.15em]">
               {currentQuestion?.type === 'mcq' ? 'Multiple Choice Scenario' : 'Direct Inquiry'} • {currentQuestion?.marks} Value
             </span>
-            <h3 className="text-3xl font-black text-gray-900 leading-[1.2] italic tracking-tight">
+            <h3 className="text-3xl font-black text-gray-900 leading-[1.2] tracking-tight">
               {currentQuestion?.questionText}
             </h3>
           </div>

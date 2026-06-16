@@ -9,6 +9,8 @@ const resultSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  campus: String,
+  batch: String,
   quizId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Quiz',

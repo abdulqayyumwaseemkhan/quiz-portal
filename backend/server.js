@@ -7,6 +7,8 @@ const { errorHandler } = require('./middleware/error');
 const adminRoutes = require('./routes/adminRoutes');
 const quizRoutes = require('./routes/quizRoutes');
 const studentRoutes = require('./routes/studentRoutes');
+const assignmentRoutes = require('./routes/assignmentRoutes');
+const noteRoutes = require('./routes/noteRoutes');
 
 const app = express();
 
@@ -46,6 +48,8 @@ app.use(express.json());
 app.use('/api/admin', adminRoutes);
 app.use('/api/quizzes', quizRoutes);
 app.use('/api/student', studentRoutes);
+app.use('/api/assignments', assignmentRoutes);
+app.use('/api/notes', noteRoutes);
 
 // Base route
 app.get('/', (req, res) => {

@@ -123,7 +123,7 @@ const CreateQuizPage = () => {
                     />
                   </div>
                </div>
-               <p className="mt-4 text-xs text-primary-500 font-medium italic">If left blank, the quiz will be available immediately and forever.</p>
+               <p className="mt-4 text-xs text-primary-500 font-medium">If left blank, the quiz will be available immediately and forever.</p>
             </div>
           </div>
 

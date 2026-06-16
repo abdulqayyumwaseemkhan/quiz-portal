@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import API from '../api';
 import { Clock, BookOpen, ChevronRight, User, Search, Calendar, AlertCircle } from 'lucide-react';
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -80,11 +81,18 @@ const QuizListPage = () => {
              </div>
           </div>
           
-          <div className="flex items-center gap-4 bg-gray-50 p-2 rounded-2xl border border-gray-100">
-            <div className="px-4 py-2 text-right hidden md:block">
-              <p className="font-black text-gray-800 uppercase tracking-tighter">{student?.fullName}</p>
-              <p className="text-xs text-gray-400 font-bold">STU ID: {student?.studentId}</p>
-            </div>
+          <div className="flex items-center gap-4">
+            <Link to="/student-notes" className="flex items-center gap-2 bg-gray-50 px-5 py-3 rounded-xl font-bold text-gray-600 hover:text-amber-600 hover:bg-amber-50 transition-colors">
+               <FileText size={20} /> Notes
+            </Link>
+            <Link to="/student-assignments" className="flex items-center gap-2 bg-gray-50 px-5 py-3 rounded-xl font-bold text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+               <BookOpen size={20} /> Assignments
+            </Link>
+            <div className="flex items-center gap-4 bg-gray-50 p-2 rounded-2xl border border-gray-100">
+              <div className="px-4 py-2 text-right hidden md:block">
+                <p className="font-black text-gray-800 uppercase tracking-tighter">{student?.fullName}</p>
+                <p className="text-xs text-gray-400 font-bold">STU ID: {student?.studentId}</p>
+              </div>
             <button 
               onClick={handleLogout}
               className="bg-white p-3 rounded-xl shadow-sm text-red-500 hover:bg-red-50 transition-colors"
@@ -92,6 +100,7 @@ const QuizListPage = () => {
             >
               <User size={24} />
             </button>
+          </div>
           </div>
         </header>
 

@@ -9,6 +9,8 @@ import StudentLoginPage from './pages/StudentLoginPage';
 import QuizListPage from './pages/QuizListPage';
 import QuizAttemptPage from './pages/QuizAttemptPage';
 import ResultPage from './pages/ResultPage';
+import StudentAssignmentsPage from './pages/StudentAssignmentsPage';
+import StudentNotesPage from './pages/StudentNotesPage';
 
 // Admin Pages
 import AdminLoginPage from './pages/AdminLoginPage';
@@ -19,6 +21,9 @@ import EditQuizPage from './pages/EditQuizPage';
 import ManageQuestionsPage from './pages/ManageQuestionsPage';
 import ManageStudentsPage from './pages/ManageStudentsPage';
 import AdminResultsPage from './pages/AdminResultsPage';
+import ManageAssignmentsPage from './pages/ManageAssignmentsPage';
+import AssignmentSubmissionsPage from './pages/AssignmentSubmissionsPage';
+import ManageNotesPage from './pages/ManageNotesPage';
 
 function App() {
   return (
@@ -31,6 +36,8 @@ function App() {
           <Route path="/quizzes" element={<QuizListPage />} />
           <Route path="/quiz/attempt/:quizId" element={<QuizAttemptPage />} />
           <Route path="/result/:resultId" element={<ResultPage />} />
+          <Route path="/student-assignments" element={<StudentAssignmentsPage />} />
+          <Route path="/student-notes" element={<StudentNotesPage />} />
 
           {/* Admin Routes */}
           <Route path="/admin/login" element={<AdminLoginPage />} />
@@ -79,6 +86,30 @@ function App() {
             element={
               <ProtectedRoute>
                 <AdminResultsPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/manage-assignments" 
+            element={
+              <ProtectedRoute>
+                <ManageAssignmentsPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/assignments/:id/submissions" 
+            element={
+              <ProtectedRoute>
+                <AssignmentSubmissionsPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/manage-notes" 
+            element={
+              <ProtectedRoute>
+                <ManageNotesPage />
               </ProtectedRoute>
             } 
           />

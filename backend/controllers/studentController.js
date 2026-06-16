@@ -95,9 +95,13 @@ const submitQuiz = asyncHandler(async (req, res) => {
 
   const percentage = (score / totalPossibleMarks) * 100;
 
+  const studentDoc = await Student.findOne({ studentId });
+
   const result = await Result.create({
     studentName,
     studentId,
+    campus: studentDoc?.campus,
+    batch: studentDoc?.batch,
     quizId,
     answers: processedAnswers,
     score,

@@ -102,10 +102,12 @@ const deleteQuestion = asyncHandler(async (req, res) => {
 // --- Results Controllers (Admin) ---
 
 const getAllResults = asyncHandler(async (req, res) => {
-  const { quizId, studentId } = req.query;
+  const { quizId, studentId, campus, batch } = req.query;
   let query = {};
   if (quizId) query.quizId = quizId;
   if (studentId) query.studentId = { $regex: studentId, $options: 'i' };
+  if (campus) query.campus = campus;
+  if (batch) query.batch = batch;
 
   const results = await Result.find(query)
     .populate('quizId', 'title')

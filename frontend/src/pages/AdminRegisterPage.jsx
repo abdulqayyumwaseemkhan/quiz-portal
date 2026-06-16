@@ -35,7 +35,7 @@ const AdminRegisterPage = () => {
           <div className="bg-primary-100 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 -rotate-6 border-2 border-primary-200">
             <ShieldCheck className="text-primary-600" size={32} />
           </div>
-          <h2 className="text-3xl font-black text-gray-900 tracking-tight italic">Admin Registry</h2>
+          <h2 className="text-3xl font-black text-gray-900 tracking-tight">Admin Registry</h2>
           <p className="text-gray-400 mt-2 uppercase tracking-[0.2em] text-[10px] font-black">Create your management account</p>
         </div>
 

@@ -7,18 +7,21 @@ import toast from 'react-hot-toast';
 const AdminResultsPage = () => {
   const [results, setResults] = useState([]);
   const [quizzes, setQuizzes] = useState([]);
-  const [filter, setFilter] = useState({ quizId: '', studentId: '' });
+  const [filter, setFilter] = useState({ quizId: '', studentId: '', campus: '', batch: '' });
+  const [meta, setMeta] = useState({ campuses: [], batches: [] });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [rRes, qRes] = await Promise.all([
+        const [rRes, qRes, mRes] = await Promise.all([
           API.get('/admin/results'),
-          API.get('/quizzes')
+          API.get('/quizzes'),
+          API.get('/admin/students/meta')
         ]);
         setResults(rRes.data);
         setQuizzes(qRes.data);
+        setMeta(mRes.data);
       } catch (error) {
         toast.error('Failed to load results');
       } finally {
@@ -73,6 +76,34 @@ const AdminResultsPage = () => {
                     >
                         <option value="">All Quizzes</option>
                         {quizzes.map(q => <option key={q._id} value={q._id}>{q.title}</option>)}
+                    </select>
+                </div>
+            </div>
+            <div className="flex-1 w-full">
+                <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Campus</label>
+                <div className="relative">
+                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <select 
+                      className="input-field pl-10"
+                      value={filter.campus}
+                      onChange={(e) => setFilter({...filter, campus: e.target.value})}
+                    >
+                        <option value="">All Campuses</option>
+                        {meta.campuses?.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                </div>
+            </div>
+            <div className="flex-1 w-full">
+                <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Batch</label>
+                <div className="relative">
+                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <select 
+                      className="input-field pl-10"
+                      value={filter.batch}
+                      onChange={(e) => setFilter({...filter, batch: e.target.value})}
+                    >
+                        <option value="">All Batches</option>
+                        {meta.batches?.map(b => <option key={b} value={b}>{b}</option>)}
                     </select>
                 </div>
             </div>
