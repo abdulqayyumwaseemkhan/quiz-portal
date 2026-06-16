@@ -223,6 +223,7 @@ const StudentAssignmentsPage = () => {
           </motion.div>
         )}
       </div>
+      </div>
     </div>
   );
 };

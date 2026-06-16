@@ -179,6 +179,7 @@ const QuizListPage = () => {
           </motion.div>
         )}
       </div>
+      </div>
     </div>
   );
 };

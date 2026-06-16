@@ -136,6 +136,7 @@ const StudentNotesPage = () => {
           </motion.div>
         )}
       </div>
+      </div>
     </div>
   );
 };
