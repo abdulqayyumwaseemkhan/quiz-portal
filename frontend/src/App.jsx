@@ -24,6 +24,7 @@ import AdminResultsPage from './pages/AdminResultsPage';
 import ManageAssignmentsPage from './pages/ManageAssignmentsPage';
 import AssignmentSubmissionsPage from './pages/AssignmentSubmissionsPage';
 import ManageNotesPage from './pages/ManageNotesPage';
+import ManageCampusesPage from './pages/ManageCampusesPage';
 
 function App() {
   return (
@@ -54,6 +55,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <ManageStudentsPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/manage-campuses" 
+            element={
+              <ProtectedRoute>
+                <ManageCampusesPage />
               </ProtectedRoute>
             } 
           />

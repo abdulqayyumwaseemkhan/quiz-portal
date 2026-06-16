@@ -1,6 +1,7 @@
 const asyncHandler = require('express-async-handler');
 const Admin = require('../models/Admin');
 const Student = require('../models/Student');
+const Campus = require('../models/Campus');
 const jwt = require('jsonwebtoken');
 
 const generateToken = (id) => {
@@ -86,10 +87,41 @@ const getStudents = asyncHandler(async (req, res) => {
 });
 
 const getStudentMeta = asyncHandler(async (req, res) => {
+  const explicitCampuses = await Campus.find().distinct('name');
+  const studentCampuses = await Student.distinct('campus');
+  const allCampuses = [...new Set([...explicitCampuses, ...studentCampuses])].filter(Boolean);
+
   res.json({ 
-    campuses: await Student.distinct('campus'), 
+    campuses: allCampuses, 
     batches: await Student.distinct('batch') 
   });
+});
+
+const addCampus = asyncHandler(async (req, res) => {
+  const { name } = req.body;
+  const exists = await Campus.findOne({ name });
+  if (exists) {
+    res.status(400);
+    throw new Error('Campus already exists');
+  }
+  const campus = await Campus.create({ name, addedBy: req.admin?._id });
+  res.status(201).json(campus);
+});
+
+const getCampuses = asyncHandler(async (req, res) => {
+  const campuses = await Campus.find({}).sort({ name: 1 });
+  res.json(campuses);
+});
+
+const deleteCampus = asyncHandler(async (req, res) => {
+  const campus = await Campus.findById(req.params.id);
+  if (campus) {
+    await Campus.deleteOne({ _id: campus._id });
+    res.json({ message: 'Campus removed' });
+  } else {
+    res.status(404);
+    throw new Error('Campus not found');
+  }
 });
 
 const deleteStudent = asyncHandler(async (req, res) => {
@@ -109,5 +141,8 @@ module.exports = {
   addStudent, 
   getStudents,
   getStudentMeta,
-  deleteStudent 
+  deleteStudent,
+  addCampus,
+  getCampuses,
+  deleteCampus
 };

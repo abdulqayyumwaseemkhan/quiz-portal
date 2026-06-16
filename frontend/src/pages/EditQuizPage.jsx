@@ -17,6 +17,13 @@ const EditQuizPage = () => {
       endDate: ''
     });
     const [loading, setLoading] = useState(true);
+
+    const toLocalDatetimeLocal = (utcString) => {
+      if (!utcString) return '';
+      const date = new Date(utcString);
+      const offset = date.getTimezoneOffset() * 60000;
+      return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+    };
   
     useEffect(() => {
       const fetchQuiz = async () => {
@@ -27,8 +34,8 @@ const EditQuizPage = () => {
             description: data.description,
             duration: data.duration,
             totalMarks: data.totalMarks,
-            startDate: data.startDate ? data.startDate.substring(0, 16) : '',
-            endDate: data.endDate ? data.endDate.substring(0, 16) : ''
+            startDate: toLocalDatetimeLocal(data.startDate),
+            endDate: toLocalDatetimeLocal(data.endDate)
           });
         } catch (error) {
           toast.error('Failed to load quiz details');
@@ -42,7 +49,12 @@ const EditQuizPage = () => {
     const handleSubmit = async (e) => {
       e.preventDefault();
       try {
-        await API.put(`/quizzes/${quizId}`, formData);
+        const payload = {
+          ...formData,
+          startDate: formData.startDate ? new Date(formData.startDate).toISOString() : null,
+          endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
+        };
+        await API.put(`/quizzes/${quizId}`, payload);
         toast.success('Quiz updated successfully');
         navigate('/admin/dashboard');
       } catch (error) {

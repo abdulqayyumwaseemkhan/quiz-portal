@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import API from '../api';
-import { Clock, BookOpen, ChevronRight, User, Search, Calendar, AlertCircle } from 'lucide-react';
+import { Clock, BookOpen, ChevronRight, User, Search, Calendar, AlertCircle, FileText } from 'lucide-react';
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';

@@ -22,7 +22,12 @@ const CreateQuizPage = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const { data } = await API.post('/quizzes', formData);
+      const payload = {
+        ...formData,
+        startDate: formData.startDate ? new Date(formData.startDate).toISOString() : null,
+        endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
+      };
+      const { data } = await API.post('/quizzes', payload);
       toast.success('Quiz created! Now add some questions.');
       navigate(`/admin/manage-questions/${data._id}`);
     } catch (error) {
