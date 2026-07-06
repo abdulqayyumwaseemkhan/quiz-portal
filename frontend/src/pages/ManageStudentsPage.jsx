@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import API from '../api';
 import Navbar from '../components/AdminNavbar';
-import { UserPlus, Trash2, Users, Search, GraduationCap } from 'lucide-react';
+import { UserPlus, Trash2, Users, Search, GraduationCap, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -74,6 +74,29 @@ const ManageStudentsPage = () => {
     return matchSearch && matchCampus && matchBatch;
   });
 
+  const handleDownloadCSV = () => {
+    if (filteredStudents.length === 0) {
+      toast.error('No students to export');
+      return;
+    }
+    const headers = ['Student ID', 'Full Name', 'Campus', 'Batch', 'Date Registered'];
+    const csvContent = [
+      headers.join(','),
+      ...filteredStudents.map(s => 
+        `"${s.studentId}","${s.fullName}","${s.campus || ''}","${s.batch || ''}","${new Date(s.createdAt).toLocaleDateString()}"`
+      )
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'students_records.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex">
       <Navbar />
@@ -83,12 +106,20 @@ const ManageStudentsPage = () => {
             <h1 className="text-3xl font-black text-slate-100">Manage Students</h1>
             <p className="text-slate-400">Register students who are allowed to take quizzes</p>
           </div>
-          <button 
-            onClick={() => setShowAdd(!showAdd)}
-            className="btn-primary flex items-center gap-2 px-6 h-12"
-          >
-            {showAdd ? 'Cancel' : <><UserPlus size={20} /> Register Student</>}
-          </button>
+          <div className="flex gap-4">
+            <button 
+              onClick={handleDownloadCSV}
+              className="flex items-center gap-2 px-6 h-12 bg-slate-800 text-slate-100 rounded-lg hover:bg-slate-700 font-semibold"
+            >
+              <Download size={20} /> Export CSV
+            </button>
+            <button 
+              onClick={() => setShowAdd(!showAdd)}
+              className="btn-primary flex items-center gap-2 px-6 h-12"
+            >
+              {showAdd ? 'Cancel' : <><UserPlus size={20} /> Register Student</>}
+            </button>
+          </div>
         </header>
 
         <AnimatePresence>
@@ -167,13 +198,13 @@ const ManageStudentsPage = () => {
             <input 
               type="text"
               placeholder="Search by name or ID..."
-              className="w-full h-14 pl-12 pr-6 rounded-lg border-none shadow-sm focus:ring-2 focus:ring-primary-100 font-medium"
+              className="w-full h-14 pl-12 pr-6 rounded-lg border-none shadow-sm focus:ring-2 focus:ring-primary-100 font-medium text-slate-900"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <select 
-            className="h-14 px-4 rounded-lg border-none shadow-sm focus:ring-2 focus:ring-primary-100 font-medium"
+            className="h-14 px-4 rounded-lg border-none shadow-sm focus:ring-2 focus:ring-primary-100 font-medium text-slate-900"
             value={filterCampus}
             onChange={(e) => setFilterCampus(e.target.value)}
           >
@@ -181,7 +212,7 @@ const ManageStudentsPage = () => {
             {meta.campuses.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
           <select 
-            className="h-14 px-4 rounded-lg border-none shadow-sm focus:ring-2 focus:ring-primary-100 font-medium"
+            className="h-14 px-4 rounded-lg border-none shadow-sm focus:ring-2 focus:ring-primary-100 font-medium text-slate-900"
             value={filterBatch}
             onChange={(e) => setFilterBatch(e.target.value)}
           >

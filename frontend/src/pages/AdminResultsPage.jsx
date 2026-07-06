@@ -43,13 +43,44 @@ const AdminResultsPage = () => {
     }
   };
 
+  const handleDownloadCSV = () => {
+    if (results.length === 0) {
+      toast.error('No results to export');
+      return;
+    }
+    const headers = ['Student Name', 'Student ID', 'Quiz Title', 'Score', 'Total Marks', 'Percentage', 'Date'];
+    const csvContent = [
+      headers.join(','),
+      ...results.map(r => 
+        `"${r.studentName}","${r.studentId}","${r.quizId?.title || 'Deleted Quiz'}","${r.score}","${r.totalPossibleMarks}","${r.percentage}%","${new Date(r.submittedAt).toLocaleDateString()}"`
+      )
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'quiz_results.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex">
       <Navbar />
       <main className="flex-1 ml-64 p-8">
-        <header className="mb-10">
-          <h1 className="text-3xl font-extrabold text-slate-100">Student Results</h1>
-          <p className="text-slate-400">Track performance metrics across all quizzes</p>
+        <header className="mb-10 flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-extrabold text-slate-100">Student Results</h1>
+            <p className="text-slate-400">Track performance metrics across all quizzes</p>
+          </div>
+          <button 
+            onClick={handleDownloadCSV}
+            className="flex items-center gap-2 px-6 h-12 bg-slate-800 text-slate-100 rounded-lg hover:bg-slate-700 font-semibold"
+          >
+            <Download size={20} /> Export CSV
+          </button>
         </header>
 
         <div className="bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-800 mb-8 flex flex-col md:flex-row gap-6 items-end">
