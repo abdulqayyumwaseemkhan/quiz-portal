@@ -71,7 +71,7 @@ const QuizListPage = () => {
       <div className="p-6 md:p-12">
         <div className="max-w-6xl mx-auto">
           <header className="mb-12">
-            <h1 className="text-3xl font-black text-white tracking-tight">Available Quizzes</h1>
+            <h1 className="text-3xl font-black text-[#13315c] tracking-tight">Available Quizzes</h1>
             <p className="text-gray-600 font-medium">Select a challenge to prove your skills</p>
           </header>
 

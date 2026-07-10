@@ -317,51 +317,51 @@ ${combinedJsx}
   };
 
   return (
-    <div className="flex flex-col h-full w-full bg-[#1e1e1e] text-white">
+    <div className="flex flex-col h-full w-full bg-[#eef4ed] text-[#13315c]">
       {/* Top Bar */}
-      <div className="flex items-center justify-between px-4 py-2 bg-[#2d2d2d] border-b border-[#3c3c3c]">
-        <div className="flex items-center space-x-4">
-          <span className="font-semibold text-gray-200">Web IDE Workspace</span>
+      <div className="flex items-center justify-between px-6 py-3 bg-white border-b border-[#8da9c4]/30 shadow-sm z-10">
+        <div className="flex items-center space-x-6">
+          <span className="font-black text-[#13315c] tracking-tight">Web IDE Workspace</span>
           <button 
             onClick={runCode}
-            className="flex items-center space-x-1 px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm transition-colors"
+            className="flex items-center space-x-2 px-4 py-1.5 bg-[#13315c] text-white hover:bg-opacity-90 rounded-lg text-sm font-bold transition-all shadow-sm"
           >
             <Play size={16} />
             <span>Run Code</span>
           </button>
         </div>
         {!readOnly && (
-          <button 
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="flex items-center space-x-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm transition-colors disabled:opacity-50"
-          >
-            <Save size={16} />
-            <span>{isSubmitting ? 'Saving...' : 'Submit Workspace'}</span>
-          </button>
+           <button 
+             onClick={handleSubmit}
+             disabled={isSubmitting}
+             className="flex items-center space-x-2 px-4 py-1.5 bg-green-600 text-white hover:bg-green-700 rounded-lg text-sm font-bold transition-all shadow-sm disabled:opacity-50"
+           >
+             <Save size={16} />
+             <span>{isSubmitting ? 'Saving...' : 'Submit Workspace'}</span>
+           </button>
         )}
       </div>
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
-        <div className="w-48 md:w-64 bg-[#252526] border-r border-[#3c3c3c] flex flex-col">
-          <div className="p-2 text-xs font-semibold text-gray-400 tracking-wider uppercase flex justify-between items-center">
+        <div className="w-48 md:w-64 bg-gray-50 border-r border-[#8da9c4]/30 flex flex-col">
+          <div className="px-4 py-3 text-xs font-bold text-gray-500 tracking-widest uppercase flex justify-between items-center border-b border-[#8da9c4]/20">
             <span>Explorer</span>
             {!readOnly && (
-              <div className="flex space-x-2">
-                <button onClick={handleCreateFile} title="New File" className="hover:text-white"><FilePlus size={14} /></button>
-                <button onClick={handleImageUploadClick} title="Upload Image" className="hover:text-white"><Upload size={14} /></button>
+              <div className="flex space-x-3">
+                <button onClick={handleCreateFile} title="New File" className="hover:text-[#13315c] transition-colors"><FilePlus size={16} /></button>
+                <button onClick={handleImageUploadClick} title="Upload Image" className="hover:text-[#13315c] transition-colors"><Upload size={16} /></button>
               </div>
             )}
           </div>
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto py-2">
             {Object.values(files).map((file) => (
               <div 
                 key={file.name}
                 onClick={() => setActiveFile(file.name)}
-                className={`flex items-center px-4 py-1.5 cursor-pointer text-sm ${activeFile === file.name ? 'bg-[#37373d] text-white' : 'text-gray-400 hover:bg-[#2a2d2e] hover:text-gray-200'}`}
+                className={`flex items-center px-4 py-2 cursor-pointer text-sm font-medium transition-colors ${activeFile === file.name ? 'bg-[#eef4ed] text-[#13315c] border-r-2 border-[#13315c]' : 'text-gray-600 hover:bg-gray-100 hover:text-[#13315c]'}`}
               >
-                {file.isImage ? <ImageIcon size={14} className="mr-2 text-purple-400" /> : <FileCode size={14} className="mr-2 text-blue-400" />}
+                {file.isImage ? <ImageIcon size={16} className="mr-3 text-purple-500" /> : <FileCode size={16} className="mr-3 text-blue-500" />}
                 <span className="truncate">{file.name}</span>
               </div>
             ))}
@@ -369,19 +369,19 @@ ${combinedJsx}
         </div>
 
         {/* Editor Area */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 bg-white">
           {files[activeFile] && files[activeFile].isImage ? (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[#1e1e1e]">
-              <img src={files[activeFile].url} alt={files[activeFile].name} className="max-w-full max-h-full object-contain mb-4 border border-gray-600 rounded" />
-              <div className="bg-[#2d2d2d] px-4 py-2 rounded text-sm text-gray-300 select-all w-full max-w-xl overflow-x-auto whitespace-nowrap">
+            <div className="flex-1 flex flex-col items-center justify-center p-8 bg-gray-50">
+              <img src={files[activeFile].url} alt={files[activeFile].name} className="max-w-full max-h-full object-contain mb-6 border border-[#8da9c4]/30 rounded-xl bg-white shadow-sm" />
+              <div className="bg-white border border-[#8da9c4]/30 px-4 py-2 rounded-lg text-sm text-[#13315c] select-all w-full max-w-xl overflow-x-auto whitespace-nowrap font-mono shadow-sm">
                 {files[activeFile].url}
               </div>
-              <p className="text-xs text-gray-500 mt-2">Copy the URL to use in your HTML/CSS.</p>
+              <p className="text-xs text-gray-500 mt-3 font-semibold">Copy the URL to use in your HTML/CSS.</p>
             </div>
           ) : (
             <Editor
               height="100%"
-              theme="vs-dark"
+              theme="light"
               path={activeFile}
               language={files[activeFile]?.language || 'javascript'}
               value={files[activeFile]?.content || ''}
@@ -391,13 +391,14 @@ ${combinedJsx}
                 minimap: { enabled: false },
                 fontSize: 14,
                 wordWrap: 'on',
+                padding: { top: 16 }
               }}
             />
           )}
         </div>
 
         {/* Preview Area */}
-        <div className="hidden md:flex w-1/3 lg:w-2/5 bg-white border-l border-[#3c3c3c] flex-col">
+        <div className="hidden md:flex w-1/3 lg:w-2/5 bg-white border-l border-[#8da9c4]/30 flex-col">
           <div className="px-3 py-1.5 bg-[#f3f4f6] border-b border-gray-200 text-xs font-semibold text-gray-600 flex justify-between items-center">
             <span>Preview</span>
           </div>

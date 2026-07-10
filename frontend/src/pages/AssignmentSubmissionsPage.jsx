@@ -67,7 +67,7 @@ const AssignmentSubmissionsPage = () => {
             >
               ← Back to Submissions
             </button>
-            <h2 className="text-xl font-bold text-white">{activeWorkspace.studentName}'s Workspace</h2>
+            <h2 className="text-xl font-bold text-[#13315c]">{activeWorkspace.studentName}'s Workspace</h2>
           </div>
         </div>
         <div className="flex-1 min-h-0">

@@ -226,7 +226,7 @@ const StudentAssignmentsPage = () => {
             >
               ← Back to Assignments
             </button>
-            <h2 className="text-xl font-bold text-white">{ideAssignment.assignment.title} Workspace</h2>
+            <h2 className="text-xl font-bold text-[#13315c]">{ideAssignment.assignment.title} Workspace</h2>
           </div>
         </div>
         <div className="flex-1 min-h-0">
@@ -247,7 +247,7 @@ const StudentAssignmentsPage = () => {
       <div className="p-6 md:p-12">
         <div className="max-w-6xl mx-auto">
           <header className="mb-12">
-            <h1 className="text-3xl font-black text-white tracking-tight">Assignments</h1>
+            <h1 className="text-3xl font-black text-[#13315c] tracking-tight">Assignments</h1>
             <p className="text-gray-600 font-medium">Upload your projects as .zip files</p>
           </header>
 

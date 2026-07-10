@@ -26,7 +26,7 @@ const StudentNavbar = ({ student }) => {
             <div className="bg-[#13315c] p-2 rounded-xl text-white shadow-none">
               <BookOpen size={24} />
             </div>
-            <span className="text-xl font-black text-white tracking-tight">BanoQabil</span>
+            <span className="text-xl font-black text-[#13315c] tracking-tight">BanoQabil</span>
           </div>
 
           {/* Desktop Nav */}
@@ -49,11 +49,11 @@ const StudentNavbar = ({ student }) => {
               })}
             </div>
 
-            <div className="h-8 w-px bg-[#13315c]"></div>
+            <div className="h-8 w-px bg-[#8da9c4]/50"></div>
 
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <p className="text-sm font-bold text-white uppercase">{student?.fullName}</p>
+                <p className="text-sm font-bold text-[#13315c] uppercase">{student?.fullName}</p
                 <p className="text-xs font-semibold text-gray-600 tracking-wider">ID: {student?.studentId}</p>
               </div>
               <button 
@@ -100,7 +100,7 @@ const StudentNavbar = ({ student }) => {
             })}
             <div className="border-t border-[#8da9c4]/30 pt-2 mt-2">
               <div className="px-4 py-2 mb-2">
-                <p className="text-sm font-bold text-white uppercase">{student?.fullName}</p>
+                <p className="text-sm font-bold text-[#13315c] uppercase">{student?.fullName}</p>
                 <p className="text-xs font-semibold text-gray-600 tracking-wider">ID: {student?.studentId}</p>
               </div>
               <button
