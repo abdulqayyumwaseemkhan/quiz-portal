@@ -93,12 +93,22 @@ export default function WebIDE({
     let combinedHtml = '';
 
     if (isReactProject) {
-      let combinedJsx = '';
+      let combinedJsx = `
+// Automatically injected React imports to prevent duplicate declaration errors
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { createRoot } from "react-dom/client";
+`;
       Object.values(files).forEach(file => {
         if (file.name.endsWith('.js') || file.name.endsWith('.jsx')) {
+          let content = file.content;
+          
           // Strip local relative imports (e.g. import App from './App' or import './styles.css')
-          let content = file.content.replace(/import\s+.*?\s+from\s+['"][\.\/].*?['"];?/g, '');
+          content = content.replace(/import\s+.*?\s+from\s+['"][\.\/].*?['"];?/g, '');
           content = content.replace(/import\s+['"][\.\/].*?['"];?/g, '');
+          
+          // Strip ALL react and react-dom imports from student code to prevent duplicate identifier errors
+          content = content.replace(/import\s+.*?\s+from\s+['"]react(-dom.*)?['"];?/g, '');
+
           // Strip export default and export const (everything becomes local to the single module)
           content = content.replace(/export\s+default\s+/g, '');
           content = content.replace(/export\s+(const|let|var|function|class)/g, '$1');

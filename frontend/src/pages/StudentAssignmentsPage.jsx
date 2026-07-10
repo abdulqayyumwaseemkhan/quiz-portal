@@ -75,11 +75,11 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment }) => {
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="card flex flex-col justify-between overflow-hidden p-8 border border-slate-800 shadow-xl hover:shadow-2xl transition-all rounded-xl bg-slate-900"
+      className="card flex flex-col justify-between overflow-hidden p-8 border border-[#31572c] shadow-xl hover:shadow-2xl transition-all rounded-xl bg-[#152113]"
     >
       <div>
         <div className="flex items-start justify-between mb-6">
-          <div className="p-3 rounded-xl bg-primary-500/20 text-primary-400">
+          <div className="p-3 rounded-xl bg-[#ecf39e]/20 text-[#ecf39e]">
             <FileArchive size={24} />
           </div>
           <div className="flex flex-col items-end">
@@ -93,7 +93,7 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment }) => {
         <p className="text-slate-400 text-sm font-medium line-clamp-3 mb-6 leading-relaxed">{assignment.description || 'No description provided.'}</p>
       </div>
 
-      <div className="mt-auto border-t border-slate-800 pt-6">
+      <div className="mt-auto border-t border-[#31572c] pt-6">
         {status ? (
           <div className="mb-4">
             <div className="flex items-center gap-2 text-green-400 bg-green-400/10 p-4 rounded-xl text-xs font-bold uppercase tracking-wider mb-4">
@@ -107,7 +107,7 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment }) => {
         ) : null}
 
         <div className="flex flex-col gap-3">
-          <label className="flex items-center justify-center w-full h-12 px-4 transition bg-slate-800 border-2 border-slate-700 border-dashed rounded-xl appearance-none cursor-pointer hover:border-primary-500 focus:outline-none relative">
+          <label className="flex items-center justify-center w-full h-12 px-4 transition bg-[#1e2e1b] border-2 border-[#31572c] border-dashed rounded-xl appearance-none cursor-pointer hover:border-primary-500 focus:outline-none relative">
               <span className="flex items-center space-x-2">
                   <UploadCloud className="w-5 h-5 text-slate-400" />
                   <span className="font-medium text-slate-400 text-sm">
@@ -118,7 +118,7 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment }) => {
           </label>
 
           {uploading && (
-            <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden mb-2">
+            <div className="w-full bg-[#1e2e1b] h-2 rounded-full overflow-hidden mb-2">
               <div className="h-full bg-primary-500 transition-all duration-300" style={{ width: `${progress}%` }}></div>
             </div>
           )}
@@ -128,22 +128,22 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment }) => {
             disabled={!file || uploading}
             className={`w-full py-3 rounded-xl font-black uppercase tracking-widest text-sm transition-all ${
               file && !uploading 
-                ? 'bg-primary-600 text-white hover:bg-primary-500 shadow-md shadow-primary-500/30' 
-                : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                ? 'btn-primary' 
+                : 'bg-[#1e2e1b] text-slate-500 cursor-not-allowed'
             }`}
           >
             {uploading ? `Uploading ${progress}%` : (status && status.submissionType !== 'ide') ? 'Re-upload ZIP' : 'Upload ZIP Assignment'}
           </button>
           
           <div className="flex items-center justify-center space-x-4 my-2">
-            <span className="h-px bg-slate-800 w-full"></span>
+            <span className="h-px bg-[#1e2e1b] w-full"></span>
             <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">OR</span>
-            <span className="h-px bg-slate-800 w-full"></span>
+            <span className="h-px bg-[#1e2e1b] w-full"></span>
           </div>
 
           <button 
             onClick={() => setIdeAssignment({ assignment, status })}
-            className="w-full py-3 rounded-xl font-black uppercase tracking-widest text-sm transition-all bg-purple-600 text-white hover:bg-purple-500 shadow-md shadow-purple-500/30 flex items-center justify-center space-x-2"
+            className="w-full py-3 rounded-xl font-black uppercase tracking-widest text-sm transition-all btn-primary flex items-center justify-center space-x-2"
           >
             <BookOpen size={18} />
             <span>{(status && status.submissionType === 'ide') ? 'Open Workspace' : 'Start Web IDE'}</span>
@@ -194,7 +194,7 @@ const StudentAssignmentsPage = () => {
 
   if (loading) return (
     <div className="flex items-center justify-center min-h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 text-[#ecf39e]"></div>
     </div>
   );
 
@@ -218,7 +218,7 @@ const StudentAssignmentsPage = () => {
   if (ideAssignment) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col bg-transparent">
-        <div className="flex items-center justify-between px-6 py-3 bg-slate-900 border-b border-slate-800">
+        <div className="flex items-center justify-between px-6 py-3 bg-[#152113] border-b border-[#31572c]">
           <div className="flex items-center space-x-4">
             <button 
               onClick={() => setIdeAssignment(null)}
@@ -256,7 +256,7 @@ const StudentAssignmentsPage = () => {
             <input 
                type="text"
                placeholder="Search assignments..."
-               className="w-full h-16 pl-16 pr-8 bg-slate-900 rounded-xl shadow-sm border border-slate-800 focus:ring-4 focus:ring-primary-500/20 text-slate-100 text-lg font-medium transition-all"
+               className="w-full h-16 pl-16 pr-8 bg-[#152113] rounded-xl shadow-sm border border-[#31572c] focus:ring-4 focus:ring-primary-500/20 text-slate-100 text-lg font-medium transition-all"
                value={searchTerm}
                onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -274,9 +274,9 @@ const StudentAssignmentsPage = () => {
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-center py-32 bg-slate-900 rounded-xl shadow-sm border border-slate-800"
+            className="text-center py-32 bg-[#152113] rounded-xl shadow-sm border border-[#31572c]"
           >
-            <div className="bg-slate-800 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="bg-[#1e2e1b] w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
                <FileArchive className="text-slate-500" size={48} />
             </div>
             <p className="text-slate-100 font-black text-2xl tracking-tight">No assignments found.</p>

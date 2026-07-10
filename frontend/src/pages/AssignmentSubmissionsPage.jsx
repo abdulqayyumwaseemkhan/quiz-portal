@@ -59,7 +59,7 @@ const AssignmentSubmissionsPage = () => {
   if (activeWorkspace) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col bg-transparent">
-        <div className="flex items-center justify-between px-6 py-3 bg-slate-900 border-b border-slate-800">
+        <div className="flex items-center justify-between px-6 py-3 bg-[#152113] border-b border-[#31572c]">
           <div className="flex items-center space-x-4">
             <button 
               onClick={() => setActiveWorkspace(null)}
@@ -86,7 +86,7 @@ const AssignmentSubmissionsPage = () => {
       <main className="flex-1 ml-64 p-8">
         <header className="mb-10">
           <div className="flex items-center gap-4 mb-2">
-            <Link to="/admin/manage-assignments" className="text-slate-500 hover:text-primary-400 transition-colors">
+            <Link to="/admin/manage-assignments" className="text-slate-500 hover:text-[#ecf39e] transition-colors">
               <ArrowLeft size={24} />
             </Link>
             <h1 className="text-3xl font-extrabold text-slate-100">Assignment Submissions</h1>
@@ -94,7 +94,7 @@ const AssignmentSubmissionsPage = () => {
           <p className="text-slate-400 ml-10">Review and download student project files</p>
         </header>
 
-        <div className="bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-800 mb-8 flex flex-col md:flex-row gap-6 items-end">
+        <div className="bg-[#152113] p-6 rounded-2xl shadow-sm border border-[#31572c] mb-8 flex flex-col md:flex-row gap-6 items-end">
             <div className="flex-1 w-full">
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Campus Filter</label>
                 <div className="relative">
@@ -131,9 +131,9 @@ const AssignmentSubmissionsPage = () => {
             </button>
         </div>
 
-        <div className="bg-slate-900 rounded-2xl shadow-sm border border-slate-800 overflow-hidden">
+        <div className="bg-[#152113] rounded-2xl shadow-sm border border-[#31572c] overflow-hidden">
           <table className="w-full text-left">
-            <thead className="bg-slate-900 text-slate-400 text-xs font-bold uppercase tracking-wider">
+            <thead className="bg-[#152113] text-slate-400 text-xs font-bold uppercase tracking-wider">
               <tr>
                 <th className="px-6 py-4">Student</th>
                 <th className="px-6 py-4">Campus / Batch</th>
@@ -144,7 +144,7 @@ const AssignmentSubmissionsPage = () => {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {submissions.map((sub) => (
-                <tr key={sub._id} className="hover:bg-slate-900 transition-colors">
+                <tr key={sub._id} className="hover:bg-[#152113] transition-colors">
                   <td className="px-6 py-4">
                     <p className="font-bold text-slate-200">{sub.studentName}</p>
                     <p className="text-xs text-slate-400">{sub.studentId}</p>
@@ -197,7 +197,7 @@ const AssignmentSubmissionsPage = () => {
                          href={sub.fileUrl} 
                          target="_blank" 
                          rel="noreferrer"
-                         className="inline-flex items-center gap-2 px-4 py-2 bg-primary-500/10 text-primary-400 hover:bg-primary-500/10 font-semibold rounded-lg transition-colors text-sm"
+                         className="inline-flex items-center gap-2 px-4 py-2 bg-[#ecf39e]/10 text-[#ecf39e] hover:bg-[#ecf39e]/10 font-semibold rounded-lg transition-colors text-sm"
                        >
                          <Download size={16} /> Get File
                        </a>

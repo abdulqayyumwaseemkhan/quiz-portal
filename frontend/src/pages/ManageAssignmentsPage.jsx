@@ -98,7 +98,7 @@ const ManageAssignmentsPage = () => {
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               onSubmit={handleAddAssignment}
-              className="card bg-slate-900 p-8 mb-10 overflow-hidden border-2 border-primary-100"
+              className="card bg-[#152113] p-8 mb-10 overflow-hidden border-2 border-primary-100"
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
                 <div className="md:col-span-2">
@@ -172,9 +172,9 @@ const ManageAssignmentsPage = () => {
           )}
         </AnimatePresence>
 
-        <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 overflow-hidden">
+        <div className="bg-[#152113] rounded-xl shadow-sm border border-[#31572c] overflow-hidden">
           <table className="w-full text-left">
-            <thead className="bg-slate-900 text-slate-400 text-xs font-semibold uppercase tracking-widest">
+            <thead className="bg-[#152113] text-slate-400 text-xs font-semibold uppercase tracking-widest">
               <tr>
                 <th className="px-8 py-5">Assignment Details</th>
                 <th className="px-8 py-5">Due Date</th>
@@ -184,7 +184,7 @@ const ManageAssignmentsPage = () => {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {assignments.map((assignment) => (
-                <tr key={assignment._id} className="hover:bg-slate-900/50 transition-colors group">
+                <tr key={assignment._id} className="hover:bg-[#152113]/50 transition-colors group">
                   <td className="px-8 py-5">
                     <p className="font-bold text-slate-200 text-lg">{assignment.title}</p>
                     <p className="text-sm text-slate-400 line-clamp-1 mb-1">{assignment.description || 'No description'}</p>
@@ -197,10 +197,10 @@ const ManageAssignmentsPage = () => {
                   </td>
                   <td className="px-8 py-5">
                      <div className="flex flex-col">
-                       <span className="text-xs font-semibold text-primary-600 bg-primary-500/10 px-2 py-1 rounded-md w-fit mb-1">
+                       <span className="text-xs font-semibold text-[#ecf39e] bg-[#ecf39e]/10 px-2 py-1 rounded-md w-fit mb-1">
                          {assignment.campus || 'All Campuses'}
                        </span>
-                       <span className="text-xs font-semibold text-slate-400 bg-slate-800 px-2 py-1 rounded-md w-fit">
+                       <span className="text-xs font-semibold text-slate-400 bg-[#1e2e1b] px-2 py-1 rounded-md w-fit">
                          {assignment.batch || 'All Batches'}
                        </span>
                      </div>
@@ -209,14 +209,14 @@ const ManageAssignmentsPage = () => {
                     <div className="flex justify-end gap-3">
                         <Link 
                           to={`/admin/assignments/${assignment._id}/submissions`}
-                          className="p-3 bg-slate-900 text-primary-600 hover:bg-primary-500/10 rounded-lg shadow-sm border border-slate-800 transition-all"
+                          className="p-3 bg-[#152113] text-[#ecf39e] hover:bg-[#ecf39e]/10 rounded-lg shadow-sm border border-[#31572c] transition-all"
                           title="View Submissions"
                         >
                           <Eye size={20} />
                         </Link>
                         <button 
                           onClick={() => handleDelete(assignment._id)}
-                          className="p-3 bg-slate-900 text-rose-500 hover:bg-rose-500/10 rounded-lg shadow-sm border border-slate-800 transition-all"
+                          className="p-3 bg-[#152113] text-rose-500 hover:bg-rose-500/10 rounded-lg shadow-sm border border-[#31572c] transition-all"
                           title="Delete Assignment"
                         >
                           <Trash2 size={20} />
