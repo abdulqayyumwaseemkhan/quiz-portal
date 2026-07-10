@@ -15,7 +15,6 @@ const connectDB = async () => {
 
   if (!cached.promise) {
     const opts = {
-      bufferCommands: false,
       maxPoolSize: 10, // Optimize for serverless environments
     };
 
