@@ -38,6 +38,16 @@ const getQuizForAttempt = asyncHandler(async (req, res) => {
     throw new Error('Quiz not found');
   }
 
+  const now = new Date();
+  if (quiz.startDate && new Date(quiz.startDate) > now) {
+    res.status(400);
+    throw new Error('Quiz has not started yet');
+  }
+  if (quiz.endDate && new Date(quiz.endDate) < now) {
+    res.status(400);
+    throw new Error('Quiz has already closed');
+  }
+
   let questions = await Question.find({ quizId }).select('-correctAnswer');
   
   // Randomize questions

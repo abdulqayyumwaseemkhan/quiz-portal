@@ -138,6 +138,12 @@ const submitAssignment = asyncHandler(async (req, res) => {
     throw new Error('Assignment not found');
   }
 
+  const isLate = new Date() > new Date(assignment.dueDate);
+  if (isLate) {
+    res.status(400);
+    throw new Error('The due date for this assignment has passed. Submission is no longer allowed.');
+  }
+
   const student = await Student.findOne({ studentId });
   if (!student) {
     res.status(404);
@@ -147,20 +153,15 @@ const submitAssignment = asyncHandler(async (req, res) => {
   // Check existing submission
   let submission = await Submission.findOne({ assignmentId, studentId });
 
-  // If exists, delete old file from Cloudinary
+  // If exists, throw error to prevent resubmission
   if (submission) {
-    try {
-      await cloudinary.uploader.destroy(submission.filePublicId, { resource_type: 'raw' });
-    } catch (err) {
-      console.error(`Failed to delete old Cloudinary asset ${submission.filePublicId}`, err);
-    }
+    res.status(400);
+    throw new Error('You have already submitted this assignment. Resubmission is not allowed.');
   }
 
   // Upload to Cloudinary
   const folder = `quiz-portal/assignments/${student.campus || 'General'}/${student.batch || 'General'}`;
   const uploadResult = await uploadToCloudinary(req.file.buffer, folder, req.file.originalname);
-
-  const isLate = new Date() > new Date(assignment.dueDate);
 
   const submissionData = {
     assignmentId,
@@ -176,15 +177,7 @@ const submitAssignment = asyncHandler(async (req, res) => {
     submittedAt: Date.now(),
   };
 
-  if (submission) {
-    submission = await Submission.findOneAndUpdate(
-      { _id: submission._id },
-      submissionData,
-      { new: true }
-    );
-  } else {
-    submission = await Submission.create(submissionData);
-  }
+  submission = await Submission.create(submissionData);
 
   res.status(200).json(submission);
 });
@@ -216,6 +209,12 @@ const submitIdeAssignment = asyncHandler(async (req, res) => {
     throw new Error('Assignment not found');
   }
 
+  const isLate = new Date() > new Date(assignment.dueDate);
+  if (isLate) {
+    res.status(400);
+    throw new Error('The due date for this assignment has passed. Submission is no longer allowed.');
+  }
+
   const student = await Student.findOne({ studentId });
   if (!student) {
     res.status(404);
@@ -225,16 +224,11 @@ const submitIdeAssignment = asyncHandler(async (req, res) => {
   // Check existing submission
   let submission = await Submission.findOne({ assignmentId, studentId });
 
-  // If exists and was a file submission, delete old file from Cloudinary
-  if (submission && submission.submissionType === 'file' && submission.filePublicId) {
-    try {
-      await cloudinary.uploader.destroy(submission.filePublicId, { resource_type: 'raw' });
-    } catch (err) {
-      console.error(`Failed to delete old Cloudinary asset ${submission.filePublicId}`, err);
-    }
+  // If exists, throw error to prevent resubmission
+  if (submission) {
+    res.status(400);
+    throw new Error('You have already submitted this assignment. Resubmission is not allowed.');
   }
-
-  const isLate = new Date() > new Date(assignment.dueDate);
 
   const submissionData = {
     assignmentId,
@@ -246,22 +240,14 @@ const submitIdeAssignment = asyncHandler(async (req, res) => {
     projectData,
     isLate,
     submittedAt: Date.now(),
-    // Clear out file fields if overriding a previous file submission
+    // Clear out file fields if overriding a previous file submission (redundant now but safe)
     fileUrl: null,
     filePublicId: null,
     originalFileName: null,
     fileSizeBytes: null,
   };
 
-  if (submission) {
-    submission = await Submission.findOneAndUpdate(
-      { _id: submission._id },
-      submissionData,
-      { new: true }
-    );
-  } else {
-    submission = await Submission.create(submissionData);
-  }
+  submission = await Submission.create(submissionData);
 
   res.status(200).json(submission);
 });

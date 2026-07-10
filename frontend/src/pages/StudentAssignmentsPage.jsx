@@ -106,49 +106,80 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment }) => {
           </div>
         ) : null}
 
-        <div className="flex flex-col gap-3">
-          <label className="flex items-center justify-center w-full h-12 px-4 transition bg-gray-50 border-2 border-[#8da9c4]/30 border-dashed rounded-xl appearance-none cursor-pointer hover:border-primary-500 focus:outline-none relative">
-              <span className="flex items-center space-x-2">
-                  <UploadCloud className="w-5 h-5 text-gray-600" />
-                  <span className="font-medium text-gray-600 text-sm">
-                    {file ? file.name : 'Select .zip file'}
-                  </span>
-              </span>
-              <input type="file" name="file_upload" className="hidden" accept=".zip" onChange={handleFileChange} disabled={uploading} />
-          </label>
+        {!status && !isLate ? (
+          <div className="flex flex-col gap-3">
+            <label className="flex items-center justify-center w-full h-12 px-4 transition bg-gray-50 border-2 border-[#8da9c4]/30 border-dashed rounded-xl appearance-none cursor-pointer hover:border-primary-500 focus:outline-none relative">
+                <span className="flex items-center space-x-2">
+                    <UploadCloud className="w-5 h-5 text-gray-600" />
+                    <span className="font-medium text-gray-600 text-sm">
+                      {file ? file.name : 'Select .zip file'}
+                    </span>
+                </span>
+                <input type="file" name="file_upload" className="hidden" accept=".zip" onChange={handleFileChange} disabled={uploading} />
+            </label>
 
-          {uploading && (
-            <div className="w-full bg-gray-50 h-2 rounded-full overflow-hidden mb-2">
-              <div className="h-full bg-primary-500 transition-all duration-300" style={{ width: `${progress}%` }}></div>
+            {uploading && (
+              <div className="w-full bg-gray-50 h-2 rounded-full overflow-hidden mb-2">
+                <div className="h-full bg-primary-500 transition-all duration-300" style={{ width: `${progress}%` }}></div>
+              </div>
+            )}
+
+            <button 
+              onClick={handleUpload}
+              disabled={!file || uploading}
+              className={`w-full py-3 rounded-xl font-black uppercase tracking-widest text-sm transition-all ${
+                file && !uploading 
+                  ? 'btn-primary' 
+                  : 'bg-gray-50 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              {uploading ? `Uploading ${progress}%` : 'Upload ZIP Assignment'}
+            </button>
+            
+            <div className="flex items-center justify-center space-x-4 my-2">
+              <span className="h-px bg-gray-50 w-full"></span>
+              <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">OR</span>
+              <span className="h-px bg-gray-50 w-full"></span>
             </div>
-          )}
 
-          <button 
-            onClick={handleUpload}
-            disabled={!file || uploading}
-            className={`w-full py-3 rounded-xl font-black uppercase tracking-widest text-sm transition-all ${
-              file && !uploading 
-                ? 'btn-primary' 
-                : 'bg-gray-50 text-gray-500 cursor-not-allowed'
-            }`}
-          >
-            {uploading ? `Uploading ${progress}%` : (status && status.submissionType !== 'ide') ? 'Re-upload ZIP' : 'Upload ZIP Assignment'}
-          </button>
-          
-          <div className="flex items-center justify-center space-x-4 my-2">
-            <span className="h-px bg-gray-50 w-full"></span>
-            <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">OR</span>
-            <span className="h-px bg-gray-50 w-full"></span>
+            <button 
+              onClick={() => setIdeAssignment({ assignment, status })}
+              className="w-full py-3 rounded-xl font-black uppercase tracking-widest text-sm transition-all btn-primary flex items-center justify-center space-x-2"
+            >
+              <BookOpen size={18} />
+              <span>Start Web IDE</span>
+            </button>
           </div>
-
-          <button 
-            onClick={() => setIdeAssignment({ assignment, status })}
-            className="w-full py-3 rounded-xl font-black uppercase tracking-widest text-sm transition-all btn-primary flex items-center justify-center space-x-2"
-          >
-            <BookOpen size={18} />
-            <span>{(status && status.submissionType === 'ide') ? 'Open Workspace' : 'Start Web IDE'}</span>
-          </button>
-        </div>
+        ) : !status && isLate ? (
+          <div className="flex flex-col gap-3">
+            <button disabled className="w-full py-3 rounded-xl bg-gray-50 text-gray-500 font-black uppercase tracking-widest text-sm cursor-not-allowed">
+              Submission Closed
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {status.submissionType === 'ide' && (
+              <button 
+                onClick={() => setIdeAssignment({ assignment, status, readOnly: true })}
+                className="w-full py-3 rounded-xl font-black uppercase tracking-widest text-sm transition-all btn-primary flex items-center justify-center space-x-2"
+              >
+                <BookOpen size={18} />
+                <span>View Workspace</span>
+              </button>
+            )}
+            {status.submissionType === 'file' && status.fileUrl && (
+              <a 
+                href={status.fileUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="w-full py-3 rounded-xl font-black uppercase tracking-widest text-sm transition-all btn-primary flex items-center justify-center space-x-2"
+              >
+                <FileArchive size={18} />
+                <span>Download Submission</span>
+              </a>
+            )}
+          </div>
+        )}
       </div>
     </motion.div>
   );
@@ -235,6 +266,7 @@ const StudentAssignmentsPage = () => {
             onSubmit={handleIdeSubmit} 
             studentId={student.studentId}
             projectType={ideAssignment.assignment.projectType}
+            readOnly={ideAssignment.readOnly}
           />
         </div>
       </div>
