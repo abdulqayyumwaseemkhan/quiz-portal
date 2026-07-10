@@ -19,6 +19,7 @@ const ManageAssignmentsPage = () => {
     dueDate: '',
     campus: '',
     batch: '',
+    projectType: 'vanilla',
   });
 
   useEffect(() => {
@@ -52,7 +53,7 @@ const ManageAssignmentsPage = () => {
     try {
       const { data } = await API.post('/assignments', formData);
       setAssignments([data, ...assignments]);
-      setFormData({ title: '', description: '', dueDate: '', campus: '', batch: '' });
+      setFormData({ title: '', description: '', dueDate: '', campus: '', batch: '', projectType: 'vanilla' });
       setShowAdd(false);
       toast.success('Assignment created successfully');
     } catch (error) {
@@ -131,6 +132,17 @@ const ManageAssignmentsPage = () => {
                   />
                 </div>
                 <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Project Type</label>
+                  <select 
+                    className="input-field h-12 w-full"
+                    value={formData.projectType}
+                    onChange={(e) => setFormData({...formData, projectType: e.target.value})}
+                  >
+                    <option value="vanilla">Vanilla (HTML/CSS/JS)</option>
+                    <option value="react">React</option>
+                  </select>
+                </div>
+                <div>
                   <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Campus Filter (Optional)</label>
                   <select 
                     className="input-field h-12 w-full"
@@ -175,7 +187,10 @@ const ManageAssignmentsPage = () => {
                 <tr key={assignment._id} className="hover:bg-slate-900/50 transition-colors group">
                   <td className="px-8 py-5">
                     <p className="font-bold text-slate-200 text-lg">{assignment.title}</p>
-                    <p className="text-sm text-slate-400 line-clamp-1">{assignment.description || 'No description'}</p>
+                    <p className="text-sm text-slate-400 line-clamp-1 mb-1">{assignment.description || 'No description'}</p>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${assignment.projectType === 'react' ? 'bg-cyan-500/20 text-cyan-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
+                      {assignment.projectType === 'react' ? 'React' : 'Vanilla JS'}
+                    </span>
                   </td>
                   <td className="px-8 py-5 font-semibold text-slate-300">
                      {new Date(assignment.dueDate).toLocaleString()}

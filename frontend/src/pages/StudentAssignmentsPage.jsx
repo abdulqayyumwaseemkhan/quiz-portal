@@ -234,6 +234,7 @@ const StudentAssignmentsPage = () => {
             initialProjectData={ideAssignment.status?.projectData}
             onSubmit={handleIdeSubmit} 
             studentId={student.studentId}
+            projectType={ideAssignment.assignment.projectType}
           />
         </div>
       </div>

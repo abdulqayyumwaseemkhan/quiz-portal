@@ -29,6 +29,11 @@ const assignmentSchema = new mongoose.Schema(
       ref: 'Admin',
       required: true,
     },
+    projectType: {
+      type: String,
+      enum: ['vanilla', 'react'],
+      default: 'vanilla',
+    },
   },
   { timestamps: true }
 );

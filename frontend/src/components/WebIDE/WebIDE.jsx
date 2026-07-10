@@ -22,13 +22,37 @@ const DEFAULT_FILES = {
   },
 };
 
+const REACT_DEFAULT_FILES = {
+  'index.html': {
+    name: 'index.html',
+    language: 'html',
+    content: '<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <title>React App</title>\n</head>\n<body>\n  <div id="root"></div>\n</body>\n</html>',
+  },
+  'styles.css': {
+    name: 'styles.css',
+    language: 'css',
+    content: 'body {\n  font-family: sans-serif;\n  padding: 20px;\n}\n\n.App {\n  text-align: center;\n}\n\nh1 {\n  color: #61dafb;\n}',
+  },
+  'App.jsx': {
+    name: 'App.jsx',
+    language: 'javascript',
+    content: 'export default function App() {\n  const [count, setCount] = React.useState(0);\n  \n  return (\n    <div className="App">\n      <h1>Hello React!</h1>\n      <button onClick={() => setCount(c => c + 1)}>\n        Count is {count}\n      </button>\n    </div>\n  );\n}\n',
+  },
+  'index.jsx': {
+    name: 'index.jsx',
+    language: 'javascript',
+    content: 'const root = ReactDOM.createRoot(document.getElementById("root"));\nroot.render(<App />);\n',
+  },
+};
+
 export default function WebIDE({
   initialProjectData,
   onSubmit,
   readOnly = false,
+  projectType = 'vanilla', // 'vanilla' or 'react'
 }) {
   // Try parsing initialProjectData if it's a string, else use as object
-  let initialData = DEFAULT_FILES;
+  let initialData = projectType === 'react' ? REACT_DEFAULT_FILES : DEFAULT_FILES;
   if (initialProjectData) {
     if (typeof initialProjectData === 'string') {
       try {
@@ -40,6 +64,9 @@ export default function WebIDE({
       initialData = initialProjectData;
     }
   }
+
+  // Auto-detect project type from files if not explicitly provided but initialData has .jsx
+  const isReactProject = projectType === 'react' || Object.values(initialData).some(f => f.name.endsWith('.jsx'));
 
   const [files, setFiles] = useState(initialData);
   const [activeFile, setActiveFile] = useState('index.html');
@@ -60,22 +87,55 @@ export default function WebIDE({
 
   const runCode = () => {
     if (!iframeRef.current) return;
-    const html = files['index.html']?.content || '';
-    const css = files['style.css']?.content || '';
-    const js = files['script.js']?.content || '';
+    const html = files['index.html']?.content || (isReactProject ? '<div id="root"></div>' : '');
+    const css = files['style.css']?.content || files['styles.css']?.content || '';
+    
+    let combinedHtml = '';
 
-    // Create a complete HTML document with injected CSS and JS
-    const combinedHtml = `
-      ${html}
-      <style>${css}</style>
-      <script>
-        try {
-          ${js}
-        } catch (err) {
-          console.error(err);
+    if (isReactProject) {
+      let combinedJsx = '';
+      Object.values(files).forEach(file => {
+        if (file.name.endsWith('.js') || file.name.endsWith('.jsx')) {
+          // Strip local imports (import App from './App') and library imports (import React from 'react')
+          let content = file.content.replace(/import\s+.*?\s+from\s+['"].*?['"];?/g, '');
+          // Strip export default
+          content = content.replace(/export\s+default\s+/g, '');
+          // Strip export const/function (just remove the export keyword)
+          content = content.replace(/export\s+(const|let|var|function|class)/g, '$1');
+          
+          combinedJsx += `\n/* --- ${file.name} --- */\n` + content;
         }
-      <\/script>
-    `;
+      });
+
+      combinedHtml = `
+        ${html}
+        <style>${css}</style>
+        <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+        <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+        <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+        <script type="text/babel" data-presets="react,env">
+          try {
+            ${combinedJsx}
+          } catch (err) {
+            console.error(err);
+            document.body.innerHTML += '<div style="color:red; font-family:sans-serif; padding:20px;"><h3>Compilation Error:</h3><pre>' + err.message + '</pre></div>';
+          }
+        <\/script>
+      `;
+    } else {
+      const js = files['script.js']?.content || '';
+      combinedHtml = `
+        ${html}
+        <style>${css}</style>
+        <script>
+          try {
+            ${js}
+          } catch (err) {
+            console.error(err);
+          }
+        <\/script>
+      `;
+    }
 
     const blob = new Blob([combinedHtml], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
@@ -103,6 +163,7 @@ export default function WebIDE({
     let language = 'javascript';
     if (name.endsWith('.html')) language = 'html';
     else if (name.endsWith('.css')) language = 'css';
+    else if (name.endsWith('.jsx')) language = 'javascript';
 
     setFiles((prev) => ({
       ...prev,
