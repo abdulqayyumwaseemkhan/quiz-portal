@@ -8,28 +8,28 @@
   }
 
   body {
-    @apply bg-gradient-to-br from-[#0d140b] via-[#152113] to-[#0d140b] text-slate-100 min-h-screen;
-    background-attachment: fixed;
+    @apply bg-[#0d140b] text-slate-100 min-h-screen;
     margin: 0;
     display: block;
   }
 }
 
 @layer components {
+  /* Renaming the effect from glass to a flat panel style while keeping the class name so JSX doesn't break */
   .glass {
-    @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)];
+    @apply bg-[#152113] border border-[#31572c] shadow-none;
   }
 
   .btn-primary {
-    @apply bg-gradient-to-r from-[#ecf39e] to-[#dbe574] hover:from-[#dbe574] hover:to-[#c5d84c] text-[#31572c] font-black tracking-wide py-2 px-4 rounded-xl transition-all duration-300 shadow-[0_0_15px_rgba(236,243,158,0.2)] hover:shadow-[0_0_25px_rgba(236,243,158,0.4)] disabled:opacity-50 disabled:cursor-not-allowed border border-[#ecf39e]/50;
+    @apply bg-[#ecf39e] hover:bg-[#dbe574] text-[#31572c] font-black tracking-wide py-2 px-4 rounded-xl transition-all duration-200 shadow-none disabled:opacity-50 disabled:cursor-not-allowed border-none;
   }
 
   .btn-secondary {
-    @apply bg-white/5 hover:bg-white/10 text-slate-200 border border-white/10 backdrop-blur-md font-semibold py-2 px-4 rounded-xl transition-all duration-300 shadow-md;
+    @apply bg-[#1e2e1b] hover:bg-[#31572c] text-slate-200 border border-[#31572c] font-semibold py-2 px-4 rounded-xl transition-all duration-200 shadow-none;
   }
 
   .input-field {
-    @apply w-full px-4 py-3 border border-white/10 bg-black/20 backdrop-blur-md text-slate-100 rounded-xl focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 outline-none transition-all placeholder:text-slate-500 shadow-inner;
+    @apply w-full px-4 py-3 border border-[#31572c] bg-[#0d140b] text-slate-100 rounded-xl focus:ring-2 focus:ring-[#ecf39e] focus:border-transparent outline-none transition-all placeholder:text-slate-500 shadow-none;
   }
 
   .card {

@@ -25,9 +25,9 @@ const AdminNavbar = () => {
 
   return (
     <div className="w-64 glass h-screen shadow-2xl fixed left-0 top-0 flex flex-col z-50 border-r border-white/10">
-      <div className="p-6 border-b border-white/10 text-center">
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-primary-400 to-primary-600 bg-clip-text text-transparent tracking-tight">BanoQabil</h2>
-          <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-[0.2em] mt-1">Admin Portal</p>
+      <div className="p-6 border-b border-[#31572c] text-center">
+          <h2 className="text-2xl font-bold text-[#ecf39e] tracking-tight">BanoQabil</h2>
+          <p className="text-[10px] text-[#8aa97a] font-semibold uppercase tracking-[0.2em] mt-1">Admin Portal</p>
       </div>
       <nav className="flex-1 p-4 space-y-2 mt-4">
         {navItems.map((item) => {
@@ -37,10 +37,10 @@ const AdminNavbar = () => {
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center gap-3 px-4 py-4 rounded-xl transition-all duration-300 ${
+              className={`flex items-center gap-3 px-4 py-4 rounded-xl transition-all duration-200 ${
                 isActive 
-                  ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-[0_0_15px_rgba(236,243,158,0.4)] font-semibold' 
-                  : 'text-slate-400 hover:bg-white/5 hover:text-slate-100'
+                  ? 'bg-[#ecf39e] text-[#31572c] font-bold' 
+                  : 'text-slate-400 hover:bg-[#1e2e1b] hover:text-[#ecf39e]'
               }`}
             >
               <Icon size={20} />
@@ -49,10 +49,10 @@ const AdminNavbar = () => {
           );
         })}
       </nav>
-      <div className="p-4 border-t border-white/10">
+      <div className="p-4 border-t border-[#31572c]">
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 w-full px-4 py-4 text-rose-400 hover:bg-rose-500/20 hover:shadow-[0_0_15px_rgba(244,63,94,0.3)] rounded-xl transition-all duration-300 font-semibold text-sm"
+          className="flex items-center gap-3 w-full px-4 py-4 text-rose-400 hover:bg-rose-500/20 rounded-xl transition-all duration-200 font-semibold text-sm"
         >
           <LogOut size={20} />
           <span>Logout</span>
