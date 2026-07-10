@@ -8,22 +8,22 @@ export default {
     extend: {
       colors: {
         primary: {
-          50: '#f5f3ff',
-          100: '#ede9fe',
-          200: '#ddd6fe',
-          300: '#c4b5fd',
-          400: '#a78bfa',
-          500: '#8b5cf6', // Vibrant violet
-          600: '#7c3aed',
-          700: '#6d28d9',
-          800: '#5b21b6',
-          900: '#4c1d95',
-          950: '#2e1065',
+          50: '#f9fbe8',
+          100: '#f1f6cd',
+          200: '#e5f0a3',
+          300: '#ecf39e', // Light Pale Green
+          400: '#c5d84c',
+          500: '#a2b827',
+          600: '#7d911b',
+          700: '#5e6e18',
+          800: '#4a5717',
+          900: '#31572c', // Dark Forest Green
+          950: '#1a3116',
         },
         dark: {
-          900: '#0f172a', // Deep midnight blue for backgrounds
-          800: '#1e293b',
-          700: '#334155',
+          900: '#0d140b', // Deep forest black for backgrounds
+          800: '#152113',
+          700: '#1e2e1b',
         }
       },
       fontFamily: {

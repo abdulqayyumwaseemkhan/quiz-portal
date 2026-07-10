@@ -23,7 +23,7 @@ const StudentNavbar = ({ student }) => {
       <div className="max-w-6xl mx-auto px-6">
         <div className="flex items-center justify-between h-20">
           <div className="flex items-center gap-4">
-            <div className="bg-gradient-to-br from-primary-500 to-primary-600 p-2 rounded-xl text-white shadow-[0_0_15px_rgba(139,92,246,0.5)]">
+            <div className="bg-gradient-to-br from-primary-500 to-primary-600 p-2 rounded-xl text-white shadow-[0_0_15px_rgba(236,243,158,0.5)]">
               <BookOpen size={24} />
             </div>
             <span className="text-xl font-black text-white tracking-tight">BanoQabil</span>

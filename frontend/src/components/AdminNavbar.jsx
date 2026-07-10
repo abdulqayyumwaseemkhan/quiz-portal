@@ -39,7 +39,7 @@ const AdminNavbar = () => {
               to={item.path}
               className={`flex items-center gap-3 px-4 py-4 rounded-xl transition-all duration-300 ${
                 isActive 
-                  ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-[0_0_15px_rgba(139,92,246,0.4)] font-semibold' 
+                  ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-[0_0_15px_rgba(236,243,158,0.4)] font-semibold' 
                   : 'text-slate-400 hover:bg-white/5 hover:text-slate-100'
               }`}
             >

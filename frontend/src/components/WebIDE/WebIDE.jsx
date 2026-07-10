@@ -125,14 +125,16 @@ export default function WebIDE({
         
         <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
         
+        <!-- Global Error Handler -->
+        <script>
+          window.addEventListener('error', function(event) {
+            document.body.innerHTML += '<div style="color:red; font-family:sans-serif; padding:20px; background:#1e1e1e; border-top:1px solid #ff3333; margin-top:20px;"><h3>Runtime Error:</h3><pre>' + event.message + '</pre></div>';
+          });
+        </script>
+
         <!-- Execute compiled JSX as a native module -->
         <script type="text/babel" data-type="module" data-presets="react,env">
-          try {
-            ${combinedJsx}
-          } catch (err) {
-            console.error(err);
-            document.body.innerHTML += '<div style="color:red; font-family:sans-serif; padding:20px;"><h3>Compilation Error:</h3><pre>' + err.message + '</pre></div>';
-          }
+${combinedJsx}
         <\/script>
       `;
     } else {
