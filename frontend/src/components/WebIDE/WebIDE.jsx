@@ -177,6 +177,56 @@ export default function WebIDE({
     fileInputRef.current?.click();
   };
 
+  const compressImage = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          const MAX_DIMENSION = 2048;
+          if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+            if (width > height) {
+              height = Math.round((height * MAX_DIMENSION) / width);
+              width = MAX_DIMENSION;
+            } else {
+              width = Math.round((width * MAX_DIMENSION) / height);
+              height = MAX_DIMENSION;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
+                  type: 'image/webp',
+                  lastModified: Date.now(),
+                });
+                resolve(compressedFile);
+              } else {
+                reject(new Error('Canvas to Blob failed'));
+              }
+            },
+            'image/webp',
+            0.7
+          );
+        };
+        img.onerror = (error) => reject(error);
+      };
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
   const handleImageFileChange = async (e) => {
     if (readOnly) return;
     const file = e.target.files[0];
@@ -187,10 +237,24 @@ export default function WebIDE({
       return;
     }
 
-    const toastId = toast.loading('Uploading image...');
+    const imageCount = Object.values(files).filter(f => f.isImage).length;
+    if (imageCount >= 5) {
+      toast.error('Maximum of 5 images allowed per workspace');
+      return;
+    }
+
+    const toastId = toast.loading('Compressing image...');
     try {
+      const compressedFile = await compressImage(file);
+      
+      if (compressedFile.size > 2 * 1024 * 1024) {
+        toast.error('Image is still larger than 2MB after compression. Please use a smaller image.', { id: toastId });
+        return;
+      }
+
+      toast.loading('Uploading image...', { id: toastId });
       const formData = new FormData();
-      formData.append('image', file);
+      formData.append('image', compressedFile);
 
       // Assumes token is stored in localStorage
       const token = localStorage.getItem('token');
@@ -202,7 +266,7 @@ export default function WebIDE({
       });
 
       const url = res.data.url;
-      const fileName = file.name;
+      const fileName = compressedFile.name;
       
       setFiles((prev) => ({
         ...prev,
@@ -211,7 +275,7 @@ export default function WebIDE({
       toast.success('Image uploaded!', { id: toastId });
     } catch (err) {
       console.error(err);
-      toast.error('Failed to upload image', { id: toastId });
+      toast.error('Failed to process or upload image', { id: toastId });
     }
   };
 

@@ -29,13 +29,14 @@ const uploadToCloudinary = (buffer, folder, originalFilename) => {
 // --- Admin Controllers ---
 
 const createAssignment = asyncHandler(async (req, res) => {
-  const { title, description, dueDate, campus, batch } = req.body;
+  const { title, description, dueDate, campus, batch, projectType } = req.body;
   const assignment = await Assignment.create({
     title,
     description,
     dueDate,
     campus: campus || '',
     batch: batch || '',
+    projectType: projectType || 'vanilla',
     createdBy: req.admin._id,
   });
   res.status(201).json(assignment);
