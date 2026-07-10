@@ -35,12 +35,12 @@ const REACT_DEFAULT_FILES = {
   },
   'App.jsx': {
     name: 'App.jsx',
-    language: 'javascript',
+    language: 'javascriptreact',
     content: 'import React, { useState } from "react";\n\nexport default function App() {\n  const [count, setCount] = useState(0);\n  \n  return (\n    <div className="App">\n      <h1>Hello React!</h1>\n      <button onClick={() => setCount(c => c + 1)}>\n        Count is {count}\n      </button>\n    </div>\n  );\n}\n',
   },
   'index.jsx': {
     name: 'index.jsx',
-    language: 'javascript',
+    language: 'javascriptreact',
     content: 'import React from "react";\nimport { createRoot } from "react-dom/client";\n// App component is automatically available in this environment\n\nconst root = createRoot(document.getElementById("root"));\nroot.render(<App />);\n',
   },
 };
@@ -190,7 +190,7 @@ ${combinedJsx}
     let language = 'javascript';
     if (name.endsWith('.html')) language = 'html';
     else if (name.endsWith('.css')) language = 'css';
-    else if (name.endsWith('.jsx')) language = 'javascript';
+    else if (name.endsWith('.jsx')) language = 'javascriptreact';
 
     setFiles((prev) => ({
       ...prev,
@@ -391,7 +391,11 @@ ${combinedJsx}
                 minimap: { enabled: false },
                 fontSize: 14,
                 wordWrap: 'on',
-                padding: { top: 16 }
+                padding: { top: 16 },
+                autoClosingBrackets: 'always',
+                autoClosingQuotes: 'always',
+                autoIndent: 'full',
+                formatOnPaste: true
               }}
             />
           )}

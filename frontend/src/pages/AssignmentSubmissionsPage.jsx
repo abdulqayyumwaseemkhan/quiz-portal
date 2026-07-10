@@ -63,7 +63,7 @@ const AssignmentSubmissionsPage = () => {
           <div className="flex items-center space-x-4">
             <button 
               onClick={() => setActiveWorkspace(null)}
-              className="text-gray-600 hover:text-white transition-colors"
+              className="text-gray-500 font-bold hover:text-[#13315c] transition-colors"
             >
               ← Back to Submissions
             </button>
