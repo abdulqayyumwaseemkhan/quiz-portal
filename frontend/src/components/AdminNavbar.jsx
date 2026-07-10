@@ -21,6 +21,7 @@ const AdminNavbar = () => {
     { name: 'Assignments', path: '/admin/manage-assignments', icon: FileArchive },
     { name: 'Lecture Notes', path: '/admin/manage-notes', icon: BookOpen },
     { name: 'Barcode Generator', path: '/admin/barcode-generator', icon: Barcode },
+    { name: 'Barcode Scanner', path: '/product', icon: ClipboardList },
   ];
 
   return (

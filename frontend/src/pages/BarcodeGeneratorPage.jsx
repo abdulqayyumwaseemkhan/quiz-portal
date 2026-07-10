@@ -35,7 +35,12 @@ const BarcodeGeneratorPage = () => {
 
     setLoading(true);
     try {
-      const response = await API.post('/barcodes/generate', formData, {
+      const payload = {
+        ...formData,
+        frontendUrl: window.location.origin
+      };
+
+      const response = await API.post('/barcodes/generate', payload, {
         responseType: 'blob' // Important for receiving image
       });
       
@@ -179,6 +184,7 @@ const BarcodeGeneratorPage = () => {
                         <option value="code39">Code 39</option>
                         <option value="ean13">EAN-13</option>
                         <option value="upca">UPC-A</option>
+                        <option value="qrcode">QR Code (Scannable Link)</option>
                       </select>
                     </div>
                     <div>
