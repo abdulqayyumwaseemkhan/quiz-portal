@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import API from '../api';
 import Navbar from '../components/AdminNavbar';
-import { Filter, Download, ArrowLeft, Clock, CheckCircle } from 'lucide-react';
+import { Filter, Download, ArrowLeft, Clock, CheckCircle, BookOpen } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import WebIDE from '../components/WebIDE/WebIDE';
 
 const formatBytes = (bytes, decimals = 2) => {
   if (!+bytes) return '0 Bytes';
@@ -20,6 +21,7 @@ const AssignmentSubmissionsPage = () => {
   const [filter, setFilter] = useState({ campus: '', batch: '' });
   const [meta, setMeta] = useState({ campuses: [], batches: [] });
   const [loading, setLoading] = useState(true);
+  const [activeWorkspace, setActiveWorkspace] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -53,6 +55,30 @@ const AssignmentSubmissionsPage = () => {
         setLoading(false);
     }
   };
+
+  if (activeWorkspace) {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col bg-slate-950">
+        <div className="flex items-center justify-between px-6 py-3 bg-slate-900 border-b border-slate-800">
+          <div className="flex items-center space-x-4">
+            <button 
+              onClick={() => setActiveWorkspace(null)}
+              className="text-slate-400 hover:text-white transition-colors"
+            >
+              ← Back to Submissions
+            </button>
+            <h2 className="text-xl font-bold text-white">{activeWorkspace.studentName}'s Workspace</h2>
+          </div>
+        </div>
+        <div className="flex-1 min-h-0">
+          <WebIDE 
+            initialProjectData={activeWorkspace.projectData}
+            readOnly={true}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex">
@@ -142,22 +168,40 @@ const AssignmentSubmissionsPage = () => {
                      </p>
                   </td>
                   <td className="px-6 py-4">
-                    <p className="font-medium text-slate-200 line-clamp-1 max-w-[200px]" title={sub.originalFileName}>
-                      {sub.originalFileName}
-                    </p>
-                    <p className="text-xs text-slate-400 font-mono">
-                      {formatBytes(sub.fileSizeBytes)}
-                    </p>
+                    {sub.submissionType === 'ide' ? (
+                      <div>
+                        <p className="font-medium text-purple-400 line-clamp-1">Web IDE Workspace</p>
+                        <p className="text-xs text-slate-400 font-mono">Cloud Project</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="font-medium text-slate-200 line-clamp-1 max-w-[200px]" title={sub.originalFileName}>
+                          {sub.originalFileName}
+                        </p>
+                        <p className="text-xs text-slate-400 font-mono">
+                          {formatBytes(sub.fileSizeBytes)}
+                        </p>
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4 text-right">
-                     <a 
-                       href={sub.fileUrl} 
-                       target="_blank" 
-                       rel="noreferrer"
-                       className="inline-flex items-center gap-2 px-4 py-2 bg-primary-500/10 text-primary-400 hover:bg-primary-500/10 font-semibold rounded-lg transition-colors text-sm"
-                     >
-                       <Download size={16} /> Get File
-                     </a>
+                     {sub.submissionType === 'ide' ? (
+                       <button 
+                         onClick={() => setActiveWorkspace(sub)}
+                         className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 font-semibold rounded-lg transition-colors text-sm"
+                       >
+                         <BookOpen size={16} /> View Code
+                       </button>
+                     ) : (
+                       <a 
+                         href={sub.fileUrl} 
+                         target="_blank" 
+                         rel="noreferrer"
+                         className="inline-flex items-center gap-2 px-4 py-2 bg-primary-500/10 text-primary-400 hover:bg-primary-500/10 font-semibold rounded-lg transition-colors text-sm"
+                       >
+                         <Download size={16} /> Get File
+                       </a>
+                     )}
                   </td>
                 </tr>
               ))}

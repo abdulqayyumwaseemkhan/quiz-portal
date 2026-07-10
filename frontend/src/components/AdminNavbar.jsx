@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FileText, ClipboardList, LogOut, Users, FileArchive, BookOpen, MapPin } from 'lucide-react';
+import { LayoutDashboard, FileText, ClipboardList, LogOut, Users, FileArchive, BookOpen, MapPin, Barcode } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const AdminNavbar = () => {
@@ -20,6 +20,7 @@ const AdminNavbar = () => {
     { name: 'Create Quiz', path: '/admin/create-quiz', icon: FileText },
     { name: 'Assignments', path: '/admin/manage-assignments', icon: FileArchive },
     { name: 'Lecture Notes', path: '/admin/manage-notes', icon: BookOpen },
+    { name: 'Barcode Generator', path: '/admin/barcode-generator', icon: Barcode },
   ];
 
   return (

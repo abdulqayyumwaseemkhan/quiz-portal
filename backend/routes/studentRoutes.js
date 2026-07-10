@@ -12,6 +12,8 @@ const {
 const {
   getAssignmentsForStudent,
   submitAssignment,
+  submitIdeAssignment,
+  uploadIdeImage,
   getMySubmissionStatus,
 } = require('../controllers/assignmentController');
 
@@ -31,6 +33,8 @@ router.get('/check-attempt/:quizId/:studentId', checkAttemptStatus);
 // Assignment Routes
 router.get('/assignments/:studentId', getAssignmentsForStudent);
 router.post('/assignments/:id/submit/:studentId', upload.single('file'), submitAssignment);
+router.post('/assignments/:id/submit-ide/:studentId', submitIdeAssignment);
+router.post('/ide/upload-image', upload.single('image'), uploadIdeImage);
 router.get('/assignments/:id/status/:studentId', getMySubmissionStatus);
 
 // Note Routes

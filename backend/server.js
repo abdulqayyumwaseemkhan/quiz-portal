@@ -9,6 +9,7 @@ const quizRoutes = require('./routes/quizRoutes');
 const studentRoutes = require('./routes/studentRoutes');
 const assignmentRoutes = require('./routes/assignmentRoutes');
 const noteRoutes = require('./routes/noteRoutes');
+const barcodeRoutes = require('./routes/barcodeRoutes');
 
 const app = express();
 
@@ -50,6 +51,7 @@ app.use('/api/quizzes', quizRoutes);
 app.use('/api/student', studentRoutes);
 app.use('/api/assignments', assignmentRoutes);
 app.use('/api/notes', noteRoutes);
+app.use('/api/barcodes', barcodeRoutes);
 
 // Base route
 app.get('/', (req, res) => {

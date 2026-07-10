@@ -6,8 +6,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import StudentNavbar from '../components/StudentNavbar';
+import WebIDE from '../components/WebIDE/WebIDE';
 
-const AssignmentCard = ({ assignment, student }) => {
+const AssignmentCard = ({ assignment, student, setIdeAssignment }) => {
   const [status, setStatus] = useState(null);
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -99,7 +100,9 @@ const AssignmentCard = ({ assignment, student }) => {
               <CheckCircle size={16} /> 
               Submitted ✓ {status.isLate ? '(Late)' : ''}
             </div>
-            <p className="text-xs text-slate-500 mb-2 truncate">File: {status.originalFileName}</p>
+            <p className="text-xs text-slate-500 mb-2 truncate">
+              {status.submissionType === 'ide' ? 'Web IDE Workspace' : `File: ${status.originalFileName}`}
+            </p>
           </div>
         ) : null}
 
@@ -129,7 +132,21 @@ const AssignmentCard = ({ assignment, student }) => {
                 : 'bg-slate-800 text-slate-500 cursor-not-allowed'
             }`}
           >
-            {uploading ? `Uploading ${progress}%` : status ? 'Re-upload' : 'Submit Assignment'}
+            {uploading ? `Uploading ${progress}%` : (status && status.submissionType !== 'ide') ? 'Re-upload ZIP' : 'Upload ZIP Assignment'}
+          </button>
+          
+          <div className="flex items-center justify-center space-x-4 my-2">
+            <span className="h-px bg-slate-800 w-full"></span>
+            <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">OR</span>
+            <span className="h-px bg-slate-800 w-full"></span>
+          </div>
+
+          <button 
+            onClick={() => setIdeAssignment({ assignment, status })}
+            className="w-full py-3 rounded-xl font-black uppercase tracking-widest text-sm transition-all bg-purple-600 text-white hover:bg-purple-500 shadow-md shadow-purple-500/30 flex items-center justify-center space-x-2"
+          >
+            <BookOpen size={18} />
+            <span>{(status && status.submissionType === 'ide') ? 'Open Workspace' : 'Start Web IDE'}</span>
           </button>
         </div>
       </div>
@@ -141,6 +158,7 @@ const StudentAssignmentsPage = () => {
   const [assignments, setAssignments] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [ideAssignment, setIdeAssignment] = useState(null); // { assignment, status }
   const navigate = useNavigate();
   
   const student = React.useMemo(() => {
@@ -180,6 +198,48 @@ const StudentAssignmentsPage = () => {
     </div>
   );
 
+  const handleIdeSubmit = async (projectData) => {
+    if (!ideAssignment) return;
+    try {
+      await API.post(`/student/assignments/${ideAssignment.assignment._id}/submit-ide/${student.studentId}`, { projectData });
+      toast.success('Workspace submitted successfully!');
+      
+      // Update local status so UI reflects submitted immediately
+      setAssignments((prev) => prev.map(a => a)); // Trigger re-render (status fetched in card, ideally we'd pass it down, but let's just close IDE for now and let card refetch if needed. To force refetch, we could reload, but closing is fine)
+      setIdeAssignment(null);
+      // Reload page to refresh statuses simply
+      window.location.reload();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to submit workspace');
+      throw err;
+    }
+  };
+
+  if (ideAssignment) {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col bg-slate-950">
+        <div className="flex items-center justify-between px-6 py-3 bg-slate-900 border-b border-slate-800">
+          <div className="flex items-center space-x-4">
+            <button 
+              onClick={() => setIdeAssignment(null)}
+              className="text-slate-400 hover:text-white transition-colors"
+            >
+              ← Back to Assignments
+            </button>
+            <h2 className="text-xl font-bold text-white">{ideAssignment.assignment.title} Workspace</h2>
+          </div>
+        </div>
+        <div className="flex-1 min-h-0">
+          <WebIDE 
+            initialProjectData={ideAssignment.status?.projectData}
+            onSubmit={handleIdeSubmit} 
+            studentId={student.studentId}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 font-sans">
       <StudentNavbar student={student} />
@@ -204,7 +264,7 @@ const StudentAssignmentsPage = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           <AnimatePresence>
             {filteredAssignments.map((assignment) => (
-               <AssignmentCard key={assignment._id} assignment={assignment} student={student} />
+               <AssignmentCard key={assignment._id} assignment={assignment} student={student} setIdeAssignment={setIdeAssignment} />
             ))}
           </AnimatePresence>
         </div>

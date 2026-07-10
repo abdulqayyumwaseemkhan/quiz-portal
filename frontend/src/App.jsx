@@ -25,6 +25,7 @@ import ManageAssignmentsPage from './pages/ManageAssignmentsPage';
 import AssignmentSubmissionsPage from './pages/AssignmentSubmissionsPage';
 import ManageNotesPage from './pages/ManageNotesPage';
 import ManageCampusesPage from './pages/ManageCampusesPage';
+import BarcodeGeneratorPage from './pages/BarcodeGeneratorPage';
 
 function App() {
   return (
@@ -119,6 +120,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <ManageNotesPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/barcode-generator" 
+            element={
+              <ProtectedRoute>
+                <BarcodeGeneratorPage />
               </ProtectedRoute>
             } 
           />

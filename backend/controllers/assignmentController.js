@@ -200,6 +200,103 @@ const getMySubmissionStatus = asyncHandler(async (req, res) => {
   }
 });
 
+const submitIdeAssignment = asyncHandler(async (req, res) => {
+  const { id: assignmentId, studentId } = req.params;
+  const { projectData } = req.body;
+
+  if (!projectData) {
+    res.status(400);
+    throw new Error('Project data is required for IDE submission');
+  }
+
+  const assignment = await Assignment.findById(assignmentId);
+  if (!assignment) {
+    res.status(404);
+    throw new Error('Assignment not found');
+  }
+
+  const student = await Student.findOne({ studentId });
+  if (!student) {
+    res.status(404);
+    throw new Error('Student not found');
+  }
+
+  // Check existing submission
+  let submission = await Submission.findOne({ assignmentId, studentId });
+
+  // If exists and was a file submission, delete old file from Cloudinary
+  if (submission && submission.submissionType === 'file' && submission.filePublicId) {
+    try {
+      await cloudinary.uploader.destroy(submission.filePublicId, { resource_type: 'raw' });
+    } catch (err) {
+      console.error(`Failed to delete old Cloudinary asset ${submission.filePublicId}`, err);
+    }
+  }
+
+  const isLate = new Date() > new Date(assignment.dueDate);
+
+  const submissionData = {
+    assignmentId,
+    studentId,
+    studentName: student.fullName,
+    campus: student.campus,
+    batch: student.batch,
+    submissionType: 'ide',
+    projectData,
+    isLate,
+    submittedAt: Date.now(),
+    // Clear out file fields if overriding a previous file submission
+    fileUrl: null,
+    filePublicId: null,
+    originalFileName: null,
+    fileSizeBytes: null,
+  };
+
+  if (submission) {
+    submission = await Submission.findOneAndUpdate(
+      { _id: submission._id },
+      submissionData,
+      { new: true }
+    );
+  } else {
+    submission = await Submission.create(submissionData);
+  }
+
+  res.status(200).json(submission);
+});
+
+const uploadIdeImage = asyncHandler(async (req, res) => {
+  if (!req.file) {
+    res.status(400);
+    throw new Error('No image uploaded');
+  }
+
+  // Upload to Cloudinary as image
+  const folder = `quiz-portal/ide_images`;
+  try {
+    const stream = cloudinary.uploader.upload_stream(
+      { 
+        folder,
+      },
+      (error, result) => {
+        if (error) {
+          res.status(500);
+          throw new Error('Failed to upload image to Cloudinary');
+        } else {
+          res.status(200).json({ url: result.secure_url });
+        }
+      }
+    );
+    const readableStream = new Readable();
+    readableStream.push(req.file.buffer);
+    readableStream.push(null);
+    readableStream.pipe(stream);
+  } catch (error) {
+    res.status(500);
+    throw new Error('Server error during upload');
+  }
+});
+
 module.exports = {
   createAssignment,
   getAssignments,
@@ -208,5 +305,7 @@ module.exports = {
   getSubmissionsForAssignment,
   getAssignmentsForStudent,
   submitAssignment,
+  submitIdeAssignment,
+  uploadIdeImage,
   getMySubmissionStatus,
 };

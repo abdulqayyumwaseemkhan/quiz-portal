@@ -23,19 +23,27 @@ const submissionSchema = new mongoose.Schema(
     },
     fileUrl: {
       type: String,
-      required: true,
+      required: function() { return this.submissionType !== 'ide'; },
     },
     filePublicId: {
       type: String,
-      required: true,
+      required: function() { return this.submissionType !== 'ide'; },
     },
     originalFileName: {
       type: String,
-      required: true,
+      required: function() { return this.submissionType !== 'ide'; },
     },
     fileSizeBytes: {
       type: Number,
-      required: true,
+      required: function() { return this.submissionType !== 'ide'; },
+    },
+    submissionType: {
+      type: String,
+      enum: ['file', 'ide'],
+      default: 'file',
+    },
+    projectData: {
+      type: mongoose.Schema.Types.Mixed,
     },
     isLate: {
       type: Boolean,
