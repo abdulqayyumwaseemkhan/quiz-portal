@@ -53,7 +53,7 @@ const StudentNavbar = ({ student }) => {
 
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <p className="text-sm font-bold text-[#13315c] uppercase">{student?.fullName}</p
+                <p className="text-sm font-bold text-blue-900 uppercase">{student?.fullName}</p>
                 <p className="text-xs font-semibold text-gray-600 tracking-wider">ID: {student?.studentId}</p>
               </div>
               <button 
@@ -100,7 +100,7 @@ const StudentNavbar = ({ student }) => {
             })}
             <div className="border-t border-[#8da9c4]/30 pt-2 mt-2">
               <div className="px-4 py-2 mb-2">
-                <p className="text-sm font-bold text-[#13315c] uppercase">{student?.fullName}</p>
+                <p className="text-sm font-bold text-blue-900 uppercase">{student?.fullName}</p>
                 <p className="text-xs font-semibold text-gray-600 tracking-wider">ID: {student?.studentId}</p>
               </div>
               <button

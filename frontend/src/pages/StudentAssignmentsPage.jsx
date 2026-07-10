@@ -247,7 +247,7 @@ const StudentAssignmentsPage = () => {
       <div className="p-6 md:p-12">
         <div className="max-w-6xl mx-auto">
           <header className="mb-12">
-            <h1 className="text-3xl font-black text-[#13315c] tracking-tight">Assignments</h1>
+            <h1 className="text-3xl font-black text-blue-900 tracking-tight">Assignments</h1>
             <p className="text-gray-600 font-medium">Upload your projects as .zip files</p>
           </header>
 
