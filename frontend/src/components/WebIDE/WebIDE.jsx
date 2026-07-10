@@ -127,6 +127,8 @@ import { createRoot } from "react-dom/client";
             "imports": {
               "react": "https://esm.sh/react@18.2.0",
               "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+              "react/jsx-runtime": "https://esm.sh/react@18.2.0/jsx-runtime",
+              "react/jsx-dev-runtime": "https://esm.sh/react@18.2.0/jsx-dev-runtime",
               "react-router-dom": "https://esm.sh/react-router-dom@6.22.3",
               "react-icons/": "https://esm.sh/react-icons@5.0.1/"
             }
