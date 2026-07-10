@@ -23,7 +23,7 @@ const StudentNavbar = ({ student }) => {
       <div className="max-w-6xl mx-auto px-6">
         <div className="flex items-center justify-between h-20">
           <div className="flex items-center gap-4">
-            <div className="bg-[#ecf39e] p-2 rounded-xl text-[#31572c] shadow-none">
+            <div className="bg-[#13315c] p-2 rounded-xl text-white shadow-none">
               <BookOpen size={24} />
             </div>
             <span className="text-xl font-black text-white tracking-tight">BanoQabil</span>
@@ -40,7 +40,7 @@ const StudentNavbar = ({ student }) => {
                     key={item.path}
                     to={item.path}
                     className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all duration-200 ${
-                      isActive ? 'bg-[#ecf39e] text-[#31572c]' : 'text-slate-400 hover:bg-[#1e2e1b] hover:text-[#ecf39e]'
+                      isActive ? 'bg-[#13315c] text-white' : 'text-gray-600 hover:bg-gray-50 hover:text-[#13315c]'
                     }`}
                   >
                     <Icon size={18} /> {item.name}
@@ -49,12 +49,12 @@ const StudentNavbar = ({ student }) => {
               })}
             </div>
 
-            <div className="h-8 w-px bg-[#31572c]"></div>
+            <div className="h-8 w-px bg-[#13315c]"></div>
 
             <div className="flex items-center gap-4">
               <div className="text-right">
                 <p className="text-sm font-bold text-white uppercase">{student?.fullName}</p>
-                <p className="text-xs font-semibold text-slate-400 tracking-wider">ID: {student?.studentId}</p>
+                <p className="text-xs font-semibold text-gray-600 tracking-wider">ID: {student?.studentId}</p>
               </div>
               <button 
                 onClick={handleLogout}
@@ -70,7 +70,7 @@ const StudentNavbar = ({ student }) => {
           <div className="md:hidden flex items-center">
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="p-2 rounded-xl text-slate-400 hover:bg-[#1e2e1b] hover:text-[#ecf39e] transition-all"
+              className="p-2 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-[#13315c] transition-all"
             >
               {isOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
@@ -80,7 +80,7 @@ const StudentNavbar = ({ student }) => {
 
       {/* Mobile Nav */}
       {isOpen && (
-        <div className="md:hidden bg-[#0d140b] border-t border-[#31572c]">
+        <div className="md:hidden bg-[#eef4ed] border-t border-[#8da9c4]/30">
           <div className="px-4 py-4 space-y-2">
             {navItems.map((item) => {
               const Icon = item.icon;
@@ -90,7 +90,7 @@ const StudentNavbar = ({ student }) => {
                     key={item.path}
                     to={item.path}
                     className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
-                      isActive ? 'bg-[#ecf39e] text-[#31572c]' : 'text-slate-400 hover:bg-[#1e2e1b] hover:text-[#ecf39e]'
+                      isActive ? 'bg-[#13315c] text-white' : 'text-gray-600 hover:bg-gray-50 hover:text-[#13315c]'
                     }`}
                     onClick={() => setIsOpen(false)}
                   >
@@ -98,10 +98,10 @@ const StudentNavbar = ({ student }) => {
                 </Link>
               );
             })}
-            <div className="border-t border-[#31572c] pt-2 mt-2">
+            <div className="border-t border-[#8da9c4]/30 pt-2 mt-2">
               <div className="px-4 py-2 mb-2">
                 <p className="text-sm font-bold text-white uppercase">{student?.fullName}</p>
-                <p className="text-xs font-semibold text-slate-400 tracking-wider">ID: {student?.studentId}</p>
+                <p className="text-xs font-semibold text-gray-600 tracking-wider">ID: {student?.studentId}</p>
               </div>
               <button
                 onClick={handleLogout}

@@ -75,13 +75,13 @@ const ManageAssignmentsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-transparent text-slate-100 flex">
+    <div className="min-h-screen bg-transparent text-[#13315c] flex">
       <Navbar />
       <main className="flex-1 ml-64 p-8">
         <header className="flex justify-between items-center mb-10">
           <div>
-            <h1 className="text-3xl font-black text-slate-100">Manage Assignments</h1>
-            <p className="text-slate-400">Create assignments and collect zip submissions</p>
+            <h1 className="text-3xl font-black text-[#13315c]">Manage Assignments</h1>
+            <p className="text-gray-600">Create assignments and collect zip submissions</p>
           </div>
           <button 
             onClick={() => setShowAdd(!showAdd)}
@@ -98,11 +98,11 @@ const ManageAssignmentsPage = () => {
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               onSubmit={handleAddAssignment}
-              className="card bg-[#152113] p-8 mb-10 overflow-hidden border-2 border-primary-100"
+              className="card bg-white p-8 mb-10 overflow-hidden border-2 border-primary-100"
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
                 <div className="md:col-span-2">
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Title</label>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Title</label>
                   <input
                     type="text"
                     placeholder="e.g. Final Project Submission"
@@ -113,7 +113,7 @@ const ManageAssignmentsPage = () => {
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Description</label>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Description</label>
                   <textarea
                     placeholder="Instructions for the assignment..."
                     className="input-field h-24 w-full py-3"
@@ -122,7 +122,7 @@ const ManageAssignmentsPage = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Due Date</label>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Due Date</label>
                   <input
                     type="datetime-local"
                     className="input-field h-12 w-full"
@@ -132,7 +132,7 @@ const ManageAssignmentsPage = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Project Type</label>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Project Type</label>
                   <select 
                     className="input-field h-12 w-full"
                     value={formData.projectType}
@@ -143,7 +143,7 @@ const ManageAssignmentsPage = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Campus Filter (Optional)</label>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Campus Filter (Optional)</label>
                   <select 
                     className="input-field h-12 w-full"
                     value={formData.campus}
@@ -154,7 +154,7 @@ const ManageAssignmentsPage = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Batch Filter (Optional)</label>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Batch Filter (Optional)</label>
                   <select 
                     className="input-field h-12 w-full"
                     value={formData.batch}
@@ -172,9 +172,9 @@ const ManageAssignmentsPage = () => {
           )}
         </AnimatePresence>
 
-        <div className="bg-[#152113] rounded-xl shadow-sm border border-[#31572c] overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm border border-[#8da9c4]/30 overflow-hidden">
           <table className="w-full text-left">
-            <thead className="bg-[#152113] text-slate-400 text-xs font-semibold uppercase tracking-widest">
+            <thead className="bg-white text-gray-600 text-xs font-semibold uppercase tracking-widest">
               <tr>
                 <th className="px-8 py-5">Assignment Details</th>
                 <th className="px-8 py-5">Due Date</th>
@@ -184,23 +184,23 @@ const ManageAssignmentsPage = () => {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {assignments.map((assignment) => (
-                <tr key={assignment._id} className="hover:bg-[#152113]/50 transition-colors group">
+                <tr key={assignment._id} className="hover:bg-white0 transition-colors group">
                   <td className="px-8 py-5">
-                    <p className="font-bold text-slate-200 text-lg">{assignment.title}</p>
-                    <p className="text-sm text-slate-400 line-clamp-1 mb-1">{assignment.description || 'No description'}</p>
+                    <p className="font-bold text-[#13315c] text-lg">{assignment.title}</p>
+                    <p className="text-sm text-gray-600 line-clamp-1 mb-1">{assignment.description || 'No description'}</p>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${assignment.projectType === 'react' ? 'bg-cyan-500/20 text-cyan-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
                       {assignment.projectType === 'react' ? 'React' : 'Vanilla JS'}
                     </span>
                   </td>
-                  <td className="px-8 py-5 font-semibold text-slate-300">
+                  <td className="px-8 py-5 font-semibold text-[#13315c]">
                      {new Date(assignment.dueDate).toLocaleString()}
                   </td>
                   <td className="px-8 py-5">
                      <div className="flex flex-col">
-                       <span className="text-xs font-semibold text-[#ecf39e] bg-[#ecf39e]/10 px-2 py-1 rounded-md w-fit mb-1">
+                       <span className="text-xs font-semibold text-[#13315c] bg-[#8da9c4]/20 px-2 py-1 rounded-md w-fit mb-1">
                          {assignment.campus || 'All Campuses'}
                        </span>
-                       <span className="text-xs font-semibold text-slate-400 bg-[#1e2e1b] px-2 py-1 rounded-md w-fit">
+                       <span className="text-xs font-semibold text-gray-600 bg-gray-50 px-2 py-1 rounded-md w-fit">
                          {assignment.batch || 'All Batches'}
                        </span>
                      </div>
@@ -209,14 +209,14 @@ const ManageAssignmentsPage = () => {
                     <div className="flex justify-end gap-3">
                         <Link 
                           to={`/admin/assignments/${assignment._id}/submissions`}
-                          className="p-3 bg-[#152113] text-[#ecf39e] hover:bg-[#ecf39e]/10 rounded-lg shadow-sm border border-[#31572c] transition-all"
+                          className="p-3 bg-white text-[#13315c] hover:bg-[#8da9c4]/20 rounded-lg shadow-sm border border-[#8da9c4]/30 transition-all"
                           title="View Submissions"
                         >
                           <Eye size={20} />
                         </Link>
                         <button 
                           onClick={() => handleDelete(assignment._id)}
-                          className="p-3 bg-[#152113] text-rose-500 hover:bg-rose-500/10 rounded-lg shadow-sm border border-[#31572c] transition-all"
+                          className="p-3 bg-white text-rose-500 hover:bg-rose-500/10 rounded-lg shadow-sm border border-[#8da9c4]/30 transition-all"
                           title="Delete Assignment"
                         >
                           <Trash2 size={20} />
@@ -230,7 +230,7 @@ const ManageAssignmentsPage = () => {
           {assignments.length === 0 && !loading && (
             <div className="p-20 text-center">
               <FileArchive className="mx-auto text-gray-100 mb-6" size={80} />
-              <p className="text-slate-500 font-semibold text-xl uppercase tracking-widest">No assignments found</p>
+              <p className="text-gray-500 font-semibold text-xl uppercase tracking-widest">No assignments found</p>
             </div>
           )}
         </div>

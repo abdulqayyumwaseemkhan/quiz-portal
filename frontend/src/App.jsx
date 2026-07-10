@@ -29,7 +29,7 @@ import BarcodeGeneratorPage from './pages/BarcodeGeneratorPage';
 
 function App() {
   return (
-    <div className="min-h-screen bg-[#0d140b] text-slate-100 font-sans selection:bg-[#ecf39e] selection:text-[#31572c]">
+    <div className="min-h-screen bg-[#eef4ed] text-[#13315c] font-sans selection:bg-[#13315c] selection:text-white">
       <AuthProvider>
         <Router>
           <Toaster position="top-right" />

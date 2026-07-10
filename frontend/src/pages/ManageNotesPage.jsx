@@ -103,13 +103,13 @@ const ManageNotesPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-transparent text-slate-100 flex">
+    <div className="min-h-screen bg-transparent text-[#13315c] flex">
       <Navbar />
       <main className="flex-1 ml-64 p-8">
         <header className="flex justify-between items-center mb-10">
           <div>
-            <h1 className="text-3xl font-black text-slate-100">Manage Lecture Notes</h1>
-            <p className="text-slate-400">Upload and organize course materials</p>
+            <h1 className="text-3xl font-black text-[#13315c]">Manage Lecture Notes</h1>
+            <p className="text-gray-600">Upload and organize course materials</p>
           </div>
           <button 
             onClick={() => setShowAdd(!showAdd)}
@@ -126,11 +126,11 @@ const ManageNotesPage = () => {
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               onSubmit={handleAddNote}
-              className="card bg-slate-900 p-8 mb-10 overflow-hidden border-2 border-primary-100"
+              className="card bg-white p-8 mb-10 overflow-hidden border-2 border-primary-100"
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Lecture Number</label>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Lecture Number</label>
                   <input
                     type="number"
                     min="1"
@@ -142,7 +142,7 @@ const ManageNotesPage = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Lecture Title</label>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Lecture Title</label>
                   <input
                     type="text"
                     placeholder="e.g. Introduction to React"
@@ -153,7 +153,7 @@ const ManageNotesPage = () => {
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Description</label>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Description</label>
                   <textarea
                     placeholder="Brief overview of the lecture..."
                     className="input-field h-24 w-full py-3"
@@ -162,10 +162,10 @@ const ManageNotesPage = () => {
                   />
                 </div>
                 <div className="md:col-span-2">
-                   <label className="flex items-center justify-center w-full h-16 px-4 transition bg-slate-900 border-2 border-slate-700 border-dashed rounded-xl appearance-none cursor-pointer hover:border-primary-400 focus:outline-none relative">
+                   <label className="flex items-center justify-center w-full h-16 px-4 transition bg-white border-2 border-[#8da9c4]/30 border-dashed rounded-xl appearance-none cursor-pointer hover:border-primary-400 focus:outline-none relative">
                        <span className="flex items-center space-x-2">
-                           <UploadCloud className="w-6 h-6 text-slate-500" />
-                           <span className="font-medium text-slate-400">
+                           <UploadCloud className="w-6 h-6 text-gray-500" />
+                           <span className="font-medium text-gray-600">
                              {file ? file.name : 'Select file (PDF, PPT, DOC, ZIP, PNG, JPG)'}
                            </span>
                        </span>
@@ -173,7 +173,7 @@ const ManageNotesPage = () => {
                    </label>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Campus Filter (Optional)</label>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Campus Filter (Optional)</label>
                   <select 
                     className="input-field h-12 w-full"
                     value={formData.campus}
@@ -184,7 +184,7 @@ const ManageNotesPage = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Batch Filter (Optional)</label>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Batch Filter (Optional)</label>
                   <select 
                     className="input-field h-12 w-full"
                     value={formData.batch}
@@ -204,9 +204,9 @@ const ManageNotesPage = () => {
           )}
         </AnimatePresence>
 
-        <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm border border-[#8da9c4]/30 overflow-hidden">
           <table className="w-full text-left">
-            <thead className="bg-slate-900 text-slate-400 text-xs font-semibold uppercase tracking-widest">
+            <thead className="bg-white text-gray-600 text-xs font-semibold uppercase tracking-widest">
               <tr>
                 <th className="px-8 py-5">#</th>
                 <th className="px-8 py-5">Lecture Details</th>
@@ -217,25 +217,25 @@ const ManageNotesPage = () => {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {notes.map((note) => (
-                <tr key={note._id} className="hover:bg-slate-900/50 transition-colors group">
-                  <td className="px-8 py-5 font-bold text-slate-500 text-lg">
+                <tr key={note._id} className="hover:bg-white0 transition-colors group">
+                  <td className="px-8 py-5 font-bold text-gray-500 text-lg">
                     {note.lectureNumber}
                   </td>
                   <td className="px-8 py-5">
-                    <p className="font-bold text-slate-200 text-lg">{note.lectureTitle}</p>
-                    <p className="text-sm text-slate-400 line-clamp-1">{note.description || 'No description'}</p>
+                    <p className="font-bold text-[#13315c] text-lg">{note.lectureTitle}</p>
+                    <p className="text-sm text-gray-600 line-clamp-1">{note.description || 'No description'}</p>
                   </td>
                   <td className="px-8 py-5">
-                    <a href={note.fileUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold text-primary-600 hover:underline flex items-center gap-2">
+                    <a href={note.fileUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold text-[#13315c] hover:underline flex items-center gap-2">
                        <FileText size={16} /> {note.fileType.toUpperCase()}
                     </a>
                   </td>
                   <td className="px-8 py-5">
                      <div className="flex flex-col">
-                       <span className="text-xs font-semibold text-primary-600 bg-primary-500/10 px-2 py-1 rounded-md w-fit mb-1">
+                       <span className="text-xs font-semibold text-[#13315c] bg-[#8da9c4]/20 px-2 py-1 rounded-md w-fit mb-1">
                          {note.campus || 'All Campuses'}
                        </span>
-                       <span className="text-xs font-semibold text-slate-400 bg-slate-800 px-2 py-1 rounded-md w-fit">
+                       <span className="text-xs font-semibold text-gray-600 bg-gray-50 px-2 py-1 rounded-md w-fit">
                          {note.batch || 'All Batches'}
                        </span>
                      </div>
@@ -243,7 +243,7 @@ const ManageNotesPage = () => {
                   <td className="px-8 py-5 text-right">
                     <button 
                       onClick={() => handleDelete(note._id)}
-                      className="p-3 bg-slate-900 text-rose-500 hover:bg-rose-500/10 rounded-lg shadow-sm border border-slate-800 transition-all"
+                      className="p-3 bg-white text-rose-500 hover:bg-rose-500/10 rounded-lg shadow-sm border border-[#8da9c4]/30 transition-all"
                       title="Delete Note"
                     >
                       <Trash2 size={20} />
@@ -256,7 +256,7 @@ const ManageNotesPage = () => {
           {notes.length === 0 && !loading && (
             <div className="p-20 text-center">
               <FileText className="mx-auto text-gray-100 mb-6" size={80} />
-              <p className="text-slate-500 font-semibold text-xl uppercase tracking-widest">No lecture notes found</p>
+              <p className="text-gray-500 font-semibold text-xl uppercase tracking-widest">No lecture notes found</p>
             </div>
           )}
         </div>

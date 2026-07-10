@@ -75,11 +75,11 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment }) => {
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="card flex flex-col justify-between overflow-hidden p-8 border border-[#31572c] shadow-xl hover:shadow-2xl transition-all rounded-xl bg-[#152113]"
+      className="card flex flex-col justify-between overflow-hidden p-8 border border-[#8da9c4]/30 shadow-xl hover:shadow-2xl transition-all rounded-xl bg-white"
     >
       <div>
         <div className="flex items-start justify-between mb-6">
-          <div className="p-3 rounded-xl bg-[#ecf39e]/20 text-[#ecf39e]">
+          <div className="p-3 rounded-xl bg-[#8da9c4]/20 text-[#13315c]">
             <FileArchive size={24} />
           </div>
           <div className="flex flex-col items-end">
@@ -89,28 +89,28 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment }) => {
           </div>
         </div>
         
-        <h3 className="text-2xl font-black text-slate-100 mb-2 truncate leading-tight">{assignment.title}</h3>
-        <p className="text-slate-400 text-sm font-medium line-clamp-3 mb-6 leading-relaxed">{assignment.description || 'No description provided.'}</p>
+        <h3 className="text-2xl font-black text-[#13315c] mb-2 truncate leading-tight">{assignment.title}</h3>
+        <p className="text-gray-600 text-sm font-medium line-clamp-3 mb-6 leading-relaxed">{assignment.description || 'No description provided.'}</p>
       </div>
 
-      <div className="mt-auto border-t border-[#31572c] pt-6">
+      <div className="mt-auto border-t border-[#8da9c4]/30 pt-6">
         {status ? (
           <div className="mb-4">
             <div className="flex items-center gap-2 text-green-400 bg-green-400/10 p-4 rounded-xl text-xs font-bold uppercase tracking-wider mb-4">
               <CheckCircle size={16} /> 
               Submitted ✓ {status.isLate ? '(Late)' : ''}
             </div>
-            <p className="text-xs text-slate-500 mb-2 truncate">
+            <p className="text-xs text-gray-500 mb-2 truncate">
               {status.submissionType === 'ide' ? 'Web IDE Workspace' : `File: ${status.originalFileName}`}
             </p>
           </div>
         ) : null}
 
         <div className="flex flex-col gap-3">
-          <label className="flex items-center justify-center w-full h-12 px-4 transition bg-[#1e2e1b] border-2 border-[#31572c] border-dashed rounded-xl appearance-none cursor-pointer hover:border-primary-500 focus:outline-none relative">
+          <label className="flex items-center justify-center w-full h-12 px-4 transition bg-gray-50 border-2 border-[#8da9c4]/30 border-dashed rounded-xl appearance-none cursor-pointer hover:border-primary-500 focus:outline-none relative">
               <span className="flex items-center space-x-2">
-                  <UploadCloud className="w-5 h-5 text-slate-400" />
-                  <span className="font-medium text-slate-400 text-sm">
+                  <UploadCloud className="w-5 h-5 text-gray-600" />
+                  <span className="font-medium text-gray-600 text-sm">
                     {file ? file.name : 'Select .zip file'}
                   </span>
               </span>
@@ -118,7 +118,7 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment }) => {
           </label>
 
           {uploading && (
-            <div className="w-full bg-[#1e2e1b] h-2 rounded-full overflow-hidden mb-2">
+            <div className="w-full bg-gray-50 h-2 rounded-full overflow-hidden mb-2">
               <div className="h-full bg-primary-500 transition-all duration-300" style={{ width: `${progress}%` }}></div>
             </div>
           )}
@@ -129,16 +129,16 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment }) => {
             className={`w-full py-3 rounded-xl font-black uppercase tracking-widest text-sm transition-all ${
               file && !uploading 
                 ? 'btn-primary' 
-                : 'bg-[#1e2e1b] text-slate-500 cursor-not-allowed'
+                : 'bg-gray-50 text-gray-500 cursor-not-allowed'
             }`}
           >
             {uploading ? `Uploading ${progress}%` : (status && status.submissionType !== 'ide') ? 'Re-upload ZIP' : 'Upload ZIP Assignment'}
           </button>
           
           <div className="flex items-center justify-center space-x-4 my-2">
-            <span className="h-px bg-[#1e2e1b] w-full"></span>
-            <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">OR</span>
-            <span className="h-px bg-[#1e2e1b] w-full"></span>
+            <span className="h-px bg-gray-50 w-full"></span>
+            <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">OR</span>
+            <span className="h-px bg-gray-50 w-full"></span>
           </div>
 
           <button 
@@ -194,7 +194,7 @@ const StudentAssignmentsPage = () => {
 
   if (loading) return (
     <div className="flex items-center justify-center min-h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 text-[#ecf39e]"></div>
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 text-[#13315c]"></div>
     </div>
   );
 
@@ -218,11 +218,11 @@ const StudentAssignmentsPage = () => {
   if (ideAssignment) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col bg-transparent">
-        <div className="flex items-center justify-between px-6 py-3 bg-[#152113] border-b border-[#31572c]">
+        <div className="flex items-center justify-between px-6 py-3 bg-white border-b border-[#8da9c4]/30">
           <div className="flex items-center space-x-4">
             <button 
               onClick={() => setIdeAssignment(null)}
-              className="text-slate-400 hover:text-white transition-colors"
+              className="text-gray-600 hover:text-white transition-colors"
             >
               ← Back to Assignments
             </button>
@@ -248,15 +248,15 @@ const StudentAssignmentsPage = () => {
         <div className="max-w-6xl mx-auto">
           <header className="mb-12">
             <h1 className="text-3xl font-black text-white tracking-tight">Assignments</h1>
-            <p className="text-slate-400 font-medium">Upload your projects as .zip files</p>
+            <p className="text-gray-600 font-medium">Upload your projects as .zip files</p>
           </header>
 
         <div className="relative mb-12">
-            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500" size={24} />
+            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-500" size={24} />
             <input 
                type="text"
                placeholder="Search assignments..."
-               className="w-full h-16 pl-16 pr-8 bg-[#152113] rounded-xl shadow-sm border border-[#31572c] focus:ring-4 focus:ring-primary-500/20 text-slate-100 text-lg font-medium transition-all"
+               className="w-full h-16 pl-16 pr-8 bg-white rounded-xl shadow-sm border border-[#8da9c4]/30 focus:ring-4 focus:ring-primary-500/20 text-[#13315c] text-lg font-medium transition-all"
                value={searchTerm}
                onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -274,13 +274,13 @@ const StudentAssignmentsPage = () => {
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-center py-32 bg-[#152113] rounded-xl shadow-sm border border-[#31572c]"
+            className="text-center py-32 bg-white rounded-xl shadow-sm border border-[#8da9c4]/30"
           >
-            <div className="bg-[#1e2e1b] w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
-               <FileArchive className="text-slate-500" size={48} />
+            <div className="bg-gray-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
+               <FileArchive className="text-gray-500" size={48} />
             </div>
-            <p className="text-slate-100 font-black text-2xl tracking-tight">No assignments found.</p>
-            <p className="text-slate-400 font-medium mt-1">You're all caught up!</p>
+            <p className="text-[#13315c] font-black text-2xl tracking-tight">No assignments found.</p>
+            <p className="text-gray-600 font-medium mt-1">You're all caught up!</p>
           </motion.div>
         )}
       </div>

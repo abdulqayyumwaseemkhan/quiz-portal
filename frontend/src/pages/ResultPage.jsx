@@ -30,7 +30,7 @@ const ResultPage = () => {
   }, [resultId]);
 
   if (loading) return (
-    <div className="flex items-center justify-center min-h-screen bg-transparent text-primary-500">
+    <div className="flex items-center justify-center min-h-screen bg-transparent text-[#13315c]">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-current mb-4"></div>
       <p className="ml-4 font-bold uppercase tracking-widest text-sm">Calibrating Results...</p>
     </div>
@@ -41,8 +41,8 @@ const ResultPage = () => {
        <div className="bg-red-500/10 p-6 rounded-full text-rose-500 mb-6">
           <XCircle size={48} />
        </div>
-       <h1 className="text-2xl font-black text-slate-100 mb-2 uppercase">Result Not Found</h1>
-       <p className="text-slate-400 mb-8">We couldn't find the quiz result you're looking for.</p>
+       <h1 className="text-2xl font-black text-[#13315c] mb-2 uppercase">Result Not Found</h1>
+       <p className="text-gray-600 mb-8">We couldn't find the quiz result you're looking for.</p>
        <Link to="/quizzes" className="btn-primary px-8 py-3 rounded-xl flex items-center gap-2">
           <Home size={20} /> Return to Home
        </Link>
@@ -58,17 +58,17 @@ const ResultPage = () => {
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="max-w-xl w-full bg-slate-900 rounded-2xl shadow-2xl p-12 text-center border border-slate-800"
+            className="max-w-xl w-full bg-white rounded-2xl shadow-2xl p-12 text-center border border-[#8da9c4]/30"
           >
             <div className="w-24 h-24 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
               <Award className="text-amber-400" size={48} />
             </div>
-            <h1 className="text-4xl font-black text-slate-100 mb-4">Results Pending</h1>
-            <p className="text-xl text-slate-400 font-medium mb-10 leading-relaxed">
-              Great job, <span className="text-slate-100 font-black">{result.studentName}</span>! Your answers have been recorded.
+            <h1 className="text-4xl font-black text-[#13315c] mb-4">Results Pending</h1>
+            <p className="text-xl text-gray-600 font-medium mb-10 leading-relaxed">
+              Great job, <span className="text-[#13315c] font-black">{result.studentName}</span>! Your answers have been recorded.
             </p>
-            <div className="bg-slate-800 rounded-xl p-6 mb-10 border border-dashed border-slate-700">
-              <p className="text-slate-300 font-bold">"{result.message || 'Results are being processed and will be released soon!'}"</p>
+            <div className="bg-gray-50 rounded-xl p-6 mb-10 border border-dashed border-[#8da9c4]/30">
+              <p className="text-[#13315c] font-bold">"{result.message || 'Results are being processed and will be released soon!'}"</p>
             </div>
             <Link to="/quizzes" className="btn-primary w-full h-16 text-lg flex items-center justify-center gap-3">
                <Home size={24} /> Back to Quizzes
@@ -88,7 +88,7 @@ const ResultPage = () => {
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="card text-center mb-12 relative overflow-hidden p-10 border border-slate-800 shadow-2xl bg-slate-900 rounded-2xl"
+          className="card text-center mb-12 relative overflow-hidden p-10 border border-[#8da9c4]/30 shadow-2xl bg-white rounded-2xl"
         >
           <div className={`absolute top-0 left-0 w-full h-3 ${isPassed ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
           <div className="flex justify-center mb-6 pt-4">
@@ -101,20 +101,20 @@ const ResultPage = () => {
               <Trophy size={64} />
             </motion.div>
           </div>
-          <h1 className="text-4xl font-black text-slate-100 mb-2">Quiz Completed!</h1>
-          <p className="text-xl text-slate-400 mb-10 font-medium">Great effort, {result.studentName}!</p>
+          <h1 className="text-4xl font-black text-[#13315c] mb-2">Quiz Completed!</h1>
+          <p className="text-xl text-gray-600 mb-10 font-medium">Great effort, {result.studentName}!</p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
-            <motion.div whileHover={{ y: -5 }} className="bg-slate-800 p-8 rounded-xl shadow-sm border border-slate-700">
-              <p className="text-slate-500 text-xs font-black mb-1 uppercase tracking-widest">Score</p>
-              <p className="text-3xl font-extrabold text-slate-100">{result.score} / {result.totalPossibleMarks}</p>
+            <motion.div whileHover={{ y: -5 }} className="bg-gray-50 p-8 rounded-xl shadow-sm border border-[#8da9c4]/30">
+              <p className="text-gray-500 text-xs font-black mb-1 uppercase tracking-widest">Score</p>
+              <p className="text-3xl font-extrabold text-[#13315c]">{result.score} / {result.totalPossibleMarks}</p>
             </motion.div>
-            <motion.div whileHover={{ y: -5 }} className="bg-slate-800 p-8 rounded-xl shadow-sm border border-slate-700">
-              <p className="text-slate-500 text-xs font-black mb-1 uppercase tracking-widest">Percentage</p>
+            <motion.div whileHover={{ y: -5 }} className="bg-gray-50 p-8 rounded-xl shadow-sm border border-[#8da9c4]/30">
+              <p className="text-gray-500 text-xs font-black mb-1 uppercase tracking-widest">Percentage</p>
               <p className={`text-4xl font-black ${isPassed ? 'text-emerald-500' : 'text-rose-500'}`}>{result.percentage}%</p>
             </motion.div>
-            <motion.div whileHover={{ y: -5 }} className="bg-slate-800 p-8 rounded-xl shadow-sm border border-slate-700">
-              <p className="text-slate-500 text-xs font-black mb-1 uppercase tracking-widest">Result</p>
+            <motion.div whileHover={{ y: -5 }} className="bg-gray-50 p-8 rounded-xl shadow-sm border border-[#8da9c4]/30">
+              <p className="text-gray-500 text-xs font-black mb-1 uppercase tracking-widest">Result</p>
               <p className={`text-3xl font-extrabold ${isPassed ? 'text-emerald-500' : 'text-rose-500'}`}>{isPassed ? 'PASSED' : 'FAILED'}</p>
             </motion.div>
           </div>
@@ -126,8 +126,8 @@ const ResultPage = () => {
           </div>
         </motion.div>
 
-        <h2 className="text-3xl font-black text-slate-100 mb-8 flex items-center gap-3 px-4">
-          <FileText className="text-primary-500" size={32} /> Review Answers
+        <h2 className="text-3xl font-black text-[#13315c] mb-8 flex items-center gap-3 px-4">
+          <FileText className="text-[#13315c]" size={32} /> Review Answers
         </h2>
 
         <div className="space-y-8">
@@ -137,11 +137,11 @@ const ResultPage = () => {
               initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              className={`card border-l-8 p-8 transition-shadow hover:shadow-lg bg-slate-900 border-t border-r border-b border-t-slate-800 border-r-slate-800 border-b-slate-800 ${item.isCorrect ? 'border-l-green-500' : 'border-l-red-500'}`}
+              className={`card border-l-8 p-8 transition-shadow hover:shadow-lg bg-white border-t border-r border-b border-t-slate-800 border-r-slate-800 border-b-slate-800 ${item.isCorrect ? 'border-l-green-500' : 'border-l-red-500'}`}
             >
               <div className="flex justify-between items-start mb-6">
-                <h4 className="text-xl font-bold text-slate-100 leading-tight">
-                  <span className="text-slate-500 mr-2 text-sm">Question {idx + 1}</span><br/>
+                <h4 className="text-xl font-bold text-[#13315c] leading-tight">
+                  <span className="text-gray-500 mr-2 text-sm">Question {idx + 1}</span><br/>
                   {item.questionId?.questionText}
                 </h4>
                 {item.isCorrect ? (
@@ -155,14 +155,14 @@ const ResultPage = () => {
                 )}
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm mt-6 p-6 bg-slate-800 rounded-xl border border-slate-700">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm mt-6 p-6 bg-gray-50 rounded-xl border border-[#8da9c4]/30">
                 <div>
-                  <p className="text-slate-500 font-bold mb-2 uppercase tracking-tighter">Your Answer</p>
+                  <p className="text-gray-500 font-bold mb-2 uppercase tracking-tighter">Your Answer</p>
                   <p className={`text-lg font-black ${item.isCorrect ? 'text-green-400' : 'text-red-400'}`}>{item.answer || 'No Answer'}</p>
                 </div>
                 {!item.isCorrect && (
                   <div>
-                    <p className="text-slate-500 font-bold mb-2 uppercase tracking-tighter">Correct Answer</p>
+                    <p className="text-gray-500 font-bold mb-2 uppercase tracking-tighter">Correct Answer</p>
                     <p className="text-lg font-black text-green-400">{item.questionId.correctAnswer}</p>
                   </div>
                 )}

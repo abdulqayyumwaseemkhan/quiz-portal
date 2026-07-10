@@ -38,27 +38,27 @@ const CreateQuizPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-transparent text-slate-100 flex">
+    <div className="min-h-screen bg-transparent text-[#13315c] flex">
       <Navbar />
       <main className="flex-1 ml-64 p-8 max-w-5xl">
-        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-400 hover:text-slate-200 mb-6 transition-colors font-medium">
+        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-600 hover:text-[#13315c] mb-6 transition-colors font-medium">
           <ArrowLeft size={20} /> Back
         </button>
 
         <header className="mb-10">
-            <h1 className="text-4xl font-black text-slate-100 mb-2">Configure New Quiz</h1>
-            <p className="text-slate-400 font-medium">Set the identity, timing rules, and availability for your test</p>
+            <h1 className="text-4xl font-black text-[#13315c] mb-2">Configure New Quiz</h1>
+            <p className="text-gray-600 font-medium">Set the identity, timing rules, and availability for your test</p>
         </header>
 
         <motion.form 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           onSubmit={handleSubmit} 
-          className="card bg-slate-900 p-10 space-y-8 shadow-xl border-none rounded-3xl"
+          className="card bg-white p-10 space-y-8 shadow-xl border-none rounded-3xl"
         >
           <div className="grid grid-cols-1 gap-8">
             <div className="space-y-2">
-              <label className="block text-xs font-black text-slate-500 uppercase tracking-widest">Quiz Title</label>
+              <label className="block text-xs font-black text-gray-500 uppercase tracking-widest">Quiz Title</label>
               <input
                 type="text"
                 placeholder="e.g. JavaScript Fundamentals Final"
@@ -70,7 +70,7 @@ const CreateQuizPage = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="block text-xs font-black text-slate-500 uppercase tracking-widest">Description</label>
+              <label className="block text-xs font-black text-gray-500 uppercase tracking-widest">Description</label>
               <textarea
                 placeholder="Shortly explain what this quiz covers..."
                 className="input-field py-4 min-h-[120px] border-2"
@@ -82,7 +82,7 @@ const CreateQuizPage = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-2">
-                <label className="block text-xs font-black text-slate-500 uppercase tracking-widest">Duration (Minutes)</label>
+                <label className="block text-xs font-black text-gray-500 uppercase tracking-widest">Duration (Minutes)</label>
                 <input
                   type="number"
                   className="input-field py-4 border-2"
@@ -92,7 +92,7 @@ const CreateQuizPage = () => {
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-xs font-black text-slate-500 uppercase tracking-widest">Total Marks</label>
+                <label className="block text-xs font-black text-gray-500 uppercase tracking-widest">Total Marks</label>
                 <input
                   type="number"
                   className="input-field py-4 border-2"
@@ -103,14 +103,14 @@ const CreateQuizPage = () => {
               </div>
             </div>
 
-            <div className="p-6 bg-primary-500/10 rounded-2xl border border-primary-100">
+            <div className="p-6 bg-[#8da9c4]/20 rounded-2xl border border-primary-100">
                <div className="flex items-center gap-2 mb-6 text-primary-700">
                   <Calendar size={20} />
                   <h3 className="font-bold uppercase tracking-wider text-sm">Schedule Availability (Optional)</h3>
                </div>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="block text-xs font-bold text-primary-600 uppercase">Start Date & Time</label>
+                    <label className="block text-xs font-bold text-[#13315c] uppercase">Start Date & Time</label>
                     <input
                       type="datetime-local"
                       className="input-field border-primary-200"
@@ -119,7 +119,7 @@ const CreateQuizPage = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="block text-xs font-bold text-primary-600 uppercase">End Date & Time</label>
+                    <label className="block text-xs font-bold text-[#13315c] uppercase">End Date & Time</label>
                     <input
                       type="datetime-local"
                       className="input-field border-primary-200"
@@ -128,7 +128,7 @@ const CreateQuizPage = () => {
                     />
                   </div>
                </div>
-               <p className="mt-4 text-xs text-primary-500 font-medium">If left blank, the quiz will be available immediately and forever.</p>
+               <p className="mt-4 text-xs text-[#13315c] font-medium">If left blank, the quiz will be available immediately and forever.</p>
             </div>
           </div>
 

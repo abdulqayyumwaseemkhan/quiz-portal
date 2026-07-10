@@ -29,19 +29,19 @@ const AdminRegisterPage = () => {
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="max-w-md w-full bg-slate-900 rounded-3xl shadow-2xl p-10"
+        className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-10"
       >
         <div className="text-center mb-10">
-          <div className="bg-primary-500/10 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 -rotate-6 border-2 border-primary-500/20">
-            <ShieldCheck className="text-primary-400" size={32} />
+          <div className="bg-[#8da9c4]/20 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 -rotate-6 border-2 border-primary-500/20">
+            <ShieldCheck className="text-[#13315c]" size={32} />
           </div>
-          <h2 className="text-3xl font-black text-slate-100 tracking-tight">Admin Registry</h2>
-          <p className="text-slate-500 mt-2 uppercase tracking-[0.2em] text-[10px] font-black">Create your management account</p>
+          <h2 className="text-3xl font-black text-[#13315c] tracking-tight">Admin Registry</h2>
+          <p className="text-gray-500 mt-2 uppercase tracking-[0.2em] text-[10px] font-black">Create your management account</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Full Name</label>
+            <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Full Name</label>
             <div className="relative">
               <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" size={20} />
               <input
@@ -56,7 +56,7 @@ const AdminRegisterPage = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Email Address</label>
+            <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Email Address</label>
             <div className="relative">
               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" size={20} />
               <input
@@ -71,7 +71,7 @@ const AdminRegisterPage = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Password</label>
+            <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Password</label>
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" size={20} />
               <input
@@ -95,8 +95,8 @@ const AdminRegisterPage = () => {
         </form>
 
         <div className="mt-8 text-center">
-            <p className="text-slate-500 text-sm font-medium">Already have an account?</p>
-            <Link to="/admin/login" className="text-primary-400 font-black uppercase text-xs tracking-tighter hover:underline mt-1 inline-block">
+            <p className="text-gray-500 text-sm font-medium">Already have an account?</p>
+            <Link to="/admin/login" className="text-[#13315c] font-black uppercase text-xs tracking-tighter hover:underline mt-1 inline-block">
                 Sign In Instead
             </Link>
         </div>

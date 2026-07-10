@@ -72,15 +72,15 @@ const QuizListPage = () => {
         <div className="max-w-6xl mx-auto">
           <header className="mb-12">
             <h1 className="text-3xl font-black text-white tracking-tight">Available Quizzes</h1>
-            <p className="text-slate-400 font-medium">Select a challenge to prove your skills</p>
+            <p className="text-gray-600 font-medium">Select a challenge to prove your skills</p>
           </header>
 
         <div className="relative mb-12">
-            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500" size={24} />
+            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-500" size={24} />
             <input 
                type="text"
                placeholder="Search by quiz title..."
-               className="w-full h-16 pl-16 pr-8 bg-slate-900 rounded-xl shadow-sm border border-slate-800 focus:ring-4 focus:ring-primary-500/20 text-slate-100 text-lg font-medium transition-all"
+               className="w-full h-16 pl-16 pr-8 bg-white rounded-xl shadow-sm border border-[#8da9c4]/30 focus:ring-4 focus:ring-primary-500/20 text-[#13315c] text-lg font-medium transition-all"
                value={searchTerm}
                onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -98,26 +98,26 @@ const QuizListPage = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.05 }}
-                  className={`card group relative flex flex-col justify-between overflow-hidden p-8 border border-slate-800 shadow-xl hover:shadow-2xl transition-all h-[320px] rounded-xl ${isLocked ? 'opacity-75 grayscale-[0.5]' : ''}`}
+                  className={`card group relative flex flex-col justify-between overflow-hidden p-8 border border-[#8da9c4]/30 shadow-xl hover:shadow-2xl transition-all h-[320px] rounded-xl ${isLocked ? 'opacity-75 grayscale-[0.5]' : ''}`}
                 >
                   <div className={`absolute top-0 left-0 w-full h-2 ${status === 'upcoming' ? 'bg-amber-400' : status === 'expired' ? 'bg-red-400' : 'bg-primary-500'}`}></div>
                   
                   <div>
                     <div className="flex items-start justify-between mb-6">
-                      <div className={`p-3 rounded-xl ${isLocked ? 'bg-slate-800 text-slate-500' : 'bg-primary-500/20 text-primary-400'}`}>
+                      <div className={`p-3 rounded-xl ${isLocked ? 'bg-gray-50 text-gray-500' : 'bg-[#8da9c4]/20 text-[#13315c]'}`}>
                         <BookOpen size={24} />
                       </div>
                       <div className="flex flex-col items-end">
-                        <div className="flex items-center gap-1 text-sm font-black text-slate-500 mb-1 uppercase tracking-widest">
+                        <div className="flex items-center gap-1 text-sm font-black text-gray-500 mb-1 uppercase tracking-widest">
                           <Clock size={16} />
                           <span>{quiz.duration} min</span>
                         </div>
-                        <span className="text-xs font-bold text-slate-400">{quiz.totalMarks} Marks</span>
+                        <span className="text-xs font-bold text-gray-600">{quiz.totalMarks} Marks</span>
                       </div>
                     </div>
                     
-                    <h3 className="text-2xl font-black text-slate-100 mb-2 truncate leading-tight">{quiz.title}</h3>
-                    <p className="text-slate-400 text-sm font-medium line-clamp-2 mb-4 leading-relaxed">{quiz.description}</p>
+                    <h3 className="text-2xl font-black text-[#13315c] mb-2 truncate leading-tight">{quiz.title}</h3>
+                    <p className="text-gray-600 text-sm font-medium line-clamp-2 mb-4 leading-relaxed">{quiz.description}</p>
                   </div>
 
                   <div className="mt-auto">
@@ -141,13 +141,13 @@ const QuizListPage = () => {
                         </div>
                         <Link
                           to={`/result/${quiz.attemptInfo.resultId}`}
-                          className="w-full h-14 bg-slate-800 text-white flex items-center justify-center gap-2 text-sm font-black uppercase tracking-widest rounded-xl hover:bg-slate-700 transition-all"
+                          className="w-full h-14 bg-gray-50 text-white flex items-center justify-center gap-2 text-sm font-black uppercase tracking-widest rounded-xl hover:bg-slate-700 transition-all"
                         >
                           View Result <ChevronRight size={20} />
                         </Link>
                       </div>
                     ) : isLocked ? (
-                       <button disabled className="w-full py-4 rounded-xl bg-slate-800 text-slate-500 font-black uppercase tracking-widest text-sm cursor-not-allowed">
+                       <button disabled className="w-full py-4 rounded-xl bg-gray-50 text-gray-500 font-black uppercase tracking-widest text-sm cursor-not-allowed">
                           {status === 'upcoming' ? 'Not Started' : 'Quiz Closed'}
                        </button>
                     ) : (
@@ -169,13 +169,13 @@ const QuizListPage = () => {
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-center py-32 bg-slate-900 rounded-xl shadow-sm border border-slate-800"
+            className="text-center py-32 bg-white rounded-xl shadow-sm border border-[#8da9c4]/30"
           >
-            <div className="bg-slate-800 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
-               <Search className="text-slate-500" size={48} />
+            <div className="bg-gray-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
+               <Search className="text-gray-500" size={48} />
             </div>
-            <p className="text-slate-100 font-black text-2xl tracking-tight">No quizzes found.</p>
-            <p className="text-slate-400 font-medium mt-1">Try searching for something else or contact your admin.</p>
+            <p className="text-[#13315c] font-black text-2xl tracking-tight">No quizzes found.</p>
+            <p className="text-gray-600 font-medium mt-1">Try searching for something else or contact your admin.</p>
           </motion.div>
         )}
       </div>

@@ -59,11 +59,11 @@ const AssignmentSubmissionsPage = () => {
   if (activeWorkspace) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col bg-transparent">
-        <div className="flex items-center justify-between px-6 py-3 bg-[#152113] border-b border-[#31572c]">
+        <div className="flex items-center justify-between px-6 py-3 bg-white border-b border-[#8da9c4]/30">
           <div className="flex items-center space-x-4">
             <button 
               onClick={() => setActiveWorkspace(null)}
-              className="text-slate-400 hover:text-white transition-colors"
+              className="text-gray-600 hover:text-white transition-colors"
             >
               ← Back to Submissions
             </button>
@@ -81,24 +81,24 @@ const AssignmentSubmissionsPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-transparent text-slate-100 flex">
+    <div className="min-h-screen bg-transparent text-[#13315c] flex">
       <Navbar />
       <main className="flex-1 ml-64 p-8">
         <header className="mb-10">
           <div className="flex items-center gap-4 mb-2">
-            <Link to="/admin/manage-assignments" className="text-slate-500 hover:text-[#ecf39e] transition-colors">
+            <Link to="/admin/manage-assignments" className="text-gray-500 hover:text-[#13315c] transition-colors">
               <ArrowLeft size={24} />
             </Link>
-            <h1 className="text-3xl font-extrabold text-slate-100">Assignment Submissions</h1>
+            <h1 className="text-3xl font-extrabold text-[#13315c]">Assignment Submissions</h1>
           </div>
-          <p className="text-slate-400 ml-10">Review and download student project files</p>
+          <p className="text-gray-600 ml-10">Review and download student project files</p>
         </header>
 
-        <div className="bg-[#152113] p-6 rounded-2xl shadow-sm border border-[#31572c] mb-8 flex flex-col md:flex-row gap-6 items-end">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-[#8da9c4]/30 mb-8 flex flex-col md:flex-row gap-6 items-end">
             <div className="flex-1 w-full">
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Campus Filter</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Campus Filter</label>
                 <div className="relative">
-                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                     <select 
                       className="input-field pl-10"
                       value={filter.campus}
@@ -110,9 +110,9 @@ const AssignmentSubmissionsPage = () => {
                 </div>
             </div>
             <div className="flex-1 w-full">
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Batch Filter</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Batch Filter</label>
                 <div className="relative">
-                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                     <select 
                       className="input-field pl-10"
                       value={filter.batch}
@@ -131,9 +131,9 @@ const AssignmentSubmissionsPage = () => {
             </button>
         </div>
 
-        <div className="bg-[#152113] rounded-2xl shadow-sm border border-[#31572c] overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-sm border border-[#8da9c4]/30 overflow-hidden">
           <table className="w-full text-left">
-            <thead className="bg-[#152113] text-slate-400 text-xs font-bold uppercase tracking-wider">
+            <thead className="bg-white text-gray-600 text-xs font-bold uppercase tracking-wider">
               <tr>
                 <th className="px-6 py-4">Student</th>
                 <th className="px-6 py-4">Campus / Batch</th>
@@ -144,14 +144,14 @@ const AssignmentSubmissionsPage = () => {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {submissions.map((sub) => (
-                <tr key={sub._id} className="hover:bg-[#152113] transition-colors">
+                <tr key={sub._id} className="hover:bg-white transition-colors">
                   <td className="px-6 py-4">
-                    <p className="font-bold text-slate-200">{sub.studentName}</p>
-                    <p className="text-xs text-slate-400">{sub.studentId}</p>
+                    <p className="font-bold text-[#13315c]">{sub.studentName}</p>
+                    <p className="text-xs text-gray-600">{sub.studentId}</p>
                   </td>
                   <td className="px-6 py-4">
-                     <p className="font-semibold text-slate-300">{sub.campus || '-'}</p>
-                     <p className="text-xs text-slate-400">{sub.batch || '-'}</p>
+                     <p className="font-semibold text-[#13315c]">{sub.campus || '-'}</p>
+                     <p className="text-xs text-gray-600">{sub.batch || '-'}</p>
                   </td>
                   <td className="px-6 py-4">
                      {sub.isLate ? (
@@ -163,7 +163,7 @@ const AssignmentSubmissionsPage = () => {
                            <CheckCircle size={12} /> On Time
                          </span>
                      )}
-                     <p className="text-xs text-slate-500 font-medium mt-1">
+                     <p className="text-xs text-gray-500 font-medium mt-1">
                         {new Date(sub.submittedAt).toLocaleDateString()}
                      </p>
                   </td>
@@ -171,14 +171,14 @@ const AssignmentSubmissionsPage = () => {
                     {sub.submissionType === 'ide' ? (
                       <div>
                         <p className="font-medium text-purple-400 line-clamp-1">Web IDE Workspace</p>
-                        <p className="text-xs text-slate-400 font-mono">Cloud Project</p>
+                        <p className="text-xs text-gray-600 font-mono">Cloud Project</p>
                       </div>
                     ) : (
                       <div>
-                        <p className="font-medium text-slate-200 line-clamp-1 max-w-[200px]" title={sub.originalFileName}>
+                        <p className="font-medium text-[#13315c] line-clamp-1 max-w-[200px]" title={sub.originalFileName}>
                           {sub.originalFileName}
                         </p>
-                        <p className="text-xs text-slate-400 font-mono">
+                        <p className="text-xs text-gray-600 font-mono">
                           {formatBytes(sub.fileSizeBytes)}
                         </p>
                       </div>
@@ -197,7 +197,7 @@ const AssignmentSubmissionsPage = () => {
                          href={sub.fileUrl} 
                          target="_blank" 
                          rel="noreferrer"
-                         className="inline-flex items-center gap-2 px-4 py-2 bg-[#ecf39e]/10 text-[#ecf39e] hover:bg-[#ecf39e]/10 font-semibold rounded-lg transition-colors text-sm"
+                         className="inline-flex items-center gap-2 px-4 py-2 bg-[#8da9c4]/20 text-[#13315c] hover:bg-[#8da9c4]/20 font-semibold rounded-lg transition-colors text-sm"
                        >
                          <Download size={16} /> Get File
                        </a>
@@ -210,7 +210,7 @@ const AssignmentSubmissionsPage = () => {
           {submissions.length === 0 && !loading && (
               <div className="p-16 text-center">
                   <Download className="mx-auto text-slate-700 mb-4" size={56} />
-                  <p className="text-slate-500 font-medium">No submissions found</p>
+                  <p className="text-gray-500 font-medium">No submissions found</p>
               </div>
           )}
         </div>

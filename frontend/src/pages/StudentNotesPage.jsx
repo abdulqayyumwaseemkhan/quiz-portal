@@ -18,7 +18,7 @@ const NoteCard = ({ note }) => {
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="card flex flex-col justify-between overflow-hidden p-8 border border-slate-800 shadow-xl hover:shadow-2xl transition-all rounded-xl bg-slate-900"
+      className="card flex flex-col justify-between overflow-hidden p-8 border border-[#8da9c4]/30 shadow-xl hover:shadow-2xl transition-all rounded-xl bg-white"
     >
       <div>
         <div className="flex items-start justify-between mb-6">
@@ -26,17 +26,17 @@ const NoteCard = ({ note }) => {
             {getFileIcon(note.fileType)}
           </div>
           <div className="flex flex-col items-end">
-            <span className="text-xs font-bold px-3 py-1 rounded-full bg-slate-800 text-slate-400 uppercase tracking-widest">
+            <span className="text-xs font-bold px-3 py-1 rounded-full bg-gray-50 text-gray-600 uppercase tracking-widest">
               Lecture {note.lectureNumber}
             </span>
           </div>
         </div>
         
-        <h3 className="text-2xl font-black text-slate-100 mb-2 truncate leading-tight">{note.lectureTitle}</h3>
-        <p className="text-slate-400 text-sm font-medium line-clamp-3 mb-6 leading-relaxed">{note.description || 'No description provided.'}</p>
+        <h3 className="text-2xl font-black text-[#13315c] mb-2 truncate leading-tight">{note.lectureTitle}</h3>
+        <p className="text-gray-600 text-sm font-medium line-clamp-3 mb-6 leading-relaxed">{note.description || 'No description provided.'}</p>
       </div>
 
-      <div className="mt-auto border-t border-slate-800 pt-6">
+      <div className="mt-auto border-t border-[#8da9c4]/30 pt-6">
         <a 
           href={note.fileUrl}
           target="_blank"
@@ -100,15 +100,15 @@ const StudentNotesPage = () => {
         <div className="max-w-6xl mx-auto">
           <header className="mb-12">
             <h1 className="text-3xl font-black text-white tracking-tight">Lecture Notes</h1>
-            <p className="text-slate-400 font-medium">Download course materials and resources</p>
+            <p className="text-gray-600 font-medium">Download course materials and resources</p>
           </header>
 
         <div className="relative mb-12">
-            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500" size={24} />
+            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-500" size={24} />
             <input 
                type="text"
                placeholder="Search lecture notes..."
-               className="w-full h-16 pl-16 pr-8 bg-slate-900 rounded-xl shadow-sm border border-slate-800 focus:ring-4 focus:ring-primary-500/20 text-slate-100 text-lg font-medium transition-all"
+               className="w-full h-16 pl-16 pr-8 bg-white rounded-xl shadow-sm border border-[#8da9c4]/30 focus:ring-4 focus:ring-primary-500/20 text-[#13315c] text-lg font-medium transition-all"
                value={searchTerm}
                onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -126,13 +126,13 @@ const StudentNotesPage = () => {
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-center py-32 bg-slate-900 rounded-xl shadow-sm border border-slate-800"
+            className="text-center py-32 bg-white rounded-xl shadow-sm border border-[#8da9c4]/30"
           >
-            <div className="bg-slate-800 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
-               <FileText className="text-slate-500" size={48} />
+            <div className="bg-gray-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
+               <FileText className="text-gray-500" size={48} />
             </div>
-            <p className="text-slate-100 font-black text-2xl tracking-tight">No notes found.</p>
-            <p className="text-slate-400 font-medium mt-1">Check back later for new materials.</p>
+            <p className="text-[#13315c] font-black text-2xl tracking-tight">No notes found.</p>
+            <p className="text-gray-600 font-medium mt-1">Check back later for new materials.</p>
           </motion.div>
         )}
       </div>

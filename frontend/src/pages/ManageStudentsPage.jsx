@@ -98,18 +98,18 @@ const ManageStudentsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-transparent text-slate-100 flex">
+    <div className="min-h-screen bg-transparent text-[#13315c] flex">
       <Navbar />
       <main className="flex-1 ml-64 p-8">
         <header className="flex justify-between items-center mb-10">
           <div>
-            <h1 className="text-3xl font-black text-slate-100">Manage Students</h1>
-            <p className="text-slate-400">Register students who are allowed to take quizzes</p>
+            <h1 className="text-3xl font-black text-[#13315c]">Manage Students</h1>
+            <p className="text-gray-600">Register students who are allowed to take quizzes</p>
           </div>
           <div className="flex gap-4">
             <button 
               onClick={handleDownloadCSV}
-              className="flex items-center gap-2 px-6 h-12 bg-slate-800 text-slate-100 rounded-lg hover:bg-slate-700 font-semibold"
+              className="flex items-center gap-2 px-6 h-12 bg-gray-50 text-[#13315c] rounded-lg hover:bg-slate-700 font-semibold"
             >
               <Download size={20} /> Export CSV
             </button>
@@ -129,11 +129,11 @@ const ManageStudentsPage = () => {
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               onSubmit={handleAddStudent}
-              className="card bg-slate-900 p-8 mb-10 overflow-hidden border-2 border-primary-100"
+              className="card bg-white p-8 mb-10 overflow-hidden border-2 border-primary-100"
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Student ID</label>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Student ID</label>
                   <input
                     type="text"
                     placeholder="e.g. STU123"
@@ -144,7 +144,7 @@ const ManageStudentsPage = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Full Name</label>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Full Name</label>
                   <input
                     type="text"
                     placeholder="e.g. John Doe"
@@ -155,7 +155,7 @@ const ManageStudentsPage = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Campus</label>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Campus</label>
                   <input
                     type="text"
                     list="campus-list"
@@ -170,7 +170,7 @@ const ManageStudentsPage = () => {
                   </datalist>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Batch</label>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Batch</label>
                   <input
                     type="text"
                     list="batch-list"
@@ -194,7 +194,7 @@ const ManageStudentsPage = () => {
 
         <div className="flex flex-col md:flex-row gap-4 mb-8">
           <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={20} />
             <input 
               type="text"
               placeholder="Search by name or ID..."
@@ -221,9 +221,9 @@ const ManageStudentsPage = () => {
           </select>
         </div>
 
-        <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm border border-[#8da9c4]/30 overflow-hidden">
           <table className="w-full text-left">
-            <thead className="bg-slate-900 text-slate-400 text-xs font-semibold uppercase tracking-widest">
+            <thead className="bg-white text-gray-600 text-xs font-semibold uppercase tracking-widest">
               <tr>
                 <th className="px-8 py-5 text-center w-20">#</th>
                 <th className="px-8 py-5">Student Details</th>
@@ -235,22 +235,22 @@ const ManageStudentsPage = () => {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {filteredStudents.map((student, idx) => (
-                <tr key={student._id} className="hover:bg-slate-900/50 transition-colors group">
+                <tr key={student._id} className="hover:bg-white0 transition-colors group">
                   <td className="px-8 py-5 text-center text-slate-600 font-semibold">{idx + 1}</td>
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-4">
-                       <div className="w-10 h-10 rounded-full bg-primary-500/10 text-primary-600 flex items-center justify-center font-bold">
+                       <div className="w-10 h-10 rounded-full bg-[#8da9c4]/20 text-[#13315c] flex items-center justify-center font-bold">
                           {student.fullName.charAt(0)}
                        </div>
                        <div>
-                          <p className="font-bold text-slate-200">{student.fullName}</p>
-                          <p className="text-xs text-slate-500 font-semibold uppercase tracking-tighter">ID: {student.studentId}</p>
+                          <p className="font-bold text-[#13315c]">{student.fullName}</p>
+                          <p className="text-xs text-gray-500 font-semibold uppercase tracking-tighter">ID: {student.studentId}</p>
                        </div>
                     </div>
                   </td>
-                  <td className="px-8 py-5 font-semibold text-slate-300">{student.campus || '-'}</td>
-                  <td className="px-8 py-5 font-semibold text-slate-300">{student.batch || '-'}</td>
-                  <td className="px-8 py-5 text-slate-400 text-sm font-medium">
+                  <td className="px-8 py-5 font-semibold text-[#13315c]">{student.campus || '-'}</td>
+                  <td className="px-8 py-5 font-semibold text-[#13315c]">{student.batch || '-'}</td>
+                  <td className="px-8 py-5 text-gray-600 text-sm font-medium">
                      {new Date(student.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-8 py-5 text-right">
@@ -268,7 +268,7 @@ const ManageStudentsPage = () => {
           {filteredStudents.length === 0 && !loading && (
             <div className="p-20 text-center">
               <Users className="mx-auto text-gray-100 mb-6" size={80} />
-              <p className="text-slate-500 font-semibold text-xl uppercase tracking-widest">No students found</p>
+              <p className="text-gray-500 font-semibold text-xl uppercase tracking-widest">No students found</p>
             </div>
           )}
         </div>

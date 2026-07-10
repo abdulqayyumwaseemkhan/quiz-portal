@@ -43,20 +43,20 @@ const StudentLoginPage = () => {
         <div className="text-center mb-8">
           <motion.div 
             whileHover={{ scale: 1.1, rotate: 5 }}
-            className="bg-primary-500/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-primary-500/20"
+            className="bg-[#8da9c4]/20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-primary-500/20"
           >
-            <GraduationCap className="text-primary-400" size={32} />
+            <GraduationCap className="text-[#13315c]" size={32} />
           </motion.div>
-          <h2 className="text-3xl font-extrabold text-slate-200 tracking-tight">BanoQabil Web Dev</h2>
-          <p className="text-slate-400 mt-2 font-medium tracking-widest uppercase text-xs">Official Quiz Portal</p>
+          <h2 className="text-3xl font-extrabold text-[#13315c] tracking-tight">BanoQabil Web Dev</h2>
+          <p className="text-gray-600 mt-2 font-medium tracking-widest uppercase text-xs">Official Quiz Portal</p>
         </div>
 
         {!studentData ? (
           <form onSubmit={handleLookup} className="space-y-6">
             <div>
-              <label className="block text-sm font-bold text-slate-300 mb-2 uppercase tracking-wide">Enter Student ID</label>
+              <label className="block text-sm font-bold text-[#13315c] mb-2 uppercase tracking-wide">Enter Student ID</label>
               <div className="relative">
-                <IdCard className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
+                <IdCard className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={20} />
                 <input
                   type="text"
                   placeholder="e.g. STU123"
@@ -85,9 +85,9 @@ const StudentLoginPage = () => {
           >
             <div className="bg-emerald-500/10 p-6 rounded-2xl border-2 border-emerald-500/20 mb-6">
                <CheckCircle2 className="text-emerald-500 mx-auto mb-3" size={48} />
-               <p className="text-slate-400 text-sm font-bold uppercase tracking-widest">Student Found</p>
-               <h3 className="text-2xl font-black text-slate-200 mt-1">{studentData.fullName}</h3>
-               <p className="text-slate-500 text-xs mt-1">ID: {studentData.studentId}</p>
+               <p className="text-gray-600 text-sm font-bold uppercase tracking-widest">Student Found</p>
+               <h3 className="text-2xl font-black text-[#13315c] mt-1">{studentData.fullName}</h3>
+               <p className="text-gray-500 text-xs mt-1">ID: {studentData.studentId}</p>
             </div>
 
             <div className="space-y-4">
@@ -101,7 +101,7 @@ const StudentLoginPage = () => {
               </motion.button>
               <button 
                 onClick={() => setStudentData(null)}
-                className="text-slate-500 text-sm font-bold hover:text-slate-400 transition-colors uppercase tracking-widest"
+                className="text-gray-500 text-sm font-bold hover:text-gray-600 transition-colors uppercase tracking-widest"
               >
                 Not you? Search again
               </button>
