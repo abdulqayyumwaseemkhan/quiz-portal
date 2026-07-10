@@ -66,7 +66,7 @@ const QuizListPage = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 font-sans">
+    <div className="min-h-screen bg-transparent font-sans">
       <StudentNavbar student={student} />
       <div className="p-6 md:p-12">
         <div className="max-w-6xl mx-auto">

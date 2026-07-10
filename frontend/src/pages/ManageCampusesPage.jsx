@@ -51,7 +51,7 @@ const ManageCampusesPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex">
+    <div className="min-h-screen bg-transparent text-slate-100 flex">
       <Navbar />
       <main className="flex-1 ml-64 p-10">
         <header className="mb-12">

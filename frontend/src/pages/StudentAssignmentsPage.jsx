@@ -217,7 +217,7 @@ const StudentAssignmentsPage = () => {
 
   if (ideAssignment) {
     return (
-      <div className="fixed inset-0 z-50 flex flex-col bg-slate-950">
+      <div className="fixed inset-0 z-50 flex flex-col bg-transparent">
         <div className="flex items-center justify-between px-6 py-3 bg-slate-900 border-b border-slate-800">
           <div className="flex items-center space-x-4">
             <button 
@@ -242,7 +242,7 @@ const StudentAssignmentsPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 font-sans">
+    <div className="min-h-screen bg-transparent font-sans">
       <StudentNavbar student={student} />
       <div className="p-6 md:p-12">
         <div className="max-w-6xl mx-auto">

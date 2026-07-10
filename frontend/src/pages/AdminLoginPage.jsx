@@ -28,7 +28,7 @@ const AdminLoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-transparent flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-slate-900 rounded-2xl shadow-2xl p-8">
         <div className="text-center mb-10">
           <div className="bg-primary-500/10 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 rotate-3">

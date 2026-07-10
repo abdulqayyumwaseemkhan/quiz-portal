@@ -65,7 +65,7 @@ const EditQuizPage = () => {
     if (loading) return <div className="p-12 text-center text-slate-400">Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex">
+    <div className="min-h-screen bg-transparent text-slate-100 flex">
       <Navbar />
       <main className="flex-1 ml-64 p-8">
         <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-500 hover:text-slate-200 mb-8 font-black uppercase text-xs tracking-widest transition-all">

@@ -36,12 +36,12 @@ const REACT_DEFAULT_FILES = {
   'App.jsx': {
     name: 'App.jsx',
     language: 'javascript',
-    content: 'export default function App() {\n  const [count, setCount] = React.useState(0);\n  \n  return (\n    <div className="App">\n      <h1>Hello React!</h1>\n      <button onClick={() => setCount(c => c + 1)}>\n        Count is {count}\n      </button>\n    </div>\n  );\n}\n',
+    content: 'import React, { useState } from "react";\n\nexport default function App() {\n  const [count, setCount] = useState(0);\n  \n  return (\n    <div className="App">\n      <h1>Hello React!</h1>\n      <button onClick={() => setCount(c => c + 1)}>\n        Count is {count}\n      </button>\n    </div>\n  );\n}\n',
   },
   'index.jsx': {
     name: 'index.jsx',
     language: 'javascript',
-    content: 'const root = ReactDOM.createRoot(document.getElementById("root"));\nroot.render(<App />);\n',
+    content: 'import React from "react";\nimport { createRoot } from "react-dom/client";\n// App component is automatically available in this environment\n\nconst root = createRoot(document.getElementById("root"));\nroot.render(<App />);\n',
   },
 };
 
@@ -96,11 +96,11 @@ export default function WebIDE({
       let combinedJsx = '';
       Object.values(files).forEach(file => {
         if (file.name.endsWith('.js') || file.name.endsWith('.jsx')) {
-          // Strip local imports (import App from './App') and library imports (import React from 'react')
-          let content = file.content.replace(/import\s+.*?\s+from\s+['"].*?['"];?/g, '');
-          // Strip export default
+          // Strip local relative imports (e.g. import App from './App' or import './styles.css')
+          let content = file.content.replace(/import\s+.*?\s+from\s+['"][\.\/].*?['"];?/g, '');
+          content = content.replace(/import\s+['"][\.\/].*?['"];?/g, '');
+          // Strip export default and export const (everything becomes local to the single module)
           content = content.replace(/export\s+default\s+/g, '');
-          // Strip export const/function (just remove the export keyword)
           content = content.replace(/export\s+(const|let|var|function|class)/g, '$1');
           
           combinedJsx += `\n/* --- ${file.name} --- */\n` + content;
@@ -110,10 +110,23 @@ export default function WebIDE({
       combinedHtml = `
         ${html}
         <style>${css}</style>
-        <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-        <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+        
+        <!-- Import Maps for native ES Modules in browser -->
+        <script type="importmap">
+          {
+            "imports": {
+              "react": "https://esm.sh/react@18.2.0",
+              "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+              "react-router-dom": "https://esm.sh/react-router-dom@6.22.3",
+              "react-icons/": "https://esm.sh/react-icons@5.0.1/"
+            }
+          }
+        </script>
+        
         <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-        <script type="text/babel" data-presets="react,env">
+        
+        <!-- Execute compiled JSX as a native module -->
+        <script type="text/babel" data-type="module" data-presets="react,env">
           try {
             ${combinedJsx}
           } catch (err) {

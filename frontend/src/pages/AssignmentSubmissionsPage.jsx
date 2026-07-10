@@ -58,7 +58,7 @@ const AssignmentSubmissionsPage = () => {
 
   if (activeWorkspace) {
     return (
-      <div className="fixed inset-0 z-50 flex flex-col bg-slate-950">
+      <div className="fixed inset-0 z-50 flex flex-col bg-transparent">
         <div className="flex items-center justify-between px-6 py-3 bg-slate-900 border-b border-slate-800">
           <div className="flex items-center space-x-4">
             <button 
@@ -81,7 +81,7 @@ const AssignmentSubmissionsPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex">
+    <div className="min-h-screen bg-transparent text-slate-100 flex">
       <Navbar />
       <main className="flex-1 ml-64 p-8">
         <header className="mb-10">

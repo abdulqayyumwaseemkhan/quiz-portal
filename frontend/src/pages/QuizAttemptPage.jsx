@@ -131,7 +131,7 @@ const QuizAttemptPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6">
+      <div className="min-h-screen bg-transparent flex flex-col items-center justify-center p-6">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500 mb-4"></div>
         <p className="text-slate-500 font-bold uppercase tracking-widest text-sm">Synchronizing Quiz Data...</p>
       </div>
@@ -142,7 +142,7 @@ const QuizAttemptPage = () => {
   const selectedAnswer = userAnswers.find(ua => ua.questionId === currentQuestion?._id)?.answer || '';
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col font-sans">
+    <div className="min-h-screen bg-transparent flex flex-col font-sans">
       <header className="bg-slate-900 shadow-xl px-8 py-5 sticky top-0 z-50 flex justify-between items-center border-b border-slate-800">
         <div className="flex items-center gap-4">
            <div className="bg-primary-500/20 p-3 rounded-xl">

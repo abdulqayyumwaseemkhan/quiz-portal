@@ -30,14 +30,14 @@ const ResultPage = () => {
   }, [resultId]);
 
   if (loading) return (
-    <div className="flex items-center justify-center min-h-screen bg-slate-950 text-primary-500">
+    <div className="flex items-center justify-center min-h-screen bg-transparent text-primary-500">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-current mb-4"></div>
       <p className="ml-4 font-bold uppercase tracking-widest text-sm">Calibrating Results...</p>
     </div>
   );
   
   if (!result) return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
+    <div className="min-h-screen bg-transparent flex flex-col items-center justify-center p-6 text-center">
        <div className="bg-red-500/10 p-6 rounded-full text-rose-500 mb-6">
           <XCircle size={48} />
        </div>
@@ -52,7 +52,7 @@ const ResultPage = () => {
   // If results are not released, don't send scores or specific answers
   if (result.quizId && !result.quizId.resultsReleased) {
     return (
-      <div className="min-h-screen bg-slate-950 font-sans">
+      <div className="min-h-screen bg-transparent font-sans">
         <StudentNavbar student={student} />
         <div className="flex items-center justify-center p-6 min-h-[calc(100vh-80px)]">
           <motion.div 
@@ -82,7 +82,7 @@ const ResultPage = () => {
   const isPassed = result.percentage >= 50;
 
   return (
-    <div className="min-h-screen bg-slate-950 font-sans">
+    <div className="min-h-screen bg-transparent font-sans">
       <StudentNavbar student={student} />
       <div className="p-6 md:p-12 max-w-4xl mx-auto">
         <motion.div 
