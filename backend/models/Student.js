@@ -4,7 +4,6 @@ const studentSchema = new mongoose.Schema({
   studentId: {
     type: String,
     required: true,
-    unique: true,
   },
   fullName: {
     type: String,
@@ -29,6 +28,8 @@ const studentSchema = new mongoose.Schema({
     default: Date.now,
   },
 });
+
+studentSchema.index({ studentId: 1, addedBy: 1 }, { unique: true });
 
 const Student = mongoose.model('Student', studentSchema);
 
