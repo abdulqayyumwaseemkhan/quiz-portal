@@ -31,7 +31,7 @@ const assignmentSchema = new mongoose.Schema(
     },
     projectType: {
       type: String,
-      enum: ['vanilla', 'react'],
+      enum: ['vanilla', 'react', 'document'],
       default: 'vanilla',
     },
   },

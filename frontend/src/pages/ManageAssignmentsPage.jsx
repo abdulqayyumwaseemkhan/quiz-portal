@@ -140,6 +140,7 @@ const ManageAssignmentsPage = () => {
                   >
                     <option value="vanilla">Vanilla (HTML/CSS/JS)</option>
                     <option value="react">React</option>
+                    <option value="document">Document / Video Drive Link</option>
                   </select>
                 </div>
                 <div>
@@ -188,8 +189,8 @@ const ManageAssignmentsPage = () => {
                   <td className="px-8 py-5">
                     <p className="font-bold text-[#13315c] text-lg">{assignment.title}</p>
                     <p className="text-sm text-gray-600 line-clamp-1 mb-1">{assignment.description || 'No description'}</p>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${assignment.projectType === 'react' ? 'bg-cyan-500/20 text-cyan-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
-                      {assignment.projectType === 'react' ? 'React' : 'Vanilla JS'}
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${assignment.projectType === 'react' ? 'bg-cyan-500/20 text-cyan-400' : assignment.projectType === 'document' ? 'bg-purple-500/20 text-purple-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
+                      {assignment.projectType === 'react' ? 'React' : assignment.projectType === 'document' ? 'Document / Video' : 'Vanilla JS'}
                     </span>
                   </td>
                   <td className="px-8 py-5 font-semibold text-[#13315c]">

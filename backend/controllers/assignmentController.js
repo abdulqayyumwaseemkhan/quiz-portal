@@ -45,6 +45,9 @@ const createAssignment = asyncHandler(async (req, res) => {
 const getAssignments = asyncHandler(async (req, res) => {
   const { campus, batch } = req.query;
   let query = {};
+  if (req.admin.role !== 'superadmin') {
+    query.createdBy = req.admin._id;
+  }
   if (campus) query.campus = campus;
   if (batch) query.batch = batch;
 
@@ -126,16 +129,22 @@ const getAssignmentsForStudent = asyncHandler(async (req, res) => {
 
 const submitAssignment = asyncHandler(async (req, res) => {
   const { id: assignmentId, studentId } = req.params;
+  const { driveLink, assignmentTitle, assignmentDetails } = req.body;
   
-  if (!req.file) {
-    res.status(400);
-    throw new Error('No file uploaded or invalid file type');
-  }
-
   const assignment = await Assignment.findById(assignmentId);
   if (!assignment) {
     res.status(404);
     throw new Error('Assignment not found');
+  }
+
+  if (assignment.projectType !== 'document' && !req.file) {
+    res.status(400);
+    throw new Error('No file uploaded or invalid file type');
+  }
+
+  if (assignment.projectType === 'document' && !req.file && !driveLink) {
+    res.status(400);
+    throw new Error('Please upload a document or provide a Google Drive link.');
   }
 
   const isLate = new Date() > new Date(assignment.dueDate);
@@ -159,9 +168,22 @@ const submitAssignment = asyncHandler(async (req, res) => {
     throw new Error('You have already submitted this assignment. Resubmission is not allowed.');
   }
 
+  let fileUrl = null;
+  let filePublicId = null;
+  let originalFileName = null;
+  let fileSizeBytes = null;
+
   // Upload to Cloudinary
-  const folder = `quiz-portal/assignments/${student.campus || 'General'}/${student.batch || 'General'}`;
-  const uploadResult = await uploadToCloudinary(req.file.buffer, folder, req.file.originalname);
+  if (req.file) {
+    const folder = `quiz-portal/assignments/${student.campus || 'General'}/${student.batch || 'General'}`;
+    const uploadResult = await uploadToCloudinary(req.file.buffer, folder, req.file.originalname);
+    fileUrl = uploadResult.secure_url;
+    filePublicId = uploadResult.public_id;
+    originalFileName = req.file.originalname;
+    fileSizeBytes = req.file.size;
+  }
+
+  const subType = assignment.projectType === 'document' ? 'document' : 'file';
 
   const submissionData = {
     assignmentId,
@@ -169,10 +191,14 @@ const submitAssignment = asyncHandler(async (req, res) => {
     studentName: student.fullName,
     campus: student.campus,
     batch: student.batch,
-    fileUrl: uploadResult.secure_url,
-    filePublicId: uploadResult.public_id,
-    originalFileName: req.file.originalname,
-    fileSizeBytes: req.file.size,
+    submissionType: subType,
+    fileUrl,
+    filePublicId,
+    originalFileName,
+    fileSizeBytes,
+    driveLink,
+    assignmentTitle,
+    assignmentDetails,
     isLate,
     submittedAt: Date.now(),
   };

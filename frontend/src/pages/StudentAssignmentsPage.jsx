@@ -13,6 +13,9 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment }) => {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [assignmentTitle, setAssignmentTitle] = useState('');
+  const [assignmentDetails, setAssignmentDetails] = useState('');
+  const [driveLink, setDriveLink] = useState('');
 
   useEffect(() => {
     const checkStatus = async () => {
@@ -39,12 +42,25 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment }) => {
   };
 
   const handleUpload = async () => {
-    if (!file) return;
+    if (assignment.projectType === 'document') {
+      if (!file && !driveLink) {
+        toast.error('Please provide either a file or a Google Drive link');
+        return;
+      }
+    } else {
+      if (!file) return;
+    }
+    
     setUploading(true);
     setProgress(0);
 
     const formData = new FormData();
-    formData.append('file', file);
+    if (file) formData.append('file', file);
+    if (assignment.projectType === 'document') {
+      formData.append('assignmentTitle', assignmentTitle);
+      formData.append('assignmentDetails', assignmentDetails);
+      formData.append('driveLink', driveLink);
+    }
 
     try {
       const { data } = await API.post(
@@ -108,14 +124,66 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment }) => {
 
         {!status && !isLate ? (
           <div className="flex flex-col gap-3">
+            {assignment.projectType === 'document' && (
+              <>
+                <input 
+                  type="text" 
+                  placeholder="Assignment Title (Optional)" 
+                  className="input-field h-10 w-full text-sm"
+                  value={assignmentTitle}
+                  onChange={(e) => setAssignmentTitle(e.target.value)}
+                />
+                <textarea 
+                  placeholder="Assignment Details (Optional)" 
+                  className="input-field h-20 w-full text-sm p-2"
+                  value={assignmentDetails}
+                  onChange={(e) => setAssignmentDetails(e.target.value)}
+                ></textarea>
+                <input 
+                  type="url" 
+                  placeholder="Google Drive Video Link (Optional)" 
+                  className="input-field h-10 w-full text-sm"
+                  value={driveLink}
+                  onChange={(e) => setDriveLink(e.target.value)}
+                />
+                <div className="flex items-center justify-center space-x-4 my-2">
+                  <span className="h-px bg-gray-50 w-full"></span>
+                  <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">AND/OR</span>
+                  <span className="h-px bg-gray-50 w-full"></span>
+                </div>
+              </>
+            )}
+
             <label className="flex items-center justify-center w-full h-12 px-4 transition bg-gray-50 border-2 border-[#8da9c4]/30 border-dashed rounded-xl appearance-none cursor-pointer hover:border-primary-500 focus:outline-none relative">
                 <span className="flex items-center space-x-2">
                     <UploadCloud className="w-5 h-5 text-gray-600" />
                     <span className="font-medium text-gray-600 text-sm">
-                      {file ? file.name : 'Select .zip file'}
+                      {file ? file.name : (assignment.projectType === 'document' ? 'Select PDF/DOC/ZIP' : 'Select .zip file')}
                     </span>
                 </span>
-                <input type="file" name="file_upload" className="hidden" accept=".zip" onChange={handleFileChange} disabled={uploading} />
+                <input 
+                  type="file" 
+                  name="file_upload" 
+                  className="hidden" 
+                  accept={assignment.projectType === 'document' ? ".zip,.pdf,.doc,.docx" : ".zip"} 
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      const selected = e.target.files[0];
+                      const name = selected.name.toLowerCase();
+                      if (assignment.projectType === 'document' && !name.match(/\.(zip|pdf|doc|docx)$/)) {
+                        toast.error('Only .zip, .pdf, .doc, .docx files are allowed');
+                        setFile(null);
+                        return;
+                      } else if (assignment.projectType !== 'document' && !name.endsWith('.zip')) {
+                        toast.error('Only .zip files are allowed');
+                        setFile(null);
+                        return;
+                      }
+                      setFile(selected);
+                    }
+                  }} 
+                  disabled={uploading} 
+                />
             </label>
 
             {uploading && (
@@ -126,29 +194,33 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment }) => {
 
             <button 
               onClick={handleUpload}
-              disabled={!file || uploading}
+              disabled={uploading || (assignment.projectType !== 'document' && !file) || (assignment.projectType === 'document' && !file && !driveLink)}
               className={`w-full py-3 rounded-xl font-black uppercase tracking-widest text-sm transition-all ${
-                file && !uploading 
+                (!uploading && (file || (assignment.projectType === 'document' && driveLink)))
                   ? 'btn-primary' 
                   : 'bg-gray-50 text-gray-500 cursor-not-allowed'
               }`}
             >
-              {uploading ? `Uploading ${progress}%` : 'Upload ZIP Assignment'}
+              {uploading ? `Uploading ${progress}%` : 'Submit Assignment'}
             </button>
             
-            <div className="flex items-center justify-center space-x-4 my-2">
-              <span className="h-px bg-gray-50 w-full"></span>
-              <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">OR</span>
-              <span className="h-px bg-gray-50 w-full"></span>
-            </div>
+            {assignment.projectType !== 'document' && (
+              <>
+                <div className="flex items-center justify-center space-x-4 my-2">
+                  <span className="h-px bg-gray-50 w-full"></span>
+                  <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">OR</span>
+                  <span className="h-px bg-gray-50 w-full"></span>
+                </div>
 
-            <button 
-              onClick={() => setIdeAssignment({ assignment, status })}
-              className="w-full py-3 rounded-xl font-black uppercase tracking-widest text-sm transition-all btn-primary flex items-center justify-center space-x-2"
-            >
-              <BookOpen size={18} />
-              <span>Start Web IDE</span>
-            </button>
+                <button 
+                  onClick={() => setIdeAssignment({ assignment, status })}
+                  className="w-full py-3 rounded-xl font-black uppercase tracking-widest text-sm transition-all btn-primary flex items-center justify-center space-x-2"
+                >
+                  <BookOpen size={18} />
+                  <span>Start Web IDE</span>
+                </button>
+              </>
+            )}
           </div>
         ) : !status && isLate ? (
           <div className="flex flex-col gap-3">

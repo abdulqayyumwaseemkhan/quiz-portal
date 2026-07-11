@@ -22,6 +22,7 @@ const AssignmentSubmissionsPage = () => {
   const [meta, setMeta] = useState({ campuses: [], batches: [] });
   const [loading, setLoading] = useState(true);
   const [activeWorkspace, setActiveWorkspace] = useState(null);
+  const [activeVideo, setActiveVideo] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -55,6 +56,49 @@ const AssignmentSubmissionsPage = () => {
         setLoading(false);
     }
   };
+
+  if (activeVideo) {
+    let embedLink = activeVideo.driveLink;
+    if (embedLink && embedLink.includes('drive.google.com/file/d/')) {
+      const fileId = embedLink.split('/file/d/')[1].split('/')[0];
+      embedLink = `https://drive.google.com/file/d/${fileId}/preview`;
+    }
+
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col bg-black bg-opacity-90">
+        <div className="flex items-center justify-between px-6 py-4 bg-gray-900 border-b border-gray-800">
+          <div className="flex items-center space-x-4">
+            <button 
+              onClick={() => setActiveVideo(null)}
+              className="text-gray-400 font-bold hover:text-white transition-colors flex items-center gap-2"
+            >
+              <ArrowLeft size={20} /> Back to Submissions
+            </button>
+            <h2 className="text-xl font-bold text-white">{activeVideo.assignmentTitle || 'Video Submission'}</h2>
+          </div>
+        </div>
+        <div className="flex-1 min-h-0 flex items-center justify-center p-8 relative">
+          {activeVideo.assignmentDetails && (
+            <div className="absolute top-8 right-8 bg-gray-800 p-4 rounded-lg text-white max-w-sm shadow-xl z-10 opacity-80 hover:opacity-100 transition-opacity">
+              <h3 className="font-bold text-sm mb-2 text-gray-300">Assignment Details</h3>
+              <p className="text-sm whitespace-pre-wrap">{activeVideo.assignmentDetails}</p>
+            </div>
+          )}
+          {embedLink ? (
+             <iframe 
+               src={embedLink} 
+               width="100%" 
+               height="100%" 
+               allow="autoplay" 
+               className="rounded-xl shadow-2xl max-w-5xl w-full h-[80vh] border-0"
+             ></iframe>
+          ) : (
+             <div className="text-white font-bold">Invalid Google Drive Link provided.</div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   if (activeWorkspace) {
     return (
@@ -173,6 +217,16 @@ const AssignmentSubmissionsPage = () => {
                         <p className="font-medium text-purple-400 line-clamp-1">Web IDE Workspace</p>
                         <p className="text-xs text-gray-600 font-mono">Cloud Project</p>
                       </div>
+                    ) : sub.submissionType === 'document' ? (
+                      <div>
+                        {sub.assignmentTitle && <p className="font-bold text-[#13315c] line-clamp-1 mb-1">{sub.assignmentTitle}</p>}
+                        {sub.driveLink && <p className="font-medium text-blue-500 line-clamp-1 text-xs mb-1">Drive Video Attached</p>}
+                        {sub.fileUrl && (
+                          <p className="text-xs text-gray-600 font-mono flex gap-1 items-center">
+                             File: {sub.originalFileName} ({formatBytes(sub.fileSizeBytes)})
+                          </p>
+                        )}
+                      </div>
                     ) : (
                       <div>
                         <p className="font-medium text-[#13315c] line-clamp-1 max-w-[200px]" title={sub.originalFileName}>
@@ -192,6 +246,27 @@ const AssignmentSubmissionsPage = () => {
                        >
                          <BookOpen size={16} /> View Code
                        </button>
+                     ) : sub.submissionType === 'document' ? (
+                        <div className="flex flex-col items-end gap-2">
+                          {sub.driveLink && (
+                            <button 
+                              onClick={() => setActiveVideo(sub)}
+                              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 font-semibold rounded-lg transition-colors text-sm"
+                            >
+                              <BookOpen size={16} /> Play Video
+                            </button>
+                          )}
+                          {sub.fileUrl && (
+                            <a 
+                              href={sub.fileUrl} 
+                              target="_blank" 
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-2 px-4 py-2 bg-[#8da9c4]/20 text-[#13315c] hover:bg-[#8da9c4]/20 font-semibold rounded-lg transition-colors text-sm"
+                            >
+                              <Download size={16} /> Document
+                            </a>
+                          )}
+                        </div>
                      ) : (
                        <a 
                          href={sub.fileUrl} 

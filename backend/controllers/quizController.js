@@ -21,7 +21,11 @@ const createQuiz = asyncHandler(async (req, res) => {
 });
 
 const getQuizzes = asyncHandler(async (req, res) => {
-  const quizzes = await Quiz.find({}).sort({ createdAt: -1 });
+  let query = {};
+  if (req.admin.role !== 'superadmin') {
+    query.createdBy = req.admin._id;
+  }
+  const quizzes = await Quiz.find(query).sort({ createdAt: -1 });
   res.json(quizzes);
 });
 
@@ -104,7 +108,20 @@ const deleteQuestion = asyncHandler(async (req, res) => {
 const getAllResults = asyncHandler(async (req, res) => {
   const { quizId, studentId, campus, batch } = req.query;
   let query = {};
-  if (quizId) query.quizId = quizId;
+  
+  if (req.admin.role !== 'superadmin') {
+    const adminQuizzes = await Quiz.find({ createdBy: req.admin._id }).distinct('_id');
+    query.quizId = { $in: adminQuizzes };
+  }
+
+  if (quizId) {
+    if (query.quizId && query.quizId.$in) {
+      if (!query.quizId.$in.map(id => id.toString()).includes(quizId)) {
+        return res.json([]); 
+      }
+    }
+    query.quizId = quizId;
+  }
   if (studentId) query.studentId = { $regex: studentId, $options: 'i' };
   if (campus) query.campus = campus;
   if (batch) query.batch = batch;
