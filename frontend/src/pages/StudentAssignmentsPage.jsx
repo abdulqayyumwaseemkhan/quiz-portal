@@ -337,6 +337,7 @@ const StudentAssignmentsPage = () => {
             initialProjectData={ideAssignment.status?.projectData}
             onSubmit={handleIdeSubmit} 
             studentId={student.studentId}
+            assignmentId={ideAssignment.assignment._id}
             projectType={ideAssignment.assignment.projectType}
             readOnly={ideAssignment.readOnly}
           />

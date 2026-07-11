@@ -50,8 +50,12 @@ export default function WebIDE({
   initialProjectData,
   onSubmit,
   readOnly = false,
+  studentId,
+  assignmentId,
   projectType = 'vanilla', // 'vanilla' or 'react'
 }) {
+  const draftKey = `ide_draft_${studentId}_${assignmentId}`;
+
   // Try parsing initialProjectData if it's a string, else use as object
   let initialData = projectType === 'react' ? REACT_DEFAULT_FILES : DEFAULT_FILES;
   if (initialProjectData) {
@@ -64,6 +68,15 @@ export default function WebIDE({
     } else {
       initialData = initialProjectData;
     }
+  } else if (!readOnly && studentId && assignmentId) {
+    const draft = localStorage.getItem(draftKey);
+    if (draft) {
+      try {
+        initialData = JSON.parse(draft);
+      } catch (e) {
+        console.error("Failed to parse draft", e);
+      }
+    }
   }
 
   // Auto-detect project type from files if not explicitly provided but initialData has .jsx
@@ -74,6 +87,12 @@ export default function WebIDE({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const iframeRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    if (!readOnly && studentId && assignmentId && files) {
+      localStorage.setItem(draftKey, JSON.stringify(files));
+    }
+  }, [files, readOnly, studentId, assignmentId, draftKey]);
 
   const handleEditorChange = (value) => {
     if (readOnly) return;
@@ -373,6 +392,9 @@ ${combinedJsx}
     setIsSubmitting(true);
     try {
       await onSubmit(files);
+      if (studentId && assignmentId) {
+        localStorage.removeItem(draftKey);
+      }
     } finally {
       setIsSubmitting(false);
     }
