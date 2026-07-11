@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
-import { Play, Save, Upload, FolderPlus, FilePlus, X, Image as ImageIcon, FileCode, Edit2 } from 'lucide-react';
+import { Play, Save, Upload, FolderPlus, FilePlus, X, Image as ImageIcon, FileCode, Edit2, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import API from '../../api';
@@ -238,6 +238,29 @@ ${combinedJsx}
     }
   };
 
+  const handleDeleteFile = (e, name) => {
+    e.stopPropagation();
+    if (readOnly) return;
+    
+    if (name === 'index.html') {
+      toast.error('Cannot delete the main index.html file');
+      return;
+    }
+
+    const confirm = window.confirm(`Are you sure you want to delete ${name}?`);
+    if (!confirm) return;
+
+    setFiles((prev) => {
+      const newFiles = { ...prev };
+      delete newFiles[name];
+      return newFiles;
+    });
+
+    if (activeFile === name) {
+      setActiveFile('index.html');
+    }
+  };
+
   const handleImageUploadClick = () => {
     if (readOnly) return;
     fileInputRef.current?.click();
@@ -331,11 +354,23 @@ ${combinedJsx}
       const url = res.data.url;
       const fileName = compressedFile.name;
       
-      setFiles((prev) => ({
+      const newFiles = {
         ...prev,
         [fileName]: { name: fileName, isImage: true, url },
-      }));
-      toast.success('Image uploaded!', { id: toastId });
+      };
+      
+      // Auto-save if onSubmit is provided (not in readOnly mode)
+      if (onSubmit && !readOnly) {
+        // We run it asynchronously in the background so it doesn't block the UI
+        onSubmit(newFiles).catch(err => {
+          console.error("Auto-save failed", err);
+          toast.error("Auto-save failed after image upload");
+        });
+      }
+      
+      return newFiles;
+    });
+    toast.success('Image uploaded and workspace saved!', { id: toastId });
     } catch (err) {
       console.error(err);
       toast.error('Failed to process or upload image', { id: toastId });
@@ -402,13 +437,22 @@ ${combinedJsx}
                   <span className="truncate">{file.name}</span>
                 </div>
                 {!readOnly && file.name !== 'index.html' && (
-                  <button 
-                    onClick={(e) => handleRenameFile(e, file.name)} 
-                    title="Rename File"
-                    className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-blue-500 transition-all p-1 rounded-md hover:bg-white/50"
-                  >
-                    <Edit2 size={14} />
-                  </button>
+                  <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button 
+                      onClick={(e) => handleRenameFile(e, file.name)} 
+                      title="Rename File"
+                      className="text-gray-400 hover:text-blue-500 transition-all p-1 rounded-md hover:bg-white/50"
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                    <button 
+                      onClick={(e) => handleDeleteFile(e, file.name)} 
+                      title="Delete File"
+                      className="text-gray-400 hover:text-red-500 transition-all p-1 rounded-md hover:bg-white/50"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 )}
               </div>
             ))}
