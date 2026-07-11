@@ -3,6 +3,7 @@ import Editor from '@monaco-editor/react';
 import { Play, Save, Upload, FolderPlus, FilePlus, X, Image as ImageIcon, FileCode } from 'lucide-react';
 import toast from 'react-hot-toast';
 import axios from 'axios';
+import API from '../../api';
 
 const DEFAULT_FILES = {
   'index.html': {
@@ -283,12 +284,9 @@ ${combinedJsx}
       const formData = new FormData();
       formData.append('image', compressedFile);
 
-      // Assumes token is stored in localStorage
-      const token = localStorage.getItem('token');
-      const res = await axios.post('/api/student/ide/upload-image', formData, {
+      const res = await API.post('/student/ide/upload-image', formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${token}`
+          'Content-Type': 'multipart/form-data'
         }
       });
 
