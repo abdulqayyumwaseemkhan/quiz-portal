@@ -118,6 +118,7 @@ const getAssignmentsForStudent = asyncHandler(async (req, res) => {
   }
 
   const assignments = await Assignment.find({
+    createdBy: student.addedBy,
     $and: [
       { $or: [{ campus: '' }, { campus: student.campus }] },
       { $or: [{ batch: '' }, { batch: student.batch }] }

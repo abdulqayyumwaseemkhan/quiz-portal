@@ -16,9 +16,16 @@ const verifyStudentId = asyncHandler(async (req, res) => {
   }
 });
 
-// Student doesn't need a real login, just identity
 const getAvailableQuizzes = asyncHandler(async (req, res) => {
-  const quizzes = await Quiz.find({}).sort({ createdAt: -1 });
+  const { studentId } = req.params;
+  const student = await Student.findOne({ studentId });
+  
+  if (!student) {
+    res.status(404);
+    throw new Error('Student not found');
+  }
+
+  const quizzes = await Quiz.find({ createdBy: student.addedBy }).sort({ createdAt: -1 });
   res.json(quizzes);
 });
 

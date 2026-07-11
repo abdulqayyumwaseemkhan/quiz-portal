@@ -89,6 +89,7 @@ const getNotesForStudent = asyncHandler(async (req, res) => {
   }
 
   const notes = await Note.find({
+    uploadedBy: student.addedBy,
     $and: [
       { $or: [{ campus: '' }, { campus: student.campus }] },
       { $or: [{ batch: '' }, { batch: student.batch }] }

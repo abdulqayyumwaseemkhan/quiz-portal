@@ -24,7 +24,7 @@ const {
 const upload = require('../middleware/upload');
 
 router.get('/verify-id/:studentId', verifyStudentId);
-router.get('/quizzes', getAvailableQuizzes);
+router.get('/quizzes/:studentId', getAvailableQuizzes);
 router.get('/quiz/:quizId/:studentId', getQuizForAttempt);
 router.post('/submit', submitQuiz);
 router.get('/result/:resultId', getStudentResult);

@@ -30,7 +30,7 @@ const QuizListPage = () => {
   useEffect(() => {
     const fetchQuizzes = async () => {
       try {
-        const { data } = await API.get('/student/quizzes');
+        const { data } = await API.get(`/student/quizzes/${student.studentId}`);
         
         // Fetch attempt status for each quiz
         const quizzesWithStatus = await Promise.all(data.map(async (quiz) => {
