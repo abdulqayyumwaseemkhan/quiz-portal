@@ -258,29 +258,28 @@ const uploadIdeImage = asyncHandler(async (req, res) => {
     throw new Error('No image uploaded');
   }
 
-  // Upload to Cloudinary as image
   const folder = `quiz-portal/ide_images`;
-  try {
+  
+  const uploadPromise = new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
-      { 
-        folder,
-      },
+      { folder, resource_type: 'auto' },
       (error, result) => {
-        if (error) {
-          res.status(500);
-          throw new Error('Failed to upload image to Cloudinary');
-        } else {
-          res.status(200).json({ url: result.secure_url });
-        }
+        if (error) reject(error);
+        else resolve(result);
       }
     );
     const readableStream = new Readable();
     readableStream.push(req.file.buffer);
     readableStream.push(null);
     readableStream.pipe(stream);
+  });
+
+  try {
+    const result = await uploadPromise;
+    res.status(200).json({ url: result.secure_url });
   } catch (error) {
     res.status(500);
-    throw new Error('Server error during upload');
+    throw new Error('Failed to upload image to Cloudinary');
   }
 });
 
