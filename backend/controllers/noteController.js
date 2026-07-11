@@ -56,7 +56,7 @@ const createNote = asyncHandler(async (req, res) => {
 });
 
 const getNotes = asyncHandler(async (req, res) => {
-  const notes = await Note.find({}).sort({ lectureNumber: 1 });
+  const notes = await Note.find({ uploadedBy: req.admin._id }).sort({ lectureNumber: 1 });
   res.json(notes);
 });
 

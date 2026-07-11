@@ -78,10 +78,7 @@ const addStudent = asyncHandler(async (req, res) => {
 
 const getStudents = asyncHandler(async (req, res) => {
   const { campus, batch } = req.query;
-  let query = {};
-  if (req.admin.role !== 'superadmin') {
-    query.addedBy = req.admin._id;
-  }
+  let query = { addedBy: req.admin._id };
   if (campus) query.campus = campus;
   if (batch) query.batch = batch;
   
@@ -90,12 +87,8 @@ const getStudents = asyncHandler(async (req, res) => {
 });
 
 const getStudentMeta = asyncHandler(async (req, res) => {
-  let campusQuery = {};
-  let studentQuery = {};
-  if (req.admin.role !== 'superadmin') {
-    campusQuery.addedBy = req.admin._id;
-    studentQuery.addedBy = req.admin._id;
-  }
+  let campusQuery = { addedBy: req.admin._id };
+  let studentQuery = { addedBy: req.admin._id };
 
   const explicitCampuses = await Campus.find(campusQuery).distinct('name');
   const studentCampuses = await Student.find(studentQuery).distinct('campus');
@@ -121,10 +114,7 @@ const addCampus = asyncHandler(async (req, res) => {
 });
 
 const getCampuses = asyncHandler(async (req, res) => {
-  let query = {};
-  if (req.admin.role !== 'superadmin') {
-    query.addedBy = req.admin._id;
-  }
+  let query = { addedBy: req.admin._id };
   const campuses = await Campus.find(query).sort({ name: 1 });
   res.json(campuses);
 });

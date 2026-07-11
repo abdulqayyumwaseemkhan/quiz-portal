@@ -44,10 +44,7 @@ const createAssignment = asyncHandler(async (req, res) => {
 
 const getAssignments = asyncHandler(async (req, res) => {
   const { campus, batch } = req.query;
-  let query = {};
-  if (req.admin.role !== 'superadmin') {
-    query.createdBy = req.admin._id;
-  }
+  let query = { createdBy: req.admin._id };
   if (campus) query.campus = campus;
   if (batch) query.batch = batch;
 
