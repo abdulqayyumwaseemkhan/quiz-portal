@@ -304,8 +304,11 @@ const uploadIdeImage = asyncHandler(async (req, res) => {
     const result = await uploadPromise;
     res.status(200).json({ url: result.secure_url });
   } catch (error) {
-    res.status(500);
-    throw new Error('Failed to upload image to Cloudinary');
+    console.error('Cloudinary IDE Image Upload Error:', error);
+    res.status(500).json({ 
+      message: `Failed to upload image to Cloudinary: ${error.message || error}`,
+      error: error.toString() 
+    });
   }
 });
 

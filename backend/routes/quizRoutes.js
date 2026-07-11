@@ -13,7 +13,7 @@ const {
 const { protectAdmin } = require('../middleware/auth');
 
 router.route('/')
-  .get(getQuizzes)
+  .get(protectAdmin, getQuizzes)
   .post(protectAdmin, createQuiz);
 
 router.route('/:id')
