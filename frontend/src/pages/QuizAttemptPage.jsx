@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import API from '../api';
 import { Clock, AlertCircle, CheckCircle2 } from 'lucide-react';
@@ -99,14 +99,87 @@ const QuizAttemptPage = () => {
     return () => clearInterval(timer);
   }, [loading, submitting, timeLeft === 0, submitQuiz]); 
 
-  // Prevent back/refresh
+  // Anti-Cheat State Refs
+  const warningsRef = useRef(0);
+  const submitQuizRef = useRef(submitQuiz);
+  const stateRef = useRef({ submitting, timeLeft });
+
   useEffect(() => {
+    submitQuizRef.current = submitQuiz;
+    stateRef.current = { submitting, timeLeft };
+  }, [submitQuiz, submitting, timeLeft]);
+
+  // Comprehensive Lockdown & Anti-Cheat
+  useEffect(() => {
+    // 0. Prevent Refresh / Close Tab
     const handleBeforeUnload = (e) => {
       e.preventDefault();
       e.returnValue = '';
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+
+    // 1. Prevent Back Navigation
+    window.history.pushState(null, null, window.location.href);
+    const handlePopState = () => {
+      window.history.pushState(null, null, window.location.href);
+      toast.error('Back navigation is disabled during the quiz!');
+    };
+    window.addEventListener('popstate', handlePopState);
+
+    // 2. Disable Inspect Element (Right-click & shortcuts)
+    const handleContextMenu = (e) => {
+      e.preventDefault();
+      toast.error('Right-click is disabled.');
+    };
+    const handleKeyDown = (e) => {
+      if (
+        e.key === 'F12' ||
+        ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key.toLowerCase() === 'i' || e.key.toLowerCase() === 'c' || e.key.toLowerCase() === 'j')) ||
+        ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'u') // View Source
+      ) {
+        e.preventDefault();
+        toast.error('Developer tools are disabled.');
+      }
+    };
+    window.addEventListener('contextmenu', handleContextMenu);
+    window.addEventListener('keydown', handleKeyDown);
+
+    // 3. Tab Switch Detection
+    const handleVisibilityChange = () => {
+      const { submitting, timeLeft } = stateRef.current;
+      if (document.hidden && !submitting && timeLeft > 0) {
+        warningsRef.current += 1;
+        if (warningsRef.current === 1) {
+          toast.error('WARNING: You switched tabs or minimized! Do not leave this page or your quiz will be auto-submitted.', { duration: 6000 });
+        } else if (warningsRef.current >= 2) {
+          toast.error('You left the page again. Auto-submitting quiz...', { duration: 4000 });
+          if (submitQuizRef.current) submitQuizRef.current();
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // 4. Force Fullscreen on interaction
+    const enterFullscreen = () => {
+      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    };
+    document.addEventListener('click', enterFullscreen);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('contextmenu', handleContextMenu);
+      window.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('click', enterFullscreen);
+      
+      // Exit fullscreen if they leave/finish
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+    };
   }, []);
 
   const handleAnswerSelect = (answer) => {
