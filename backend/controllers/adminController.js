@@ -59,10 +59,10 @@ const registerAdmin = asyncHandler(async (req, res) => {
 const addStudent = asyncHandler(async (req, res) => {
   const { studentId, fullName, campus, batch } = req.body;
   
-  const studentExists = await Student.findOne({ studentId });
+  const studentExists = await Student.findOne({ studentId, addedBy: req.admin?._id });
   if (studentExists) {
     res.status(400);
-    throw new Error('Student ID already exists');
+    throw new Error('Student ID already exists in your account');
   }
   
   const student = await Student.create({ 
@@ -111,10 +111,10 @@ const getStudentMeta = asyncHandler(async (req, res) => {
 
 const addCampus = asyncHandler(async (req, res) => {
   const { name } = req.body;
-  const exists = await Campus.findOne({ name });
+  const exists = await Campus.findOne({ name, addedBy: req.admin?._id });
   if (exists) {
     res.status(400);
-    throw new Error('Campus already exists');
+    throw new Error('Campus already exists in your account');
   }
   const campus = await Campus.create({ name, addedBy: req.admin?._id });
   res.status(201).json(campus);
