@@ -140,8 +140,8 @@ const QuizListPage = () => {
                            {quiz.resultsReleased ? 'Results Released' : 'Result Pending Release'}
                         </div>
                         <Link
-                          to={`/result/${quiz.attemptInfo.resultId}`}
-                          className="w-full h-14 bg-gray-50 text-white flex items-center justify-center gap-2 text-sm font-black uppercase tracking-widest rounded-xl hover:bg-slate-700 transition-all"
+                          to={`/student/result/${quiz.attemptInfo.resultId}`}
+                          className="w-full mt-4 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest text-xs py-3 px-4 rounded-xl transition-all shadow-md hover:shadow-lg"
                         >
                           View Result <ChevronRight size={20} />
                         </Link>
