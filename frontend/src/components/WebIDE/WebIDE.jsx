@@ -354,23 +354,24 @@ ${combinedJsx}
       const url = res.data.url;
       const fileName = compressedFile.name;
       
-      const newFiles = {
-        ...prev,
-        [fileName]: { name: fileName, isImage: true, url },
-      };
-      
-      // Auto-save if onSubmit is provided (not in readOnly mode)
-      if (onSubmit && !readOnly) {
-        // We run it asynchronously in the background so it doesn't block the UI
-        onSubmit(newFiles).catch(err => {
-          console.error("Auto-save failed", err);
-          toast.error("Auto-save failed after image upload");
-        });
-      }
-      
-      return newFiles;
-    });
-    toast.success('Image uploaded and workspace saved!', { id: toastId });
+      setFiles((prev) => {
+        const newFiles = {
+          ...prev,
+          [fileName]: { name: fileName, isImage: true, url },
+        };
+        
+        // Auto-save if onSubmit is provided (not in readOnly mode)
+        if (onSubmit && !readOnly) {
+          // We run it asynchronously in the background so it doesn't block the UI
+          onSubmit(newFiles).catch(err => {
+            console.error("Auto-save failed", err);
+            toast.error("Auto-save failed after image upload");
+          });
+        }
+        
+        return newFiles;
+      });
+      toast.success('Image uploaded and workspace saved!', { id: toastId });
     } catch (err) {
       console.error(err);
       toast.error('Failed to process or upload image', { id: toastId });
