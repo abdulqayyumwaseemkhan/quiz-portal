@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
-import { Play, Save, Upload, FolderPlus, FilePlus, X, Image as ImageIcon, FileCode } from 'lucide-react';
+import { Play, Save, Upload, FolderPlus, FilePlus, X, Image as ImageIcon, FileCode, Edit2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import API from '../../api';
@@ -200,6 +200,44 @@ ${combinedJsx}
     setActiveFile(name);
   };
 
+  const handleRenameFile = (e, oldName) => {
+    e.stopPropagation();
+    if (readOnly) return;
+
+    if (oldName === 'index.html') {
+      toast.error('Cannot rename the main index.html file');
+      return;
+    }
+
+    const newName = prompt(`Enter new name for ${oldName}:`, oldName);
+    if (!newName || newName === oldName) return;
+
+    if (files[newName]) {
+      toast.error('A file with this name already exists');
+      return;
+    }
+
+    setFiles((prev) => {
+      const newFiles = { ...prev };
+      const fileObj = { ...newFiles[oldName], name: newName };
+      
+      if (!fileObj.isImage) {
+         if (newName.endsWith('.html')) fileObj.language = 'html';
+         else if (newName.endsWith('.css')) fileObj.language = 'css';
+         else if (newName.endsWith('.jsx')) fileObj.language = 'javascriptreact';
+         else fileObj.language = 'javascript';
+      }
+
+      newFiles[newName] = fileObj;
+      delete newFiles[oldName];
+      return newFiles;
+    });
+
+    if (activeFile === oldName) {
+      setActiveFile(newName);
+    }
+  };
+
   const handleImageUploadClick = () => {
     if (readOnly) return;
     fileInputRef.current?.click();
@@ -357,10 +395,21 @@ ${combinedJsx}
               <div 
                 key={file.name}
                 onClick={() => setActiveFile(file.name)}
-                className={`flex items-center px-4 py-2 cursor-pointer text-sm font-medium transition-colors ${activeFile === file.name ? 'bg-[#eef4ed] text-[#13315c] border-r-2 border-[#13315c]' : 'text-gray-600 hover:bg-gray-100 hover:text-[#13315c]'}`}
+                className={`group flex items-center justify-between px-4 py-2 cursor-pointer text-sm font-medium transition-colors ${activeFile === file.name ? 'bg-[#eef4ed] text-[#13315c] border-r-2 border-[#13315c]' : 'text-gray-600 hover:bg-gray-100 hover:text-[#13315c]'}`}
               >
-                {file.isImage ? <ImageIcon size={16} className="mr-3 text-purple-500" /> : <FileCode size={16} className="mr-3 text-blue-500" />}
-                <span className="truncate">{file.name}</span>
+                <div className="flex items-center flex-1 min-w-0">
+                  {file.isImage ? <ImageIcon size={16} className="mr-3 flex-shrink-0 text-purple-500" /> : <FileCode size={16} className="mr-3 flex-shrink-0 text-blue-500" />}
+                  <span className="truncate">{file.name}</span>
+                </div>
+                {!readOnly && file.name !== 'index.html' && (
+                  <button 
+                    onClick={(e) => handleRenameFile(e, file.name)} 
+                    title="Rename File"
+                    className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-blue-500 transition-all p-1 rounded-md hover:bg-white/50"
+                  >
+                    <Edit2 size={14} />
+                  </button>
+                )}
               </div>
             ))}
           </div>
