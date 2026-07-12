@@ -141,7 +141,7 @@ const QuizListPage = () => {
                         </div>
                         {quiz.resultsReleased ? (
                           <Link
-                            to={`/student/result/${quiz.attemptInfo.resultId}`}
+                            to={`/result/${quiz.attemptInfo.resultId}`}
                             className="w-full mt-4 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest text-xs py-3 px-4 rounded-xl transition-all shadow-md hover:shadow-lg"
                           >
                             View Result <ChevronRight size={20} />
