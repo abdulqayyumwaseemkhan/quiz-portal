@@ -107,9 +107,25 @@ export default function WebIDE({
 
   const runCode = () => {
     if (!iframeRef.current) return;
-    const html = files['index.html']?.content || (isReactProject ? '<div id="root"></div>' : '');
-    const css = files['style.css']?.content || files['styles.css']?.content || '';
+    let html = files['index.html']?.content || (isReactProject ? '<div id="root"></div>' : '');
+    let css = files['style.css']?.content || files['styles.css']?.content || '';
     
+    // Create map of image URLs for replacement
+    const imageUrls = {};
+    Object.values(files).forEach(file => {
+      if (file.isImage && file.url) {
+        imageUrls[file.name] = file.url;
+      }
+    });
+
+    const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    Object.keys(imageUrls).forEach(imgName => {
+      const regex = new RegExp(escapeRegExp(imgName), 'g');
+      html = html.replace(regex, imageUrls[imgName]);
+      css = css.replace(regex, imageUrls[imgName]);
+    });
+
     let combinedHtml = '';
 
     if (isReactProject) {
@@ -121,6 +137,11 @@ import { createRoot } from "react-dom/client";
       Object.values(files).forEach(file => {
         if (file.name.endsWith('.js') || file.name.endsWith('.jsx')) {
           let content = file.content;
+          
+          Object.keys(imageUrls).forEach(imgName => {
+            const regex = new RegExp(escapeRegExp(imgName), 'g');
+            content = content.replace(regex, imageUrls[imgName]);
+          });
           
           // Strip local relative imports (e.g. import App from './App' or import './styles.css')
           content = content.replace(/import\s+.*?\s+from\s+['"][\.\/].*?['"];?/g, '');
@@ -170,7 +191,13 @@ ${combinedJsx}
         <\/script>
       `;
     } else {
-      const js = files['script.js']?.content || '';
+      let js = files['script.js']?.content || '';
+      
+      Object.keys(imageUrls).forEach(imgName => {
+        const regex = new RegExp(escapeRegExp(imgName), 'g');
+        js = js.replace(regex, imageUrls[imgName]);
+      });
+
       combinedHtml = `
         ${html}
         <style>${css}</style>
@@ -499,7 +526,12 @@ ${combinedJsx}
                 autoClosingBrackets: 'always',
                 autoClosingQuotes: 'always',
                 autoIndent: 'full',
-                formatOnPaste: true
+                formatOnPaste: true,
+                quickSuggestions: true,
+                suggestOnTriggerCharacters: true,
+                snippetSuggestions: "inline",
+                wordBasedSuggestions: true,
+                parameterHints: { enabled: true }
               }}
             />
           )}
