@@ -139,12 +139,18 @@ const QuizListPage = () => {
                            <AlertCircle size={16} /> 
                            {quiz.resultsReleased ? 'Results Released' : 'Result Pending Release'}
                         </div>
-                        <Link
-                          to={`/student/result/${quiz.attemptInfo.resultId}`}
-                          className="w-full mt-4 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest text-xs py-3 px-4 rounded-xl transition-all shadow-md hover:shadow-lg"
-                        >
-                          View Result <ChevronRight size={20} />
-                        </Link>
+                        {quiz.resultsReleased ? (
+                          <Link
+                            to={`/student/result/${quiz.attemptInfo.resultId}`}
+                            className="w-full mt-4 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest text-xs py-3 px-4 rounded-xl transition-all shadow-md hover:shadow-lg"
+                          >
+                            View Result <ChevronRight size={20} />
+                          </Link>
+                        ) : (
+                          <button disabled className="w-full mt-4 flex items-center justify-center gap-2 bg-gray-200 text-gray-500 font-black uppercase tracking-widest text-xs py-3 px-4 rounded-xl cursor-not-allowed">
+                            View Result (Pending)
+                          </button>
+                        )}
                       </div>
                     ) : isLocked ? (
                        <button disabled className="w-full py-4 rounded-xl bg-gray-50 text-gray-500 font-black uppercase tracking-widest text-sm cursor-not-allowed">
