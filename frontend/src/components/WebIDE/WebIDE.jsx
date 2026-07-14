@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
-import { Play, Save, Upload, FolderPlus, FilePlus, X, Image as ImageIcon, FileCode, Edit2, Trash2 } from 'lucide-react';
+import { Play, Save, Upload, FolderPlus, FilePlus, X, Image as ImageIcon, FileCode, Edit2, Trash2, Monitor, Tablet, Smartphone, Maximize2, Minimize2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import API from '../../api';
@@ -85,6 +85,8 @@ export default function WebIDE({
   const [files, setFiles] = useState(initialData);
   const [activeFile, setActiveFile] = useState('index.html');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [previewMode, setPreviewMode] = useState('default'); // 'hidden', 'default', 'full'
+  const [deviceWidth, setDeviceWidth] = useState('100%'); // '100%', '768px', '375px'
   const iframeRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -373,8 +375,8 @@ ${combinedJsx}
     }
 
     const imageCount = Object.values(files).filter(f => f.isImage).length;
-    if (imageCount >= 5) {
-      toast.error('Maximum of 5 images allowed per workspace');
+    if (imageCount >= 15) {
+      toast.error('Maximum of 15 images allowed per workspace');
       return;
     }
 
@@ -432,13 +434,19 @@ ${combinedJsx}
       {/* Top Bar */}
       <div className="flex items-center justify-between px-6 py-3 bg-white border-b border-[#8da9c4]/30 shadow-sm z-10">
         <div className="flex items-center space-x-6">
-          <span className="font-black text-[#13315c] tracking-tight">Web IDE Workspace</span>
+          <span className="font-black text-[#13315c] tracking-tight hidden sm:inline">Web IDE Workspace</span>
           <button 
             onClick={runCode}
             className="flex items-center space-x-2 px-4 py-1.5 bg-[#13315c] text-white hover:bg-opacity-90 rounded-lg text-sm font-bold transition-all shadow-sm"
           >
             <Play size={16} />
             <span>Run Code</span>
+          </button>
+          <button
+            onClick={() => setPreviewMode(previewMode === 'hidden' ? 'default' : 'hidden')}
+            className="flex items-center space-x-2 px-3 py-1.5 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg text-sm font-bold transition-all shadow-sm"
+          >
+            {previewMode === 'hidden' ? 'Show Result' : 'Hide Result'}
           </button>
         </div>
         {!readOnly && (
@@ -455,7 +463,7 @@ ${combinedJsx}
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
-        <div className="w-48 md:w-64 bg-gray-50 border-r border-[#8da9c4]/30 flex flex-col">
+        <div className={`w-48 md:w-64 bg-gray-50 border-r border-[#8da9c4]/30 flex flex-col ${previewMode === 'full' ? 'hidden' : ''}`}>
           <div className="px-4 py-3 text-xs font-bold text-gray-500 tracking-widest uppercase flex justify-between items-center border-b border-[#8da9c4]/20">
             <span>Explorer</span>
             {!readOnly && (
@@ -500,7 +508,7 @@ ${combinedJsx}
         </div>
 
         {/* Editor Area */}
-        <div className="flex-1 flex flex-col min-w-0 bg-white">
+        <div className={`flex-1 flex flex-col min-w-0 bg-white ${previewMode === 'full' ? 'hidden' : ''}`}>
           {files[activeFile] && files[activeFile].isImage ? (
             <div className="flex-1 flex flex-col items-center justify-center p-8 bg-gray-50">
               <img src={files[activeFile].url} alt={files[activeFile].name} className="max-w-full max-h-full object-contain mb-6 border border-[#8da9c4]/30 rounded-xl bg-white shadow-sm" />
@@ -538,16 +546,31 @@ ${combinedJsx}
         </div>
 
         {/* Preview Area */}
-        <div className="hidden md:flex w-1/3 lg:w-2/5 bg-white border-l border-[#8da9c4]/30 flex-col">
+        <div className={`${previewMode === 'hidden' ? 'hidden' : 'flex'} ${previewMode === 'full' ? 'w-full' : 'hidden md:flex w-1/3 lg:w-2/5'} bg-white border-l border-[#8da9c4]/30 flex-col`}>
           <div className="px-3 py-1.5 bg-[#f3f4f6] border-b border-gray-200 text-xs font-semibold text-gray-600 flex justify-between items-center">
             <span>Preview</span>
+            <div className="flex space-x-2 items-center">
+              <button onClick={() => setDeviceWidth('375px')} title="Mobile View" className={`hover:text-[#13315c] transition-colors p-1 rounded ${deviceWidth === '375px' ? 'text-blue-600 bg-blue-100' : 'text-gray-400'}`}><Smartphone size={14} /></button>
+              <button onClick={() => setDeviceWidth('768px')} title="Tablet View" className={`hover:text-[#13315c] transition-colors p-1 rounded ${deviceWidth === '768px' ? 'text-blue-600 bg-blue-100' : 'text-gray-400'}`}><Tablet size={14} /></button>
+              <button onClick={() => setDeviceWidth('100%')} title="Desktop View" className={`hover:text-[#13315c] transition-colors p-1 rounded ${deviceWidth === '100%' ? 'text-blue-600 bg-blue-100' : 'text-gray-400'}`}><Monitor size={14} /></button>
+              <div className="w-px h-4 bg-gray-300 mx-1"></div>
+              {previewMode === 'full' ? (
+                <button onClick={() => setPreviewMode('default')} title="Restore View" className="text-gray-400 hover:text-[#13315c] p-1"><Minimize2 size={14} /></button>
+              ) : (
+                <button onClick={() => setPreviewMode('full')} title="Full Screen Preview" className="text-gray-400 hover:text-[#13315c] p-1"><Maximize2 size={14} /></button>
+              )}
+            </div>
           </div>
-          <iframe
-            ref={iframeRef}
-            title="Preview"
-            className="w-full flex-1 border-none bg-white"
-            sandbox="allow-scripts"
-          />
+          <div className="flex-1 overflow-auto bg-gray-100 flex justify-center items-start">
+             <div style={{ width: deviceWidth, height: '100%', transition: 'width 0.3s ease', backgroundColor: 'white', borderLeft: deviceWidth !== '100%' ? '1px solid #ddd' : 'none', borderRight: deviceWidth !== '100%' ? '1px solid #ddd' : 'none', boxShadow: deviceWidth !== '100%' ? '0 0 10px rgba(0,0,0,0.1)' : 'none' }}>
+                <iframe
+                  ref={iframeRef}
+                  title="Preview"
+                  className="w-full h-full border-none bg-white"
+                  sandbox="allow-scripts"
+                />
+             </div>
+          </div>
         </div>
       </div>
       
