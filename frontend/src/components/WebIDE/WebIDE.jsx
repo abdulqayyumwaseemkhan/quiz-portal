@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
-import { Play, Save, Upload, FolderPlus, FilePlus, X, Image as ImageIcon, FileCode, Edit2, Trash2, Monitor, Tablet, Smartphone, Maximize2, Minimize2 } from 'lucide-react';
+import { Play, Save, Upload, FolderPlus, FilePlus, X, Image as ImageIcon, FileCode, Edit2, Trash2, Monitor, Tablet, Smartphone, Maximize2, Minimize2, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import API from '../../api';
@@ -510,7 +510,18 @@ ${combinedJsx}
         {/* Editor Area */}
         <div className={`flex-1 flex flex-col min-w-0 bg-white ${previewMode === 'full' ? 'hidden' : ''}`}>
           {files[activeFile] && files[activeFile].isImage ? (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 bg-gray-50">
+            <div className="flex-1 flex flex-col items-center justify-center p-8 bg-gray-50 relative">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(files[activeFile].url);
+                  toast.success('Link copied to clipboard!');
+                }}
+                className="absolute top-4 right-4 flex items-center space-x-2 px-3 py-1.5 bg-white border border-[#8da9c4]/30 text-[#13315c] hover:bg-gray-100 rounded-lg text-sm font-bold transition-all shadow-sm"
+                title="Copy Image Link"
+              >
+                <Copy size={16} />
+                <span>Copy Link</span>
+              </button>
               <img src={files[activeFile].url} alt={files[activeFile].name} className="max-w-full max-h-full object-contain mb-6 border border-[#8da9c4]/30 rounded-xl bg-white shadow-sm" />
               <div className="bg-white border border-[#8da9c4]/30 px-4 py-2 rounded-lg text-sm text-[#13315c] select-all w-full max-w-xl overflow-x-auto whitespace-nowrap font-mono shadow-sm">
                 {files[activeFile].url}
