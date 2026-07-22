@@ -375,8 +375,8 @@ ${combinedJsx}
     }
 
     const imageCount = Object.values(files).filter(f => f.isImage).length;
-    if (imageCount >= 15) {
-      toast.error('Maximum of 15 images allowed per workspace');
+    if (imageCount >= 30) {
+      toast.error('Maximum of 30 images allowed per workspace');
       return;
     }
 

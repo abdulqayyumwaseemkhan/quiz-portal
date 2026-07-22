@@ -179,6 +179,11 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment }) => {
                         setFile(null);
                         return;
                       }
+                      if (selected.size > 10 * 1024 * 1024) {
+                        toast.error('File size exceeds 10MB limit');
+                        setFile(null);
+                        return;
+                      }
                       setFile(selected);
                     }
                   }} 

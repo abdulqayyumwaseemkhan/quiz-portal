@@ -21,7 +21,7 @@ const {
   getNotesForStudent,
 } = require('../controllers/noteController');
 
-const upload = require('../middleware/upload');
+const { assignmentUpload, ideImageUpload } = require('../middleware/upload');
 
 router.get('/verify-id/:studentId', verifyStudentId);
 router.get('/quizzes/:studentId', getAvailableQuizzes);
@@ -32,9 +32,9 @@ router.get('/check-attempt/:quizId/:studentId', checkAttemptStatus);
 
 // Assignment Routes
 router.get('/assignments/:studentId', getAssignmentsForStudent);
-router.post('/assignments/:id/submit/:studentId', upload.single('file'), submitAssignment);
+router.post('/assignments/:id/submit/:studentId', assignmentUpload.single('file'), submitAssignment);
 router.post('/assignments/:id/submit-ide/:studentId', submitIdeAssignment);
-router.post('/ide/upload-image', upload.single('image'), uploadIdeImage);
+router.post('/ide/upload-image', ideImageUpload.single('image'), uploadIdeImage);
 router.get('/assignments/:id/status/:studentId', getMySubmissionStatus);
 
 // Note Routes
