@@ -18,6 +18,7 @@ connectDB();
 // Middlewares
 const allowedOrigins = [
   process.env.FRONTEND_URL,
+  'https://bql.createxcore.com',
   'https://banoqabil-quiz-portal.vercel.app',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
