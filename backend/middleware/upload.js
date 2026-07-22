@@ -38,7 +38,7 @@ const assignmentUpload = createUpload(
   assignmentAllowedMimetypes,
   assignmentAllowedExtensions,
   'Invalid file type! Allowed: zip, pdf, doc, docx, ppt, pptx',
-  10 // 10 MB limit
+  4 // 4 MB limit (Vercel Serverless Function limit is 4.5MB)
 );
 
 const imageAllowedMimetypes = [
@@ -52,7 +52,7 @@ const ideImageUpload = createUpload(
   imageAllowedMimetypes,
   imageAllowedExtensions,
   'Invalid file type! Allowed: png, jpg, jpeg, webp',
-  30 // 30 MB limit
+  4 // 4 MB limit (Vercel Serverless Function limit is 4.5MB)
 );
 
 module.exports = {
