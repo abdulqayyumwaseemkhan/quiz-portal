@@ -6,9 +6,9 @@ const {
   deleteNote,
 } = require('../controllers/noteController');
 const { protectAdmin } = require('../middleware/auth');
-const upload = require('../middleware/upload');
+const { assignmentUpload } = require('../middleware/upload');
 
-router.post('/', protectAdmin, upload.single('file'), createNote);
+router.post('/', protectAdmin, assignmentUpload.single('file'), createNote);
 router.get('/', protectAdmin, getNotes);
 router.delete('/:id', protectAdmin, deleteNote);
 
