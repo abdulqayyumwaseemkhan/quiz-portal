@@ -84,6 +84,7 @@ export default function WebIDE({
 
   const [files, setFiles] = useState(initialData);
   const [activeFile, setActiveFile] = useState('index.html');
+  const [previewFile, setPreviewFile] = useState('index.html');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewMode, setPreviewMode] = useState('default'); // 'hidden', 'default', 'full'
   const [deviceWidth, setDeviceWidth] = useState('100%'); // '100%', '768px', '375px'
@@ -109,8 +110,28 @@ export default function WebIDE({
 
   const runCode = () => {
     if (!iframeRef.current) return;
-    let html = files['index.html']?.content || (isReactProject ? '<div id="root"></div>' : '');
+    
+    let currentPreview = previewFile;
+    if (!files[currentPreview] || isReactProject) {
+      currentPreview = 'index.html';
+    }
+    let html = files[currentPreview]?.content || (isReactProject ? '<div id="root"></div>' : '');
     let css = files['style.css']?.content || files['styles.css']?.content || '';
+
+    const clickInterceptorScript = `
+      <script>
+        document.addEventListener('click', function(e) {
+          const a = e.target.closest('a');
+          if (a && a.getAttribute('href')) {
+            const href = a.getAttribute('href');
+            if (!href.startsWith('http') && !href.startsWith('#') && !href.startsWith('mailto:')) {
+              e.preventDefault();
+              window.parent.postMessage({ type: 'NAVIGATE', path: href }, '*');
+            }
+          }
+        });
+      </script>
+    `;
     
     // Create map of image URLs for replacement
     const imageUrls = {};
@@ -163,6 +184,7 @@ import { createRoot } from "react-dom/client";
       combinedHtml = `
         ${html}
         <style>${css}</style>
+        ${clickInterceptorScript}
         
         <!-- Import Maps for native ES Modules in browser -->
         <script type="importmap">
@@ -203,6 +225,7 @@ ${combinedJsx}
       combinedHtml = `
         ${html}
         <style>${css}</style>
+        ${clickInterceptorScript}
         <script>
           try {
             ${js}
@@ -226,6 +249,28 @@ ${combinedJsx}
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialProjectData]);
+
+  useEffect(() => {
+    const handleMessage = (e) => {
+      if (e.data?.type === 'NAVIGATE') {
+        const path = e.data.path;
+        if (files[path]) {
+          setPreviewFile(path);
+          setActiveFile(path);
+        } else {
+          toast.error(`File not found: ${path}`);
+        }
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [files]);
+
+  useEffect(() => {
+    if (iframeRef.current && files[previewFile]) {
+      runCode();
+    }
+  }, [previewFile]);
 
   const handleCreateFile = () => {
     if (readOnly) return;
@@ -436,7 +481,13 @@ ${combinedJsx}
         <div className="flex items-center space-x-6">
           <span className="font-black text-[#13315c] tracking-tight hidden sm:inline">Web IDE Workspace</span>
           <button 
-            onClick={runCode}
+            onClick={() => {
+              if (activeFile.endsWith('.html') && activeFile !== previewFile) {
+                setPreviewFile(activeFile);
+              } else {
+                runCode();
+              }
+            }}
             className="flex items-center space-x-2 px-4 py-1.5 bg-[#13315c] text-white hover:bg-opacity-90 rounded-lg text-sm font-bold transition-all shadow-sm"
           >
             <Play size={16} />
