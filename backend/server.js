@@ -1,6 +1,9 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const compression = require('compression');
+const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
 const { errorHandler } = require('./middleware/error');
 
@@ -9,13 +12,17 @@ const quizRoutes = require('./routes/quizRoutes');
 const studentRoutes = require('./routes/studentRoutes');
 const assignmentRoutes = require('./routes/assignmentRoutes');
 const noteRoutes = require('./routes/noteRoutes');
+const lectureRoutes = require('./routes/lectureRoutes');
 
 const app = express();
 
 // Connect to Database
 connectDB();
 
-// Middlewares
+// Security & Performance Middlewares
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+app.use(compression());
+
 const allowedOrigins = [
   process.env.FRONTEND_URL,
   'https://bql.createxcore.com',
@@ -28,12 +35,8 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    
-    // Normalize incoming origin by removing trailing slash
     const normalizedOrigin = origin.replace(/\/$/, "");
-    
     if (allowedOrigins.indexOf(normalizedOrigin) === -1) {
       console.log('CORS blocked for origin:', origin);
       const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
@@ -43,7 +46,19 @@ app.use(cors({
   },
   credentials: true
 }));
-app.use(express.json());
+
+app.use(express.json({ limit: '4mb' }));
+
+// Rate limiters tuned for 100+ concurrent students on shared campus IPs
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 600, // 600 req/min per IP (allows 100 students behind a single campus NAT router)
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many requests from this IP, please try again shortly.' },
+});
+
+app.use('/api', apiLimiter);
 
 // Routes
 app.use('/api/admin', adminRoutes);
@@ -51,6 +66,7 @@ app.use('/api/quizzes', quizRoutes);
 app.use('/api/student', studentRoutes);
 app.use('/api/assignments', assignmentRoutes);
 app.use('/api/notes', noteRoutes);
+app.use('/api/lectures', lectureRoutes);
 
 // Base route
 app.get('/', (req, res) => {
