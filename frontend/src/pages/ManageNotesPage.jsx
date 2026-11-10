@@ -3,8 +3,6 @@ import API from '../api';
 import Navbar from '../components/AdminNavbar';
 import { Plus, Trash2, FileText, UploadCloud } from 'lucide-react';
 import toast from 'react-hot-toast';
-// eslint-disable-next-line no-unused-vars
-import { motion, AnimatePresence } from 'framer-motion';
 
 const ManageNotesPage = () => {
   const [notes, setNotes] = useState([]);
@@ -12,7 +10,7 @@ const ManageNotesPage = () => {
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [uploading, setUploading] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     lectureNumber: '',
     lectureTitle: '',
@@ -74,10 +72,9 @@ const ManageNotesPage = () => {
       const response = await API.post('/notes', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      // Notes are sorted by lecture number ascending
       const newNotes = [...notes, response.data].sort((a, b) => a.lectureNumber - b.lectureNumber);
       setNotes(newNotes);
-      
+
       setFormData({ lectureNumber: '', lectureTitle: '', description: '', campus: '', batch: '' });
       setFile(null);
       setShowAdd(false);
@@ -93,7 +90,7 @@ const ManageNotesPage = () => {
     if (window.confirm('Are you sure you want to delete this lecture note?')) {
       try {
         await API.delete(`/notes/${id}`);
-        setNotes(notes.filter(n => n._id !== id));
+        setNotes(notes.filter((n) => n._id !== id));
         toast.success('Note deleted');
       } catch (error) {
         console.error(error);
@@ -103,160 +100,181 @@ const ManageNotesPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-transparent text-[#13315c] flex">
+    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
       <Navbar />
-      <main className="flex-1 ml-64 p-8">
-        <header className="flex justify-between items-center mb-10">
+      <main className="md:ml-64 p-4 sm:p-8 max-w-6xl">
+        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-black text-[#13315c]">Manage Lecture Notes</h1>
-            <p className="text-gray-600">Upload and organize course materials</p>
+            <h1 className="text-2xl font-bold tracking-tight">Lecture Notes</h1>
+            <p className="text-sm text-[var(--text-muted)] mt-1">
+              Upload and organize downloadable slides, PDFs, and starter files
+            </p>
           </div>
-          <button 
+          <button
             onClick={() => setShowAdd(!showAdd)}
-            className="btn-primary flex items-center gap-2 px-6 h-12"
+            className="btn-primary flex items-center gap-2 self-start"
           >
-            {showAdd ? 'Cancel' : <><Plus size={20} /> Upload Note</>}
+            {showAdd ? 'Cancel' : <><Plus size={16} /> Upload Note</>}
           </button>
         </header>
 
-        <AnimatePresence>
-          {showAdd && (
-            <motion.form 
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              onSubmit={handleAddNote}
-              className="card bg-white p-8 mb-10 overflow-hidden border-2 border-primary-100"
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Lecture Number</label>
-                  <input
-                    type="number"
-                    min="1"
-                    placeholder="e.g. 1"
-                    className="input-field h-12 w-full"
-                    value={formData.lectureNumber}
-                    onChange={(e) => setFormData({...formData, lectureNumber: e.target.value})}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Lecture Title</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Introduction to React"
-                    className="input-field h-12 w-full"
-                    value={formData.lectureTitle}
-                    onChange={(e) => setFormData({...formData, lectureTitle: e.target.value})}
-                    required
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Description</label>
-                  <textarea
-                    placeholder="Brief overview of the lecture..."
-                    className="input-field h-24 w-full py-3"
-                    value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  />
-                </div>
-                <div className="md:col-span-2">
-                   <label className="flex items-center justify-center w-full h-16 px-4 transition bg-white border-2 border-[#8da9c4]/30 border-dashed rounded-xl appearance-none cursor-pointer hover:border-primary-400 focus:outline-none relative">
-                       <span className="flex items-center space-x-2">
-                           <UploadCloud className="w-6 h-6 text-gray-500" />
-                           <span className="font-medium text-gray-600">
-                             {file ? file.name : 'Select file (PDF, PPT, DOC, ZIP, PNG, JPG)'}
-                           </span>
-                       </span>
-                       <input type="file" className="hidden" accept=".zip,.pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg" onChange={handleFileChange} />
-                   </label>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Campus Filter (Optional)</label>
-                  <select 
-                    className="input-field h-12 w-full"
-                    value={formData.campus}
-                    onChange={(e) => setFormData({...formData, campus: e.target.value})}
-                  >
-                    <option value="">All Campuses</option>
-                    {meta.campuses.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Batch Filter (Optional)</label>
-                  <select 
-                    className="input-field h-12 w-full"
-                    value={formData.batch}
-                    onChange={(e) => setFormData({...formData, batch: e.target.value})}
-                  >
-                    <option value="">All Batches</option>
-                    {meta.batches.map(b => <option key={b} value={b}>{b}</option>)}
-                  </select>
-                </div>
-                <div className="md:col-span-2 mt-4">
-                   <button type="submit" disabled={uploading} className="btn-primary w-full py-4 font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed">
-                     {uploading ? 'Uploading...' : 'Save Lecture Note'}
-                   </button>
-                </div>
+        {showAdd && (
+          <form
+            onSubmit={handleAddNote}
+            className="bg-[var(--bg-surface)] border border-[var(--border)] rounded-xl p-6 mb-6 space-y-4"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                  Lecture Number *
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="e.g. 1"
+                  className="input-field"
+                  value={formData.lectureNumber}
+                  onChange={(e) => setFormData({ ...formData, lectureNumber: e.target.value })}
+                  required
+                />
               </div>
-            </motion.form>
-          )}
-        </AnimatePresence>
+              <div>
+                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                  Lecture Title *
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Introduction to React"
+                  className="input-field"
+                  value={formData.lectureTitle}
+                  onChange={(e) => setFormData({ ...formData, lectureTitle: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                  Description
+                </label>
+                <textarea
+                  placeholder="Brief overview of the lecture material..."
+                  className="input-field h-20"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="flex items-center justify-center w-full h-16 px-4 bg-[var(--bg-primary)] border border-dashed border-[var(--border)] rounded-lg cursor-pointer hover:border-[var(--accent)] transition-colors">
+                  <span className="flex items-center space-x-2 text-sm">
+                    <UploadCloud className="w-5 h-5 text-[var(--text-muted)]" />
+                    <span className="font-medium text-[var(--text-secondary)]">
+                      {file ? file.name : 'Select file (PDF, PPT, DOC, ZIP, PNG, JPG)'}
+                    </span>
+                  </span>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept=".zip,.pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg"
+                    onChange={handleFileChange}
+                  />
+                </label>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                  Campus (Optional)
+                </label>
+                <select
+                  className="input-field"
+                  value={formData.campus}
+                  onChange={(e) => setFormData({ ...formData, campus: e.target.value })}
+                >
+                  <option value="">All Campuses</option>
+                  {meta.campuses.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                  Batch (Optional)
+                </label>
+                <select
+                  className="input-field"
+                  value={formData.batch}
+                  onChange={(e) => setFormData({ ...formData, batch: e.target.value })}
+                >
+                  <option value="">All Batches</option>
+                  {meta.batches.map((b) => (
+                    <option key={b} value={b}>
+                      {b}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end pt-2">
+              <button type="submit" disabled={uploading} className="btn-primary">
+                {uploading ? 'Uploading...' : 'Save Lecture Note'}
+              </button>
+            </div>
+          </form>
+        )}
 
-        <div className="bg-white rounded-xl shadow-sm border border-[#8da9c4]/30 overflow-hidden">
-          <table className="w-full text-left">
-            <thead className="bg-white text-gray-600 text-xs font-semibold uppercase tracking-widest">
-              <tr>
-                <th className="px-8 py-5">#</th>
-                <th className="px-8 py-5">Lecture Details</th>
-                <th className="px-8 py-5">File</th>
-                <th className="px-8 py-5">Target</th>
-                <th className="px-8 py-5 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {notes.map((note) => (
-                <tr key={note._id} className="hover:bg-white0 transition-colors group">
-                  <td className="px-8 py-5 font-bold text-gray-500 text-lg">
-                    {note.lectureNumber}
-                  </td>
-                  <td className="px-8 py-5">
-                    <p className="font-bold text-[#13315c] text-lg">{note.lectureTitle}</p>
-                    <p className="text-sm text-gray-600 line-clamp-1">{note.description || 'No description'}</p>
-                  </td>
-                  <td className="px-8 py-5">
-                    <a href={note.fileUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold text-[#13315c] hover:underline flex items-center gap-2">
-                       <FileText size={16} /> {note.fileType.toUpperCase()}
-                    </a>
-                  </td>
-                  <td className="px-8 py-5">
-                     <div className="flex flex-col">
-                       <span className="text-xs font-semibold text-[#13315c] bg-[#8da9c4]/20 px-2 py-1 rounded-md w-fit mb-1">
-                         {note.campus || 'All Campuses'}
-                       </span>
-                       <span className="text-xs font-semibold text-gray-600 bg-gray-50 px-2 py-1 rounded-md w-fit">
-                         {note.batch || 'All Batches'}
-                       </span>
-                     </div>
-                  </td>
-                  <td className="px-8 py-5 text-right">
-                    <button 
-                      onClick={() => handleDelete(note._id)}
-                      className="p-3 bg-white text-rose-500 hover:bg-rose-500/10 rounded-lg shadow-sm border border-[#8da9c4]/30 transition-all"
-                      title="Delete Note"
-                    >
-                      <Trash2 size={20} />
-                    </button>
-                  </td>
+        <div className="bg-[var(--bg-surface)] rounded-xl border border-[var(--border)] overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-[var(--bg-muted)] text-[var(--text-muted)] text-xs font-semibold uppercase tracking-wider border-b border-[var(--border)]">
+                <tr>
+                  <th className="px-5 py-3.5">#</th>
+                  <th className="px-5 py-3.5">Lecture Details</th>
+                  <th className="px-5 py-3.5">File</th>
+                  <th className="px-5 py-3.5">Target</th>
+                  <th className="px-5 py-3.5 text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-[var(--border)]">
+                {notes.map((note) => (
+                  <tr key={note._id} className="hover:bg-[var(--bg-muted)]/50 transition-colors">
+                    <td className="px-5 py-3.5 font-mono font-semibold text-[var(--text-muted)]">
+                      {note.lectureNumber}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <p className="font-semibold text-[var(--text-primary)]">{note.lectureTitle}</p>
+                      <p className="text-xs text-[var(--text-muted)] line-clamp-1">
+                        {note.description || 'No description'}
+                      </p>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <a
+                        href={note.fileUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs font-semibold text-[var(--accent)] hover:underline inline-flex items-center gap-1.5"
+                      >
+                        <FileText size={14} /> {note.fileType?.toUpperCase() || 'FILE'}
+                      </a>
+                    </td>
+                    <td className="px-5 py-3.5 text-xs text-[var(--text-secondary)]">
+                      {note.campus || 'All Campuses'} · {note.batch || 'All Batches'}
+                    </td>
+                    <td className="px-5 py-3.5 text-right">
+                      <button
+                        onClick={() => handleDelete(note._id)}
+                        className="p-2 text-rose-600 hover:bg-rose-500/10 rounded-lg transition-colors"
+                        title="Delete Note"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           {notes.length === 0 && !loading && (
-            <div className="p-20 text-center">
-              <FileText className="mx-auto text-gray-100 mb-6" size={80} />
-              <p className="text-gray-500 font-semibold text-xl uppercase tracking-widest">No lecture notes found</p>
+            <div className="p-12 text-center text-sm text-[var(--text-muted)]">
+              No lecture notes uploaded yet.
             </div>
           )}
         </div>

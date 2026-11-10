@@ -4,6 +4,7 @@ const {
   loginStudent,
   changeStudentPassword,
   updateStudentProfile,
+  getStudentDashboard,
   getAvailableQuizzes,
   getQuizForAttempt,
   autosaveQuizAttempt,
@@ -42,6 +43,7 @@ router.post('/login', loginStudent);
 router.put('/change-password', protectStudent, changeStudentPassword);
 router.put('/profile', protectStudent, updateStudentProfile);
 router.get('/verify-id/:studentId', verifyStudentId);
+router.get('/dashboard/:studentId', protectStudent, getStudentDashboard);
 
 // Quiz Routes
 router.get('/quizzes/:studentId', protectStudent, getAvailableQuizzes);

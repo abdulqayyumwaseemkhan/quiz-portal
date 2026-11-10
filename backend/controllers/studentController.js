@@ -4,6 +4,11 @@ const Quiz = require('../models/Quiz');
 const Question = require('../models/Question');
 const Result = require('../models/Result');
 const Student = require('../models/Student');
+const Lecture = require('../models/Lecture');
+const Assignment = require('../models/Assignment');
+const Submission = require('../models/Submission');
+const AttendanceSession = require('../models/AttendanceSession');
+const AttendanceRecord = require('../models/AttendanceRecord');
 const cache = require('../utils/cache');
 const { hashPassword, verifyPassword } = require('../utils/password');
 
@@ -584,10 +589,137 @@ const checkAttemptStatus = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Student Dashboard summary (active/upcoming quizzes, recent lectures, attendance summary, pending assignments)
+// @route   GET /api/student/dashboard/:studentId
+const getStudentDashboard = asyncHandler(async (req, res) => {
+  const { studentId } = req.params;
+  const student = req.student?.studentId === studentId
+    ? req.student
+    : await Student.findOne({ studentId }).select('-passwordHash').lean();
+
+  if (!student) {
+    res.status(404);
+    throw new Error('Student not found');
+  }
+
+  const scopeFilter = {
+    createdBy: student.addedBy,
+    $and: [
+      { $or: [{ campus: '' }, { campus: { $exists: false } }, { campus: student.campus }] },
+      { $or: [{ batch: '' }, { batch: { $exists: false } }, { batch: student.batch }] },
+    ],
+  };
+
+  const [quizzes, quizResults, lectures, assignments, submissions, sessions] = await Promise.all([
+    Quiz.find({ ...scopeFilter, isPublished: { $ne: false } })
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .lean(),
+    Result.find({ studentId: student.studentId })
+      .select('_id quizId status attemptNo score percentage submittedAt')
+      .lean(),
+    Lecture.find({ ...scopeFilter, isPublished: { $ne: false } })
+      .sort({ order: 1, date: -1, createdAt: -1 })
+      .limit(6)
+      .lean(),
+    Assignment.find({ ...scopeFilter, isPublished: { $ne: false } })
+      .sort({ deadline: 1, createdAt: -1 })
+      .limit(10)
+      .lean(),
+    Submission.find({ studentId: student.studentId })
+      .select('assignmentId status marksObtained submittedAt')
+      .lean(),
+    AttendanceSession.find({
+      createdBy: student.addedBy,
+      campus: student.campus,
+      batch: student.batch,
+    })
+      .select('_id')
+      .lean(),
+  ]);
+
+  const sessionIds = sessions.map((s) => s._id);
+  const attendanceRecords = sessionIds.length > 0
+    ? await AttendanceRecord.find({
+        sessionId: { $in: sessionIds },
+        studentId: student.studentId,
+      })
+        .select('status')
+        .lean()
+    : [];
+
+  const totalSessions = sessions.length;
+  const attendedCount = attendanceRecords.filter((r) => r.status === 'Present' || r.status === 'Late').length;
+  const attendancePercentage = totalSessions > 0 ? Number(((attendedCount / totalSessions) * 100).toFixed(1)) : 0;
+
+  const submissionByAssignment = new Map(
+    submissions.map((s) => [s.assignmentId.toString(), s])
+  );
+
+  const pendingAssignments = assignments
+    .filter((a) => !submissionByAssignment.has(a._id.toString()))
+    .slice(0, 5);
+
+  const resultsByQuiz = new Map();
+  quizResults.forEach((r) => {
+    const key = r.quizId.toString();
+    if (!resultsByQuiz.has(key)) resultsByQuiz.set(key, []);
+    resultsByQuiz.get(key).push(r);
+  });
+
+  const activeQuizzes = quizzes
+    .map((q) => {
+      const attempts = resultsByQuiz.get(q._id.toString()) || [];
+      const submittedAttempts = attempts.filter((a) => a.status !== 'in_progress');
+      const inProgress = attempts.find((a) => a.status === 'in_progress');
+      const attemptsAllowed = q.attemptsAllowed || 1;
+      const exhausted = submittedAttempts.length >= attemptsAllowed && !inProgress;
+      return {
+        ...q,
+        attemptInfo: {
+          attempted: exhausted,
+          inProgress: Boolean(inProgress),
+          attemptsUsed: submittedAttempts.length,
+          attemptsAllowed,
+        },
+      };
+    })
+    .filter((q) => !q.attemptInfo.attempted)
+    .slice(0, 5);
+
+  const recentLectures = lectures.slice(0, 4).map((l) => {
+    const watchedBy = Array.isArray(l.watchedBy) ? l.watchedBy : [];
+    return {
+      _id: l._id,
+      title: l.title,
+      courseModule: l.courseModule,
+      date: l.date,
+      watched: watchedBy.includes(student.studentId),
+    };
+  });
+
+  res.json({
+    activeQuizzes,
+    recentLectures,
+    pendingAssignments,
+    attendanceSummary: {
+      totalLectures: totalSessions,
+      attended: attendedCount,
+      percentage: attendancePercentage,
+    },
+    stats: {
+      quizzesCompleted: new Set(quizResults.filter((r) => r.status === 'submitted').map((r) => r.quizId.toString())).size,
+      assignmentsSubmitted: submissions.length,
+      lecturesWatched: lectures.filter((l) => Array.isArray(l.watchedBy) && l.watchedBy.includes(student.studentId)).length,
+    },
+  });
+});
+
 module.exports = {
   loginStudent,
   changeStudentPassword,
   updateStudentProfile,
+  getStudentDashboard,
   getAvailableQuizzes,
   getQuizForAttempt,
   autosaveQuizAttempt,
