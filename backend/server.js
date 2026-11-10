@@ -61,6 +61,16 @@ const apiLimiter = rateLimit({
 
 app.use('/api', apiLimiter);
 
+// Ensure MongoDB connection is established before handling any API route on Vercel serverless cold starts
+app.use('/api', async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Routes
 app.use('/api/admin', adminRoutes);
 app.use('/api/quizzes', quizRoutes);

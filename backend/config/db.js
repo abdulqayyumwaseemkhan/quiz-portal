@@ -17,9 +17,8 @@ const connectDB = async () => {
     const opts = {
       maxPoolSize: Number(process.env.MONGO_MAX_POOL_SIZE) || 15,
       minPoolSize: 1,
-      serverSelectionTimeoutMS: 8000,
+      serverSelectionTimeoutMS: 10000,
       socketTimeoutMS: 45000,
-      bufferCommands: false,
     };
 
     cached.promise = mongoose.connect(process.env.MONGO_URI, opts).then((mongooseInstance) => {
