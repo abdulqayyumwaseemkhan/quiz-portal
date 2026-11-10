@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   loginStudent,
   changeStudentPassword,
+  getStudentProfile,
   updateStudentProfile,
   getStudentDashboard,
   getAvailableQuizzes,
@@ -40,6 +41,7 @@ const { assignmentUpload, ideImageUpload } = require('../middleware/upload');
 
 // Auth & Profile Routes
 router.post('/login', loginStudent);
+router.get('/profile', protectStudent, getStudentProfile);
 router.put('/change-password', protectStudent, changeStudentPassword);
 router.put('/profile', protectStudent, updateStudentProfile);
 router.get('/verify-id/:studentId', verifyStudentId);

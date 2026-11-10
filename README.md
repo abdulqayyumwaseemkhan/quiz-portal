@@ -34,6 +34,10 @@ Production-ready MERN Learning Management System (LMS) for Web Development cohor
 - **Phase 6 — Mobile-First UI/UX, Light/Dark Theme & Performance**:
   - Light and Dark theme powered by CSS variables (`--bg-primary`, `--bg-surface`, `--text-primary`, `--accent`, etc.) with zero-flash startup script in `index.html` and `localStorage` persistence.
   - Mobile-first responsive navigation and card layouts, route-level code splitting (`React.lazy` + `Suspense`), and skeleton loaders.
+- **Security & Access Control**:
+  - **Student-to-Admin Isolation**: Public student portal has zero links to admin routes; admin panel accessible exclusively via direct URL (`/admin/login`).
+  - **Admin Two-Factor Authentication (2FA)**: Supports Google Authenticator (TOTP) and Windows Security Key (Windows Hello / Passkeys via WebAuthn).
+  - **Reversible Password Management**: Admin can view, custom-set, or auto-generate student passwords with AES-256 encryption. If a student updates their password, the change auto-syncs to the Admin Directory in real time.
 
 ---
 

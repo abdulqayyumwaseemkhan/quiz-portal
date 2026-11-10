@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -15,6 +15,10 @@ import {
   Moon,
   Check,
   AlertCircle,
+  Mail,
+  Phone,
+  Shield,
+  RotateCcw,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import api from '../api';
@@ -26,8 +30,17 @@ const StudentNavbar = ({ student }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
 
-  const [email, setEmail] = useState(student?.email || '');
-  const [contact, setContact] = useState(student?.contact || '');
+  const [profileData, setProfileData] = useState(() => {
+    try {
+      const stored = localStorage.getItem('studentInfo');
+      return stored ? JSON.parse(stored) : student || {};
+    } catch {
+      return student || {};
+    }
+  });
+
+  const [email, setEmail] = useState('');
+  const [contact, setContact] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -35,8 +48,18 @@ const StudentNavbar = ({ student }) => {
   const [savingPassword, setSavingPassword] = useState(false);
   const [feedback, setFeedback] = useState({ type: '', message: '' });
 
+  // Sync state whenever student prop updates
+  useEffect(() => {
+    if (student) {
+      setProfileData((prev) => ({ ...prev, ...student }));
+      setEmail(student.email || '');
+      setContact(student.contact || '');
+    }
+  }, [student]);
+
   const handleLogout = () => {
     localStorage.removeItem('studentInfo');
+    localStorage.removeItem('studentToken');
     navigate('/', { replace: true });
   };
 
@@ -49,18 +72,54 @@ const StudentNavbar = ({ student }) => {
     { name: 'Notes', path: '/student-notes', icon: FileText },
   ];
 
+  const fetchLatestProfile = async () => {
+    try {
+      const { data } = await api.get('/student/profile');
+      if (data) {
+        setProfileData(data);
+        setEmail(data.email || '');
+        setContact(data.contact || '');
+        const stored = JSON.parse(localStorage.getItem('studentInfo') || '{}');
+        localStorage.setItem('studentInfo', JSON.stringify({ ...stored, ...data }));
+      }
+    } catch (err) {
+      console.error('Could not refresh student profile from server:', err);
+    }
+  };
+
+  const handleOpenProfileModal = () => {
+    setFeedback({ type: '', message: '' });
+    // Pre-fill with the best available data immediately
+    const currentActive = profileData.studentId ? profileData : student || {};
+    setEmail(currentActive.email || '');
+    setContact(currentActive.contact || '');
+    setProfileModalOpen(true);
+    // Fetch latest fresh data from DB
+    fetchLatestProfile();
+  };
+
+  const handleResetFormToCurrent = () => {
+    setEmail(profileData.email || student?.email || '');
+    setContact(profileData.contact || student?.contact || '');
+    setFeedback({ type: 'success', message: 'Fields reset to current record details.' });
+  };
+
   const handleSaveProfile = async (e) => {
     e.preventDefault();
     setFeedback({ type: '', message: '' });
     setSavingProfile(true);
     try {
       const { data } = await api.put('/student/profile', { email, contact });
+      setProfileData((prev) => ({ ...prev, email: data.email, contact: data.contact }));
+      setEmail(data.email || '');
+      setContact(data.contact || '');
+
       const stored = JSON.parse(localStorage.getItem('studentInfo') || '{}');
       localStorage.setItem(
         'studentInfo',
         JSON.stringify({ ...stored, email: data.email, contact: data.contact })
       );
-      setFeedback({ type: 'success', message: 'Contact details updated.' });
+      setFeedback({ type: 'success', message: 'Contact details updated successfully.' });
     } catch (err) {
       setFeedback({
         type: 'error',
@@ -101,6 +160,8 @@ const StudentNavbar = ({ student }) => {
       setSavingPassword(false);
     }
   };
+
+  const activeUser = profileData.studentId ? profileData : student || {};
 
   return (
     <>
@@ -154,20 +215,17 @@ const StudentNavbar = ({ student }) => {
 
               <button
                 type="button"
-                onClick={() => {
-                  setFeedback({ type: '', message: '' });
-                  setProfileModalOpen(true);
-                }}
+                onClick={handleOpenProfileModal}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--bg-muted)] text-left transition-colors"
-                title="Account & Password Settings"
+                title="Account Details & Password Settings"
               >
                 <User size={15} className="text-[var(--text-muted)]" />
                 <div>
                   <p className="text-xs font-semibold text-[var(--text-primary)] leading-tight">
-                    {student?.fullName}
+                    {activeUser.fullName || 'Student'}
                   </p>
                   <p className="text-[10px] font-mono text-[var(--text-muted)] leading-tight">
-                    {student?.studentId}
+                    {activeUser.studentId || ''}
                   </p>
                 </div>
               </button>
@@ -175,7 +233,7 @@ const StudentNavbar = ({ student }) => {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="p-2 rounded-lg text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                className="p-2 rounded-lg text-rose-500 hover:bg-rose-500/10 transition-colors"
                 title="Sign out"
               >
                 <LogOut size={17} />
@@ -194,10 +252,7 @@ const StudentNavbar = ({ student }) => {
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setFeedback({ type: '', message: '' });
-                  setProfileModalOpen(true);
-                }}
+                onClick={handleOpenProfileModal}
                 className="p-2 rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-muted)]"
                 aria-label="Account settings"
               >
@@ -238,13 +293,13 @@ const StudentNavbar = ({ student }) => {
             })}
             <div className="pt-2 mt-2 border-t border-[var(--border)] flex items-center justify-between px-2">
               <div>
-                <p className="text-xs font-semibold text-[var(--text-primary)]">{student?.fullName}</p>
-                <p className="text-[11px] font-mono text-[var(--text-muted)]">ID: {student?.studentId}</p>
+                <p className="text-xs font-semibold text-[var(--text-primary)]">{activeUser.fullName}</p>
+                <p className="text-[11px] font-mono text-[var(--text-muted)]">ID: {activeUser.studentId}</p>
               </div>
               <button
                 type="button"
                 onClick={handleLogout}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/10"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-500 hover:bg-rose-500/10"
               >
                 <LogOut size={15} /> Sign Out
               </button>
@@ -256,12 +311,13 @@ const StudentNavbar = ({ student }) => {
       {/* Account & Password Settings Modal */}
       {profileModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-          <div className="bg-[var(--bg-surface)] border border-[var(--border)] rounded-xl max-w-md w-full p-6 shadow-xl space-y-5 max-h-[90vh] overflow-y-auto">
+          <div className="card max-w-lg w-full p-6 space-y-5 max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-[var(--border)] pb-3">
               <div>
-                <h2 className="text-base font-bold text-[var(--text-primary)]">Account Settings</h2>
+                <h2 className="text-base font-bold text-[var(--text-primary)]">Student Profile & Settings</h2>
                 <p className="text-xs text-[var(--text-muted)]">
-                  {student?.fullName} · {student?.studentId}
+                  View registered details, update contact info, or change password
                 </p>
               </div>
               <button
@@ -277,8 +333,8 @@ const StudentNavbar = ({ student }) => {
               <div
                 className={`p-3 rounded-lg text-xs font-medium flex items-center gap-2 border ${
                   feedback.type === 'success'
-                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
-                    : 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-400'
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500'
+                    : 'bg-rose-500/10 border-rose-500/30 text-rose-500'
                 }`}
               >
                 {feedback.type === 'success' ? <Check size={15} /> : <AlertCircle size={15} />}
@@ -286,43 +342,121 @@ const StudentNavbar = ({ student }) => {
               </div>
             )}
 
-            <form onSubmit={handleSaveProfile} className="space-y-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                Contact Information
-              </h3>
+            {/* Current Enrolled Details Card */}
+            <div className="p-4 rounded-xl bg-[var(--bg-muted)] border border-[var(--border)] space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+                  Registered Profile Details
+                </span>
+                <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-[var(--bg-surface)] border border-[var(--border)] text-[var(--text-secondary)]">
+                  {activeUser.studentId || 'ID'}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                <div>
+                  <span className="text-[var(--text-muted)] block text-[11px]">Full Name</span>
+                  <span className="font-semibold text-[var(--text-primary)]">
+                    {activeUser.fullName || '—'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[var(--text-muted)] block text-[11px]">Campus & Batch</span>
+                  <span className="font-semibold text-[var(--text-primary)]">
+                    {activeUser.campus || '—'} · {activeUser.batch || '—'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[var(--text-muted)] block text-[11px] flex items-center gap-1">
+                    <Mail size={12} /> Registered Email
+                  </span>
+                  <span className="font-mono text-[var(--text-primary)] truncate block">
+                    {activeUser.email || <em className="text-[var(--text-muted)]">Not provided</em>}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[var(--text-muted)] block text-[11px] flex items-center gap-1">
+                    <Phone size={12} /> Registered Contact
+                  </span>
+                  <span className="font-mono text-[var(--text-primary)] block">
+                    {activeUser.contact || <em className="text-[var(--text-muted)]">Not provided</em>}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Edit Contact Information Form */}
+            <form onSubmit={handleSaveProfile} className="space-y-3 pt-1">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+                  Update Contact Information
+                </h3>
+                <button
+                  type="button"
+                  onClick={handleResetFormToCurrent}
+                  className="text-[11px] text-[var(--text-muted)] hover:text-[var(--text-primary)] flex items-center gap-1 underline"
+                  title="Revert to current record"
+                >
+                  <RotateCcw size={11} /> Reset
+                </button>
+              </div>
+
               <div>
                 <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
                   Email Address
+                  {activeUser.email && (
+                    <span className="text-[11px] text-[var(--text-muted)] ml-2">
+                      (Current on record: <span className="font-mono">{activeUser.email}</span>)
+                    </span>
+                  )}
                 </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="student@example.com"
-                  className="input-field"
-                />
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={15} />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="student@example.com"
+                    className="input-field pl-9 text-xs"
+                  />
+                </div>
               </div>
+
               <div>
                 <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
                   Phone / WhatsApp Contact
+                  {activeUser.contact && (
+                    <span className="text-[11px] text-[var(--text-muted)] ml-2">
+                      (Current on record: <span className="font-mono">{activeUser.contact}</span>)
+                    </span>
+                  )}
                 </label>
-                <input
-                  type="text"
-                  value={contact}
-                  onChange={(e) => setContact(e.target.value)}
-                  placeholder="0300-1234567"
-                  className="input-field"
-                />
+                <div className="relative">
+                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={15} />
+                  <input
+                    type="text"
+                    value={contact}
+                    onChange={(e) => setContact(e.target.value)}
+                    placeholder="0300-1234567"
+                    className="input-field pl-9 text-xs font-mono"
+                  />
+                </div>
               </div>
-              <button type="submit" disabled={savingProfile} className="btn-secondary w-full">
-                {savingProfile ? 'Saving...' : 'Update Contact Info'}
+
+              <button type="submit" disabled={savingProfile} className="btn-secondary w-full text-xs py-2">
+                {savingProfile ? 'Saving Changes...' : 'Save Updated Contact Info'}
               </button>
             </form>
 
+            {/* Change Password Form */}
             <form onSubmit={handleChangePassword} className="space-y-3 pt-4 border-t border-[var(--border)]">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                Change Password
-              </h3>
+              <div className="flex items-center gap-2">
+                <Shield size={15} className="text-[var(--text-secondary)]" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+                  Change Password
+                </h3>
+              </div>
+
               <div>
                 <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
                   Current Password
@@ -331,37 +465,44 @@ const StudentNavbar = ({ student }) => {
                   type="password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Enter current password"
                   required
-                  className="input-field"
+                  className="input-field text-xs"
                 />
               </div>
-              <div>
-                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
-                  New Password (min 6 characters)
-                </label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  className="input-field"
-                />
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                    New Password
+                  </label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Min 6 characters"
+                    required
+                    minLength={6}
+                    className="input-field text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                    Confirm New Password
+                  </label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Re-type password"
+                    required
+                    minLength={6}
+                    className="input-field text-xs"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
-                  Confirm New Password
-                </label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  className="input-field"
-                />
-              </div>
-              <button type="submit" disabled={savingPassword} className="btn-primary w-full">
+
+              <button type="submit" disabled={savingPassword} className="btn-primary w-full text-xs py-2.5">
                 {savingPassword ? 'Updating...' : 'Update Password'}
               </button>
             </form>

@@ -175,6 +175,19 @@ const changeStudentPassword = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Get student profile details
+// @route   GET /api/student/profile
+const getStudentProfile = asyncHandler(async (req, res) => {
+  const student = await Student.findById(req.student._id)
+    .select('-passwordHash -passwordCipher')
+    .lean();
+  if (!student) {
+    res.status(404);
+    throw new Error('Student not found');
+  }
+  res.json(student);
+});
+
 // @desc    Update student contact & email profile
 // @route   PUT /api/student/profile
 const updateStudentProfile = asyncHandler(async (req, res) => {
@@ -719,6 +732,7 @@ const getStudentDashboard = asyncHandler(async (req, res) => {
 module.exports = {
   loginStudent,
   changeStudentPassword,
+  getStudentProfile,
   updateStudentProfile,
   getStudentDashboard,
   getAvailableQuizzes,
