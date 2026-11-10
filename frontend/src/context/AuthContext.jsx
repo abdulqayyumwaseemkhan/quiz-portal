@@ -1,18 +1,17 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [admin, setAdmin] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const storedAdmin = localStorage.getItem('adminData');
-    if (storedAdmin) {
-      setAdmin(JSON.parse(storedAdmin));
+  const [admin, setAdmin] = useState(() => {
+    try {
+      const storedAdmin = localStorage.getItem('adminData');
+      return storedAdmin ? JSON.parse(storedAdmin) : null;
+    } catch {
+      return null;
     }
-    setLoading(false);
-  }, []);
+  });
+  const [loading] = useState(false);
 
   const login = (data) => {
     setAdmin(data);
@@ -33,4 +32,5 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);

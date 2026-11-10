@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import API from '../api';
 import { Lock, Mail, User, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 
 const AdminRegisterPage = () => {

@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
 import { Play, Save, Upload, FolderPlus, FilePlus, X, Image as ImageIcon, FileCode, Edit2, Trash2, Monitor, Tablet, Smartphone, Maximize2, Minimize2, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
-import axios from 'axios';
 import API from '../../api';
 
 const DEFAULT_FILES = {
@@ -167,8 +166,8 @@ import { createRoot } from "react-dom/client";
           });
           
           // Strip local relative imports (e.g. import App from './App' or import './styles.css')
-          content = content.replace(/import\s+.*?\s+from\s+['"][\.\/].*?['"];?/g, '');
-          content = content.replace(/import\s+['"][\.\/].*?['"];?/g, '');
+          content = content.replace(/import\s+.*?\s+from\s+['"][./].*?['"];?/g, '');
+          content = content.replace(/import\s+['"][./].*?['"];?/g, '');
           
           // Strip ALL react and react-dom imports from student code to prevent duplicate identifier errors
           content = content.replace(/import\s+.*?\s+from\s+['"]react(-dom.*)?['"];?/g, '');
@@ -212,7 +211,7 @@ import { createRoot } from "react-dom/client";
         <!-- Execute compiled JSX as a native module -->
         <script type="text/babel" data-type="module" data-presets="react,env">
 ${combinedJsx}
-        <\/script>
+        </script>
       `;
     } else {
       let js = files['script.js']?.content || '';
@@ -232,7 +231,7 @@ ${combinedJsx}
           } catch (err) {
             console.error(err);
           }
-        <\/script>
+        </script>
       `;
     }
 
@@ -270,6 +269,7 @@ ${combinedJsx}
     if (iframeRef.current && files[previewFile]) {
       runCode();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [previewFile]);
 
   const handleCreateFile = () => {
