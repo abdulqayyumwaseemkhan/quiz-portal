@@ -15,13 +15,26 @@ import {
   Globe,
   Lock,
   X,
+  Video,
+  CalendarCheck,
+  FileArchive,
+  MapPin,
+  Upload,
+  ArrowRight,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 const AdminDashboard = () => {
   const [quizzes, setQuizzes] = useState([]);
-  const [stats, setStats] = useState({ totalQuizzes: 0, totalAttempts: 0, totalStudents: 0 });
+  const [stats, setStats] = useState({
+    totalQuizzes: 0,
+    totalAttempts: 0,
+    totalStudents: 0,
+    totalLectures: 0,
+    totalAttendanceSessions: 0,
+    totalAssignments: 0,
+  });
   const [studentsData, setStudentsData] = useState([]);
   const [resultsData, setResultsData] = useState([]);
   const [meta, setMeta] = useState({ campuses: [], batches: [] });
@@ -34,12 +47,16 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [quizRes, resultRes, studentRes, metaRes] = await Promise.all([
-          API.get('/quizzes'),
-          API.get('/admin/results'),
-          API.get('/admin/students'),
-          API.get('/admin/students/meta'),
-        ]);
+        const [quizRes, resultRes, studentRes, metaRes, lectureRes, attendanceRes, assignmentRes] =
+          await Promise.all([
+            API.get('/quizzes'),
+            API.get('/admin/results'),
+            API.get('/admin/students'),
+            API.get('/admin/students/meta'),
+            API.get('/lectures').catch(() => ({ data: [] })),
+            API.get('/attendance/sessions').catch(() => ({ data: [] })),
+            API.get('/assignments').catch(() => ({ data: [] })),
+          ]);
         setQuizzes(quizRes.data);
         setResultsData(resultRes.data);
         setStudentsData(studentRes.data);
@@ -51,6 +68,9 @@ const AdminDashboard = () => {
           totalQuizzes: quizRes.data.length,
           totalAttempts: resultRes.data.length,
           totalStudents: studentRes.data.length,
+          totalLectures: (lectureRes.data || []).length,
+          totalAttendanceSessions: (attendanceRes.data || []).length,
+          totalAssignments: (assignmentRes.data || []).length,
         });
       } catch {
         toast.error('Failed to load dashboard data');
@@ -116,26 +136,124 @@ const AdminDashboard = () => {
     }
   };
 
+  const moduleShortcuts = [
+    {
+      title: 'Students & Bulk Import',
+      description: 'Upload Excel/CSV, auto-generate passwords, & send bulk credential emails',
+      path: '/admin/manage-students',
+      icon: Users,
+      stat: `${stats.totalStudents} Students`,
+    },
+    {
+      title: 'Video Lectures & Player',
+      description: 'Publish YouTube/Google Drive lectures, modules, and course resources',
+      path: '/admin/manage-lectures',
+      icon: Video,
+      stat: `${stats.totalLectures} Lectures`,
+    },
+    {
+      title: 'Lecture-Wise Attendance',
+      description: 'Create class sessions, mark bulk attendance, and export Excel reports',
+      path: '/admin/manage-attendance',
+      icon: CalendarCheck,
+      stat: `${stats.totalAttendanceSessions} Sessions`,
+    },
+    {
+      title: 'Assignments & Grading',
+      description: 'Create assignments, track late status, and grade with marks & feedback',
+      path: '/admin/manage-assignments',
+      icon: FileArchive,
+      stat: `${stats.totalAssignments} Assignments`,
+    },
+    {
+      title: 'Campuses & Batches',
+      description: 'Manage campus locations and batch cohorts for student & quiz targeting',
+      path: '/admin/manage-campuses',
+      icon: MapPin,
+      stat: `${meta.campuses.length} Campuses`,
+    },
+    {
+      title: 'Quiz Results & Export',
+      description: 'Filter student quiz scores by campus/batch and export to Excel',
+      path: '/admin/results',
+      icon: Award,
+      stat: `${stats.totalAttempts} Submissions`,
+    },
+  ];
+
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-[var(--bg-primary)] text-[var(--text-primary)]">
       <Navbar />
       <main className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8">
         <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Admin Dashboard</h1>
             <p className="text-sm text-[var(--text-secondary)] mt-1">
-              Overview of students, campuses, and quiz assessments
+              Manage students, bulk imports, quizzes, video lectures, attendance, and assignments
             </p>
           </div>
-          <Link to="/admin/create-quiz" className="btn-primary flex items-center justify-center gap-2 text-sm py-2.5 px-5">
-            <Plus size={18} /> Create Quiz
-          </Link>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Link
+              to="/admin/manage-students"
+              className="btn-secondary flex items-center justify-center gap-2 text-xs sm:text-sm py-2.5 px-4"
+            >
+              <Upload size={16} /> Bulk Import Students
+            </Link>
+            <Link
+              to="/admin/create-quiz"
+              className="btn-primary flex items-center justify-center gap-2 text-xs sm:text-sm py-2.5 px-4"
+            >
+              <Plus size={16} /> Create Quiz
+            </Link>
+          </div>
         </header>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
-          <StatCard title="Total Quizzes" value={stats.totalQuizzes} icon={BookOpen} />
-          <StatCard title="Enrolled Students" value={stats.totalStudents} icon={Users} />
-          <StatCard title="Quiz Submissions" value={stats.totalAttempts} icon={Award} />
+        {/* Top Stat Summary Row */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+          <StatCard title="Students" value={stats.totalStudents} icon={Users} />
+          <StatCard title="Quizzes" value={stats.totalQuizzes} icon={BookOpen} />
+          <StatCard title="Quiz Attempts" value={stats.totalAttempts} icon={Award} />
+          <StatCard title="Video Lectures" value={stats.totalLectures} icon={Video} />
+          <StatCard title="Attendance" value={stats.totalAttendanceSessions} icon={CalendarCheck} />
+          <StatCard title="Assignments" value={stats.totalAssignments} icon={FileArchive} />
+        </div>
+
+        {/* LMS Quick Access Modules */}
+        <div className="mb-8">
+          <h2 className="text-base font-bold mb-3">LMS Management Modules</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {moduleShortcuts.map((mod) => {
+              const Icon = mod.icon;
+              return (
+                <Link
+                  key={mod.path}
+                  to={mod.path}
+                  className="card p-5 hover:border-[var(--accent)] transition-colors flex flex-col justify-between group"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="p-2.5 rounded-lg bg-[var(--accent-subtle)] text-[var(--accent)]">
+                        <Icon size={20} />
+                      </div>
+                      <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[var(--bg-muted)] text-[var(--text-secondary)]">
+                        {mod.stat}
+                      </span>
+                    </div>
+                    <h3 className="font-bold text-sm text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors">
+                      {mod.title}
+                    </h3>
+                    <p className="text-xs text-[var(--text-muted)] mt-1 leading-relaxed">
+                      {mod.description}
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-[var(--border)] flex items-center justify-between text-xs font-semibold text-[var(--accent)]">
+                    <span>Open Module</span>
+                    <ArrowRight size={14} />
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
         </div>
 
         {/* Campus Breakdown */}
@@ -150,7 +268,10 @@ const AdminDashboard = () => {
               );
 
               const avgScore = campusResults.length
-                ? (campusResults.reduce((sum, r) => sum + Number(r.percentage || 0), 0) / campusResults.length).toFixed(1)
+                ? (
+                    campusResults.reduce((sum, r) => sum + Number(r.percentage || 0), 0) /
+                    campusResults.length
+                  ).toFixed(1)
                 : 0;
 
               return (
@@ -176,7 +297,12 @@ const AdminDashboard = () => {
         {/* Quiz Catalog */}
         <div className="card p-0 overflow-hidden">
           <div className="p-5 border-b border-[var(--border)] flex justify-between items-center">
-            <h2 className="text-base font-bold">Quizzes</h2>
+            <div>
+              <h2 className="text-base font-bold">Quizzes & Bulk MCQ Management</h2>
+              <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                Click the Questions icon on any quiz to bulk upload MCQs via Excel/CSV
+              </p>
+            </div>
             <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[var(--accent-subtle)] text-[var(--accent)]">
               {quizzes.length} Total
             </span>
@@ -211,7 +337,8 @@ const AdminDashboard = () => {
                         {quiz.duration} min • {quiz.totalMarks} marks
                       </p>
                       <p className="text-[var(--text-secondary)]">
-                        {quiz.questionCount ?? '—'} Qs • {quiz.attemptCount ?? 0} Submissions • {quiz.attemptsAllowed || 1} Attempt(s)
+                        {quiz.questionCount ?? '—'} Qs • {quiz.attemptCount ?? 0} Submissions •{' '}
+                        {quiz.attemptsAllowed || 1} Attempt(s)
                       </p>
                     </td>
                     <td className="px-5 py-4">
@@ -258,7 +385,7 @@ const AdminDashboard = () => {
                         <Link
                           to={`/admin/manage-questions/${quiz._id}`}
                           className="p-2 rounded-lg text-[var(--text-secondary)] hover:text-[var(--accent)] hover:bg-[var(--bg-muted)]"
-                          title="Manage Questions"
+                          title="Manage & Bulk Upload Questions"
                         >
                           <FileQuestion size={16} />
                         </Link>
@@ -374,15 +501,15 @@ const AdminDashboard = () => {
 
 // eslint-disable-next-line no-unused-vars
 const StatCard = ({ title, value, icon: Icon }) => (
-  <div className="card p-5 flex items-center gap-4">
-    <div className="p-3.5 rounded-xl bg-[var(--accent-subtle)] text-[var(--accent)]">
-      <Icon size={24} />
+  <div className="card p-4 flex items-center gap-3">
+    <div className="p-2.5 rounded-lg bg-[var(--accent-subtle)] text-[var(--accent)] shrink-0">
+      <Icon size={20} />
     </div>
-    <div>
-      <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
+    <div className="min-w-0">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-secondary)] truncate">
         {title}
       </p>
-      <p className="text-2xl font-bold mt-0.5">{value}</p>
+      <p className="text-xl font-bold mt-0.5">{value}</p>
     </div>
   </div>
 );

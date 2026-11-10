@@ -54,7 +54,7 @@ const StudentNavbar = ({ student }) => {
     setFeedback({ type: '', message: '' });
     setSavingProfile(true);
     try {
-      const { data } = await api.put('/api/student/profile', { email, contact });
+      const { data } = await api.put('/student/profile', { email, contact });
       const stored = JSON.parse(localStorage.getItem('studentInfo') || '{}');
       localStorage.setItem(
         'studentInfo',
@@ -84,7 +84,7 @@ const StudentNavbar = ({ student }) => {
     }
     setSavingPassword(true);
     try {
-      await api.put('/api/student/change-password', {
+      await api.put('/student/change-password', {
         currentPassword,
         newPassword,
       });

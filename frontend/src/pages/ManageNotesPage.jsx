@@ -100,9 +100,9 @@ const ManageNotesPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-[var(--bg-primary)] text-[var(--text-primary)]">
       <Navbar />
-      <main className="md:ml-64 p-4 sm:p-8 max-w-6xl">
+      <main className="flex-1 lg:ml-64 p-4 sm:p-8 max-w-6xl">
         <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Lecture Notes</h1>

@@ -33,7 +33,7 @@ const StudentDashboardPage = () => {
   const fetchDashboard = async (studentId) => {
     setLoading(true);
     try {
-      const { data } = await api.get(`/api/student/dashboard/${studentId}`);
+      const { data } = await api.get(`/student/dashboard/${studentId}`);
       setDashboard(data);
     } catch (error) {
       console.error('Failed to load student dashboard:', error);

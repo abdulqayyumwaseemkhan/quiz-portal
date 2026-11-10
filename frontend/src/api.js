@@ -5,6 +5,11 @@ const API = axios.create({
 });
 
 API.interceptors.request.use((req) => {
+  // Prevent accidental double /api/api prefix if caller passes '/api/...'
+  if (req.url?.startsWith('/api/')) {
+    req.url = req.url.replace(/^\/api/, '');
+  }
+
   const isStudentEndpoint = req.url?.startsWith('/student');
   const studentToken = localStorage.getItem('studentToken');
   const adminToken = localStorage.getItem('adminToken');

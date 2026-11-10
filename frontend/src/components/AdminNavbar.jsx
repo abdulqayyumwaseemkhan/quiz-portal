@@ -46,7 +46,7 @@ const AdminNavbar = () => {
   return (
     <>
       {/* Mobile Header */}
-      <div className="md:hidden sticky top-0 z-40 flex items-center justify-between px-4 h-14 bg-[var(--bg-surface)] border-b border-[var(--border)]">
+      <div className="lg:hidden sticky top-0 z-40 flex items-center justify-between px-4 h-14 bg-[var(--bg-surface)] border-b border-[var(--border)]">
         <div className="flex items-center gap-2.5">
           <button
             type="button"
@@ -73,7 +73,7 @@ const AdminNavbar = () => {
       {/* Mobile Drawer Backdrop */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-50 bg-black/50 md:hidden"
+          className="fixed inset-0 z-50 bg-black/50 lg:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}
@@ -81,7 +81,7 @@ const AdminNavbar = () => {
       {/* Sidebar (Desktop fixed, Mobile drawer) */}
       <aside
         className={`w-64 bg-[var(--bg-surface)] h-screen fixed left-0 top-0 flex flex-col z-50 border-r border-[var(--border)] transition-transform duration-200 ${
-          mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+          mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
         <div className="px-5 py-4 border-b border-[var(--border)] flex items-center justify-between">
@@ -94,7 +94,7 @@ const AdminNavbar = () => {
           <button
             type="button"
             onClick={() => setMobileOpen(false)}
-            className="md:hidden p-1.5 rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-muted)]"
+            className="lg:hidden p-1.5 rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-muted)]"
           >
             <X size={18} />
           </button>
