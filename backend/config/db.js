@@ -9,18 +9,22 @@ if (!cached) {
 }
 
 const connectDB = async () => {
-  if (cached.conn) {
+  if (cached.conn && mongoose.connection.readyState === 1) {
     return cached.conn;
   }
 
   if (!cached.promise) {
     const opts = {
-      maxPoolSize: 10, // Optimize for serverless environments
+      maxPoolSize: Number(process.env.MONGO_MAX_POOL_SIZE) || 15,
+      minPoolSize: 1,
+      serverSelectionTimeoutMS: 8000,
+      socketTimeoutMS: 45000,
+      bufferCommands: false,
     };
 
-    cached.promise = mongoose.connect(process.env.MONGO_URI, opts).then((mongoose) => {
-      console.log(`MongoDB Connected: ${mongoose.connection.host}`);
-      return mongoose;
+    cached.promise = mongoose.connect(process.env.MONGO_URI, opts).then((mongooseInstance) => {
+      console.log(`MongoDB Connected: ${mongooseInstance.connection.host}`);
+      return mongooseInstance;
     });
   }
 
@@ -28,8 +32,11 @@ const connectDB = async () => {
     cached.conn = await cached.promise;
   } catch (e) {
     cached.promise = null;
-    console.error(`Error: ${e.message}`);
-    process.exit(1);
+    console.error(`MongoDB Connection Error: ${e.message}`);
+    if (process.env.NODE_ENV !== 'production') {
+      process.exit(1);
+    }
+    throw e;
   }
 
   return cached.conn;

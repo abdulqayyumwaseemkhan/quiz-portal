@@ -1,35 +1,58 @@
 import React, { useState, useEffect } from 'react';
 import API from '../api';
 import Navbar from '../components/AdminNavbar';
-import { Plus, Trash2, Edit, FileQuestion, Users, Award, BookOpen, Eye, EyeOff } from 'lucide-react';
+import {
+  Plus,
+  Trash2,
+  Edit,
+  FileQuestion,
+  Users,
+  Award,
+  BookOpen,
+  Eye,
+  EyeOff,
+  Copy,
+  Globe,
+  Lock,
+  X,
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { motion } from 'framer-motion';
 
 const AdminDashboard = () => {
   const [quizzes, setQuizzes] = useState([]);
   const [stats, setStats] = useState({ totalQuizzes: 0, totalAttempts: 0, totalStudents: 0 });
   const [studentsData, setStudentsData] = useState([]);
   const [resultsData, setResultsData] = useState([]);
+  const [meta, setMeta] = useState({ campuses: [], batches: [] });
   const [loading, setLoading] = useState(true);
+
+  // Duplicate quiz modal state
+  const [duplicatingQuiz, setDuplicatingQuiz] = useState(null);
+  const [dupForm, setDupForm] = useState({ title: '', campus: '', batch: '', isPublished: false });
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [quizRes, resultRes, studentRes] = await Promise.all([
+        const [quizRes, resultRes, studentRes, metaRes] = await Promise.all([
           API.get('/quizzes'),
           API.get('/admin/results'),
-          API.get('/admin/students')
+          API.get('/admin/students'),
+          API.get('/admin/students/meta'),
         ]);
         setQuizzes(quizRes.data);
         setResultsData(resultRes.data);
         setStudentsData(studentRes.data);
+        setMeta({
+          campuses: metaRes.data.campuses || [],
+          batches: metaRes.data.batches || [],
+        });
         setStats({
           totalQuizzes: quizRes.data.length,
           totalAttempts: resultRes.data.length,
-          totalStudents: studentRes.data.length
+          totalStudents: studentRes.data.length,
         });
-      } catch (error) {
+      } catch {
         toast.error('Failed to load dashboard data');
       } finally {
         setLoading(false);
@@ -39,190 +62,328 @@ const AdminDashboard = () => {
   }, []);
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this quiz and all its questions?')) {
-      try {
-        await API.delete(`/quizzes/${id}`);
-        setQuizzes(quizzes.filter(q => q._id !== id));
-        toast.success('Quiz deleted');
-      } catch (error) {
-        toast.error('Delete failed');
-      }
+    if (!window.confirm('Delete this quiz and all its questions?')) return;
+    try {
+      await API.delete(`/quizzes/${id}`);
+      setQuizzes(quizzes.filter((q) => q._id !== id));
+      toast.success('Quiz deleted');
+    } catch {
+      toast.error('Delete failed');
     }
   };
 
   const toggleRelease = async (id, currentStatus) => {
     try {
       await API.put(`/quizzes/${id}`, { resultsReleased: !currentStatus });
-      setQuizzes(quizzes.map(q => q._id === id ? { ...q, resultsReleased: !currentStatus } : q));
+      setQuizzes(quizzes.map((q) => (q._id === id ? { ...q, resultsReleased: !currentStatus } : q)));
       toast.success(!currentStatus ? 'Results released to students' : 'Results hidden from students');
-    } catch (error) {
+    } catch {
       toast.error('Update failed');
     }
   };
 
+  const togglePublish = async (id, currentPublished) => {
+    const nextState = currentPublished === false ? true : false;
+    try {
+      await API.put(`/quizzes/${id}`, { isPublished: nextState });
+      setQuizzes(quizzes.map((q) => (q._id === id ? { ...q, isPublished: nextState } : q)));
+      toast.success(nextState ? 'Quiz published' : 'Quiz unpublished');
+    } catch {
+      toast.error('Failed to toggle publish state');
+    }
+  };
+
+  const openDuplicateModal = (quiz) => {
+    setDuplicatingQuiz(quiz);
+    setDupForm({
+      title: `${quiz.title} (Copy)`,
+      campus: quiz.campus || '',
+      batch: quiz.batch || '',
+      isPublished: false,
+    });
+  };
+
+  const handleConfirmDuplicate = async (e) => {
+    e.preventDefault();
+    if (!duplicatingQuiz) return;
+    try {
+      const { data } = await API.post(`/quizzes/${duplicatingQuiz._id}/duplicate`, dupForm);
+      setQuizzes([data, ...quizzes]);
+      setDuplicatingQuiz(null);
+      toast.success('Quiz duplicated with all questions');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to duplicate quiz');
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-transparent text-[#13315c] flex">
+    <div className="min-h-screen flex flex-col lg:flex-row">
       <Navbar />
-      <main className="flex-1 ml-64 p-10">
-        <header className="flex justify-between items-center mb-12">
+      <main className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8">
+        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-4xl font-black text-[#13315c] tracking-tight">Admin Dashboard</h1>
-            <p className="text-gray-600 font-medium mt-1">Global statistics and course management</p>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Admin Dashboard</h1>
+            <p className="text-sm text-[var(--text-secondary)] mt-1">
+              Overview of students, campuses, and quiz assessments
+            </p>
           </div>
-          <Link to="/admin/create-quiz" className="btn-primary flex items-center gap-2 px-8 h-14 text-lg shadow-2xl shadow-primary-500/40">
-            <Plus size={24} /> Create New Quiz
+          <Link to="/admin/create-quiz" className="btn-primary flex items-center justify-center gap-2 text-sm py-2.5 px-5">
+            <Plus size={18} /> Create Quiz
           </Link>
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-          <StatCard title="Total Quizzes" value={stats.totalQuizzes} icon={BookOpen} color="text-blue-400" bg="bg-blue-500/10" />
-          <StatCard title="Total Students" value={stats.totalStudents} icon={Users} color="text-emerald-400" bg="bg-emerald-500/10" />
-          <StatCard title="Quiz Attempts" value={stats.totalAttempts} icon={Award} color="text-violet-400" bg="bg-violet-500/10" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
+          <StatCard title="Total Quizzes" value={stats.totalQuizzes} icon={BookOpen} />
+          <StatCard title="Enrolled Students" value={stats.totalStudents} icon={Users} />
+          <StatCard title="Quiz Submissions" value={stats.totalAttempts} icon={Award} />
         </div>
 
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold text-[#13315c] mb-6">Campus Overview</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[...new Set(studentsData.map(s => s.campus))].filter(Boolean).map(campus => {
-              const campusStudents = studentsData.filter(s => s.campus === campus);
-              const campusStudentIds = new Set(campusStudents.map(s => s.studentId));
-              const campusResults = resultsData.filter(r => campusStudentIds.has(r.studentId) || r.campus === campus);
-              
-              const avgScore = campusResults.length 
-                ? (campusResults.reduce((sum, r) => sum + r.percentage, 0) / campusResults.length).toFixed(1) 
+        {/* Campus Breakdown */}
+        <div className="mb-8">
+          <h2 className="text-base font-bold mb-4">Campus Overview</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[...new Set(studentsData.map((s) => s.campus))].filter(Boolean).map((campus) => {
+              const campusStudents = studentsData.filter((s) => s.campus === campus);
+              const campusStudentIds = new Set(campusStudents.map((s) => s.studentId));
+              const campusResults = resultsData.filter(
+                (r) => campusStudentIds.has(r.studentId) || r.campus === campus
+              );
+
+              const avgScore = campusResults.length
+                ? (campusResults.reduce((sum, r) => sum + Number(r.percentage || 0), 0) / campusResults.length).toFixed(1)
                 : 0;
 
               return (
-                <div key={campus} className="card bg-white p-6 rounded-xl border border-[#8da9c4]/30 shadow-sm">
-                  <h3 className="font-bold text-lg text-[#13315c] mb-4">{campus}</h3>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-semibold text-gray-600">Students</span>
-                    <span className="font-bold text-[#13315c]">{campusStudents.length}</span>
+                <div key={campus} className="card p-5">
+                  <h3 className="font-bold text-sm mb-3 truncate">{campus}</h3>
+                  <div className="flex justify-between items-center text-xs mb-1.5">
+                    <span className="text-[var(--text-secondary)]">Students</span>
+                    <span className="font-bold">{campusStudents.length}</span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-semibold text-gray-600">Avg Score</span>
-                    <span className={`font-bold ${avgScore >= 50 ? 'text-emerald-400' : 'text-[#13315c]'}`}>
-                      {avgScore}%
-                    </span>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-[var(--text-secondary)]">Avg Quiz Score</span>
+                    <span className="font-bold text-[var(--accent)]">{avgScore}%</span>
                   </div>
                 </div>
               );
             })}
-            {studentsData.length > 0 && ![...new Set(studentsData.map(s => s.campus))].filter(Boolean).length && (
-               <p className="text-gray-600 font-medium">No campus data available.</p>
+            {studentsData.length === 0 && !loading && (
+              <p className="text-xs text-[var(--text-muted)]">No campus metrics yet.</p>
             )}
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-xl shadow-black/50 border border-[#8da9c4]/30 overflow-hidden">
-          <div className="p-8 border-b border-[#8da9c4]/30 flex justify-between items-center">
-            <h2 className="text-2xl font-semibold text-[#13315c]">Course Catalog</h2>
-            <div className="flex gap-2">
-                <span className="bg-[#8da9c4]/20 text-[#13315c] px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest">{quizzes.length} ACTIVE</span>
-            </div>
+        {/* Quiz Catalog */}
+        <div className="card p-0 overflow-hidden">
+          <div className="p-5 border-b border-[var(--border)] flex justify-between items-center">
+            <h2 className="text-base font-bold">Quizzes</h2>
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[var(--accent-subtle)] text-[var(--accent)]">
+              {quizzes.length} Total
+            </span>
           </div>
+
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-white0 text-gray-500 text-[10px] font-semibold uppercase tracking-[0.2em]">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-[var(--bg-muted)] text-[var(--text-secondary)] text-xs font-semibold uppercase tracking-wider border-b border-[var(--border)]">
                 <tr>
-                  <th className="px-8 py-6">Quiz identity</th>
-                  <th className="px-8 py-6">Timing Configuration</th>
-                  <th className="px-8 py-6">Weightage</th>
-                  <th className="px-8 py-6 text-right pr-12">Control Panel</th>
+                  <th className="px-5 py-3.5">Quiz</th>
+                  <th className="px-5 py-3.5">Target</th>
+                  <th className="px-5 py-3.5">Config</th>
+                  <th className="px-5 py-3.5">Status</th>
+                  <th className="px-5 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-[var(--border)]">
                 {quizzes.map((quiz) => (
-                  <tr key={quiz._id} className="hover:bg-white0 transition-all group">
-                    <td className="px-8 py-8">
-                       <p className="font-bold text-lg text-[#13315c] group-hover:text-[#13315c] transition-colors uppercase tracking-tighter">{quiz.title}</p>
-                       <p className="text-xs text-gray-500 font-medium mt-1 line-clamp-1 max-w-[200px]">{quiz.description}</p>
+                  <tr key={quiz._id} className="hover:bg-[var(--bg-muted)]/40 transition-colors">
+                    <td className="px-5 py-4">
+                      <p className="font-bold text-[var(--text-primary)]">{quiz.title}</p>
+                      <p className="text-xs text-[var(--text-secondary)] line-clamp-1 max-w-xs">
+                        {quiz.description}
+                      </p>
                     </td>
-                    <td className="px-8 py-8">
-                       <div className="flex flex-col gap-1">
-                          <span className="inline-flex items-center gap-2 text-sm font-bold text-[#13315c]">
-                             <div className="w-1.5 h-1.5 rounded-full bg-primary-500"></div>
-                             {quiz.duration} Minutes
-                          </span>
-                           <span className="text-[10px] text-gray-500 font-semibold tracking-widest uppercase">
-                             Added: {new Date(quiz.createdAt).toLocaleDateString()}
-                          </span>
-                       </div>
+                    <td className="px-5 py-4 text-xs">
+                      <p className="font-medium">{quiz.campus || 'All Campuses'}</p>
+                      <p className="text-[var(--text-secondary)]">{quiz.batch || 'All Batches'}</p>
                     </td>
-                    <td className="px-8 py-8">
-                       <div className="bg-gray-50 h-12 w-12 rounded-xl flex items-center justify-center">
-                          <span className="text-lg font-bold text-[#13315c]">{quiz.totalMarks}</span>
-                       </div>
+                    <td className="px-5 py-4 text-xs">
+                      <p className="font-medium">
+                        {quiz.duration} min • {quiz.totalMarks} marks
+                      </p>
+                      <p className="text-[var(--text-secondary)]">
+                        {quiz.questionCount ?? '—'} Qs • {quiz.attemptCount ?? 0} Submissions • {quiz.attemptsAllowed || 1} Attempt(s)
+                      </p>
                     </td>
-                    <td className="px-8 py-8 text-right pr-12">
-                        <div className="flex justify-end gap-3 transition-all duration-300">
-                            <button 
-                              onClick={() => toggleRelease(quiz._id, quiz.resultsReleased)}
-                              className={`p-3 rounded-lg shadow-sm border border-[#8da9c4]/30 transition-all ${
-                                quiz.resultsReleased 
-                                  ? 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20' 
-                                  : 'bg-gray-50 text-gray-500 hover:bg-slate-700'
-                              }`}
-                              title={quiz.resultsReleased ? "Hide Results" : "Release Results"}
-                            >
-                              {quiz.resultsReleased ? <Eye size={20} /> : <EyeOff size={20} />}
-                            </button>
-                            <Link 
-                              to={`/admin/manage-questions/${quiz._id}`}
-                              className="p-3 bg-white text-[#13315c] hover:bg-[#8da9c4]/20 rounded-lg shadow-sm border border-[#8da9c4]/30 transition-all"
-                              title="Manage Questions"
-                            >
-                              <FileQuestion size={20} />
-                            </Link>
-                            <Link 
-                              to={`/admin/edit-quiz/${quiz._id}`}
-                              className="p-3 bg-white text-amber-400 hover:bg-amber-500/10 rounded-lg shadow-sm border border-[#8da9c4]/30 transition-all"
-                              title="Edit Details"
-                            >
-                              <Edit size={20} />
-                            </Link>
-                            <button 
-                              onClick={() => handleDelete(quiz._id)}
-                              className="p-3 bg-white text-rose-500 hover:bg-rose-500/10 rounded-lg shadow-sm border border-[#8da9c4]/30 transition-all"
-                              title="Delete Quiz"
-                            >
-                              <Trash2 size={20} />
-                            </button>
-                        </div>
+                    <td className="px-5 py-4">
+                      <div className="flex flex-col gap-1">
+                        <span
+                          className={`inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full text-[11px] font-medium ${
+                            quiz.isPublished !== false
+                              ? 'bg-emerald-500/10 text-emerald-600'
+                              : 'bg-amber-500/10 text-amber-600'
+                          }`}
+                        >
+                          {quiz.isPublished !== false ? 'Published' : 'Draft'}
+                        </span>
+                        <span className="text-[11px] text-[var(--text-muted)]">
+                          Results: {quiz.resultsReleased ? 'Released' : 'Hidden'}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 text-right">
+                      <div className="inline-flex items-center gap-1">
+                        <button
+                          onClick={() => togglePublish(quiz._id, quiz.isPublished)}
+                          className="p-2 rounded-lg text-[var(--text-secondary)] hover:text-[var(--accent)] hover:bg-[var(--bg-muted)]"
+                          title={quiz.isPublished !== false ? 'Unpublish Quiz' : 'Publish Quiz'}
+                        >
+                          {quiz.isPublished !== false ? <Globe size={16} /> : <Lock size={16} />}
+                        </button>
+                        <button
+                          onClick={() => toggleRelease(quiz._id, quiz.resultsReleased)}
+                          className={`p-2 rounded-lg hover:bg-[var(--bg-muted)] ${
+                            quiz.resultsReleased ? 'text-emerald-600' : 'text-[var(--text-secondary)]'
+                          }`}
+                          title={quiz.resultsReleased ? 'Hide Results' : 'Release Results'}
+                        >
+                          {quiz.resultsReleased ? <Eye size={16} /> : <EyeOff size={16} />}
+                        </button>
+                        <button
+                          onClick={() => openDuplicateModal(quiz)}
+                          className="p-2 rounded-lg text-[var(--text-secondary)] hover:text-[var(--accent)] hover:bg-[var(--bg-muted)]"
+                          title="Duplicate Quiz for Another Campus/Batch"
+                        >
+                          <Copy size={16} />
+                        </button>
+                        <Link
+                          to={`/admin/manage-questions/${quiz._id}`}
+                          className="p-2 rounded-lg text-[var(--text-secondary)] hover:text-[var(--accent)] hover:bg-[var(--bg-muted)]"
+                          title="Manage Questions"
+                        >
+                          <FileQuestion size={16} />
+                        </Link>
+                        <Link
+                          to={`/admin/edit-quiz/${quiz._id}`}
+                          className="p-2 rounded-lg text-[var(--text-secondary)] hover:text-[var(--accent)] hover:bg-[var(--bg-muted)]"
+                          title="Edit Quiz"
+                        >
+                          <Edit size={16} />
+                        </Link>
+                        <button
+                          onClick={() => handleDelete(quiz._id)}
+                          className="p-2 rounded-lg text-[var(--text-secondary)] hover:text-rose-600 hover:bg-[var(--bg-muted)]"
+                          title="Delete Quiz"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+
           {quizzes.length === 0 && !loading && (
-            <div className="p-24 text-center">
-               <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-6">
-                  <FileQuestion className="text-slate-700" size={40} />
-               </div>
-               <p className="text-gray-500 font-semibold text-xl uppercase tracking-widest">Repository is Empty</p>
-               <p className="text-slate-600 mt-2 font-medium">Create your first quiz to populate the catalog.</p>
+            <div className="p-14 text-center">
+              <FileQuestion className="mx-auto text-[var(--text-muted)] mb-3" size={40} />
+              <p className="font-semibold text-base">No quizzes created yet</p>
+              <p className="text-xs text-[var(--text-secondary)] mt-1">
+                Create your first quiz to get started.
+              </p>
             </div>
           )}
         </div>
+
+        {/* Duplicate Quiz Modal */}
+        {duplicatingQuiz && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <form onSubmit={handleConfirmDuplicate} className="card max-w-md w-full p-6 space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-bold">Duplicate Quiz</h3>
+                <button type="button" onClick={() => setDuplicatingQuiz(null)}>
+                  <X size={18} />
+                </button>
+              </div>
+              <p className="text-xs text-[var(--text-secondary)]">
+                Clones <strong>{duplicatingQuiz.title}</strong> and all its questions so you can assign it to another campus or batch.
+              </p>
+              <div>
+                <label className="block text-xs font-semibold uppercase mb-1">New Quiz Title *</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  value={dupForm.title}
+                  onChange={(e) => setDupForm({ ...dupForm, title: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold uppercase mb-1">Target Campus</label>
+                <select
+                  className="input-field"
+                  value={dupForm.campus}
+                  onChange={(e) => setDupForm({ ...dupForm, campus: e.target.value })}
+                >
+                  <option value="">All Campuses</option>
+                  {meta.campuses.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold uppercase mb-1">Target Batch</label>
+                <select
+                  className="input-field"
+                  value={dupForm.batch}
+                  onChange={(e) => setDupForm({ ...dupForm, batch: e.target.value })}
+                >
+                  <option value="">All Batches</option>
+                  {meta.batches.map((b) => (
+                    <option key={b} value={b}>
+                      {b}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={dupForm.isPublished}
+                  onChange={(e) => setDupForm({ ...dupForm, isPublished: e.target.checked })}
+                />
+                <span>Publish immediately</span>
+              </label>
+              <div className="flex justify-end gap-2 pt-2 border-t border-[var(--border)]">
+                <button type="button" onClick={() => setDuplicatingQuiz(null)} className="btn-secondary text-xs">
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary text-xs">
+                  Duplicate Quiz
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
       </main>
     </div>
   );
 };
 
-const StatCard = ({ title, value, icon: Icon, color, bg }) => (
-  <motion.div 
-    whileHover={{ y: -8 }}
-    className="card flex items-center gap-6 p-10 bg-white border-none shadow-xl shadow-black/50 rounded-xl"
-  >
-    <div className={`p-5 rounded-lg ${bg} ${color} shadow-inner`}>
-      <Icon size={32} />
+const StatCard = ({ title, value, icon: Icon }) => (
+  <div className="card p-5 flex items-center gap-4">
+    <div className="p-3.5 rounded-xl bg-[var(--accent-subtle)] text-[var(--accent)]">
+      <Icon size={24} />
     </div>
     <div>
-      <p className="text-gray-500 text-xs font-semibold uppercase tracking-[0.2em] mb-1">{title}</p>
-      <p className="text-4xl font-bold text-[#13315c] leading-none">{value}</p>
+      <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
+        {title}
+      </p>
+      <p className="text-2xl font-bold mt-0.5">{value}</p>
     </div>
-  </motion.div>
+  </div>
 );
 
 export default AdminDashboard;

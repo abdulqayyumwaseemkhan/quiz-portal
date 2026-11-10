@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import API from '../api';
 import { Trophy, CheckCircle2, XCircle, Home, FileText, Award } from 'lucide-react';
-import { motion } from 'framer-motion';
 import StudentNavbar from '../components/StudentNavbar';
 
 const ResultPage = () => {
@@ -10,9 +9,12 @@ const ResultPage = () => {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const student = React.useMemo(() => {
-    try { return JSON.parse(localStorage.getItem('studentInfo')); } 
-    catch { return null; }
+  const student = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem('studentInfo'));
+    } catch {
+      return null;
+    }
   }, []);
 
   useEffect(() => {
@@ -29,51 +31,49 @@ const ResultPage = () => {
     if (resultId) fetchResult();
   }, [resultId]);
 
-  if (loading) return (
-    <div className="flex items-center justify-center min-h-screen bg-transparent text-[#13315c]">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-current mb-4"></div>
-      <p className="ml-4 font-bold uppercase tracking-widest text-sm">Calibrating Results...</p>
-    </div>
-  );
-  
-  if (!result) return (
-    <div className="min-h-screen bg-transparent flex flex-col items-center justify-center p-6 text-center">
-       <div className="bg-red-500/10 p-6 rounded-full text-rose-500 mb-6">
-          <XCircle size={48} />
-       </div>
-       <h1 className="text-2xl font-black text-[#13315c] mb-2 uppercase">Result Not Found</h1>
-       <p className="text-gray-600 mb-8">We couldn't find the quiz result you're looking for.</p>
-       <Link to="/quizzes" className="btn-primary px-8 py-3 rounded-xl flex items-center gap-2">
-          <Home size={20} /> Return to Home
-       </Link>
-    </div>
-  );
+  if (loading) {
+    return (
+      <div className="min-h-screen p-6 max-w-4xl mx-auto">
+        <div className="h-64 rounded-2xl bg-[var(--bg-muted)] animate-pulse" />
+      </div>
+    );
+  }
 
-  // If results are not released, don't send scores or specific answers
+  if (!result) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
+        <XCircle size={40} className="text-rose-600 mb-3" />
+        <h1 className="text-xl font-bold mb-1">Result Not Found</h1>
+        <p className="text-sm text-[var(--text-secondary)] mb-6">
+          Could not locate the requested quiz result.
+        </p>
+        <Link to="/quizzes" className="btn-primary px-6 py-2.5 text-sm flex items-center gap-2">
+          <Home size={16} /> Back to Quizzes
+        </Link>
+      </div>
+    );
+  }
+
   if (result.quizId && !result.quizId.resultsReleased) {
     return (
-      <div className="min-h-screen bg-transparent font-sans">
+      <div className="min-h-screen">
         <StudentNavbar student={student} />
         <div className="flex items-center justify-center p-6 min-h-[calc(100vh-80px)]">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="max-w-xl w-full bg-white rounded-2xl shadow-2xl p-12 text-center border border-[#8da9c4]/30"
-          >
-            <div className="w-24 h-24 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
-              <Award className="text-amber-400" size={48} />
+          <div className="max-w-lg w-full card p-8 text-center">
+            <div className="w-16 h-16 bg-amber-500/10 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Award size={32} />
             </div>
-            <h1 className="text-4xl font-black text-[#13315c] mb-4">Results Pending</h1>
-            <p className="text-xl text-gray-600 font-medium mb-10 leading-relaxed">
-              Great job, <span className="text-[#13315c] font-black">{result.studentName}</span>! Your answers have been recorded.
+            <h1 className="text-2xl font-bold mb-2">Submission Recorded</h1>
+            <p className="text-sm text-[var(--text-secondary)] mb-6">
+              Thank you, <strong>{result.studentName}</strong>. Your quiz attempt has been saved.
             </p>
-            <div className="bg-gray-50 rounded-xl p-6 mb-10 border border-dashed border-[#8da9c4]/30">
-              <p className="text-[#13315c] font-bold">"{result.message || 'Results are being processed and will be released soon!'}"</p>
+            <div className="p-4 rounded-xl bg-[var(--bg-muted)] border border-[var(--border)] text-xs font-medium mb-6">
+              {result.message || 'Detailed scores and solutions will be visible once released by your instructor.'}
             </div>
-            <Link to="/quizzes" className="btn-primary w-full h-16 text-lg flex items-center justify-center gap-3">
-               <Home size={24} /> Back to Quizzes
+            <Link to="/quizzes" className="btn-primary w-full py-3 text-sm flex items-center justify-center gap-2">
+              <Home size={16} /> Back to Quizzes
             </Link>
-          </motion.div>
+          </div>
         </div>
       </div>
     );
@@ -82,92 +82,101 @@ const ResultPage = () => {
   const isPassed = result.percentage >= 50;
 
   return (
-    <div className="min-h-screen bg-transparent font-sans">
+    <div className="min-h-screen pb-20 md:pb-12">
       <StudentNavbar student={student} />
-      <div className="p-6 md:p-12 max-w-4xl mx-auto">
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="card text-center mb-12 relative overflow-hidden p-10 border border-[#8da9c4]/30 shadow-2xl bg-white rounded-2xl"
-        >
-          <div className={`absolute top-0 left-0 w-full h-3 ${isPassed ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
-          <div className="flex justify-center mb-6 pt-4">
-            <motion.div 
-              initial={{ rotate: -20, opacity: 0 }}
-              animate={{ rotate: 0, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 200 }}
-              className={`p-6 rounded-full ${isPassed ? 'bg-emerald-500/20 text-emerald-500' : 'bg-red-500/20 text-rose-500'}`}
+      <div className="p-4 sm:p-6 md:p-8 max-w-4xl mx-auto">
+        <div className="card text-center p-6 sm:p-8 mb-8">
+          <div className="flex justify-center mb-4">
+            <div
+              className={`p-4 rounded-full ${
+                isPassed ? 'bg-emerald-500/15 text-emerald-600' : 'bg-rose-500/15 text-rose-600'
+              }`}
             >
-              <Trophy size={64} />
-            </motion.div>
+              <Trophy size={40} />
+            </div>
           </div>
-          <h1 className="text-4xl font-black text-[#13315c] mb-2">Quiz Completed!</h1>
-          <p className="text-xl text-gray-600 mb-10 font-medium">Great effort, {result.studentName}!</p>
+          <h1 className="text-2xl sm:text-3xl font-bold mb-1">{result.quizId?.title || 'Quiz Result'}</h1>
+          <p className="text-sm text-[var(--text-secondary)] mb-6">
+            {result.studentName} ({result.studentId})
+          </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
-            <motion.div whileHover={{ y: -5 }} className="bg-gray-50 p-8 rounded-xl shadow-sm border border-[#8da9c4]/30">
-              <p className="text-gray-500 text-xs font-black mb-1 uppercase tracking-widest">Score</p>
-              <p className="text-3xl font-extrabold text-[#13315c]">{result.score} / {result.totalPossibleMarks}</p>
-            </motion.div>
-            <motion.div whileHover={{ y: -5 }} className="bg-gray-50 p-8 rounded-xl shadow-sm border border-[#8da9c4]/30">
-              <p className="text-gray-500 text-xs font-black mb-1 uppercase tracking-widest">Percentage</p>
-              <p className={`text-4xl font-black ${isPassed ? 'text-emerald-500' : 'text-rose-500'}`}>{result.percentage}%</p>
-            </motion.div>
-            <motion.div whileHover={{ y: -5 }} className="bg-gray-50 p-8 rounded-xl shadow-sm border border-[#8da9c4]/30">
-              <p className="text-gray-500 text-xs font-black mb-1 uppercase tracking-widest">Result</p>
-              <p className={`text-3xl font-extrabold ${isPassed ? 'text-emerald-500' : 'text-rose-500'}`}>{isPassed ? 'PASSED' : 'FAILED'}</p>
-            </motion.div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div className="p-4 rounded-xl bg-[var(--bg-muted)] border border-[var(--border)]">
+              <p className="text-xs font-semibold uppercase text-[var(--text-secondary)]">Score</p>
+              <p className="text-2xl font-bold mt-1">
+                {result.score} / {result.totalPossibleMarks}
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-[var(--bg-muted)] border border-[var(--border)]">
+              <p className="text-xs font-semibold uppercase text-[var(--text-secondary)]">Percentage</p>
+              <p className={`text-2xl font-bold mt-1 ${isPassed ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {result.percentage}%
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-[var(--bg-muted)] border border-[var(--border)]">
+              <p className="text-xs font-semibold uppercase text-[var(--text-secondary)]">Status</p>
+              <p className={`text-2xl font-bold mt-1 ${isPassed ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {isPassed ? 'PASSED' : 'FAILED'}
+              </p>
+            </div>
           </div>
 
-          <div className="flex flex-col md:flex-row justify-center gap-4">
-            <Link to="/quizzes" className="btn-primary flex items-center justify-center gap-3 px-10 h-14 text-lg">
-              <Home size={24} /> Back to Quizzes
-            </Link>
-          </div>
-        </motion.div>
+          <Link to="/quizzes" className="btn-primary inline-flex items-center gap-2 px-6 py-2.5 text-sm">
+            <Home size={16} /> Back to Quizzes
+          </Link>
+        </div>
 
-        <h2 className="text-3xl font-black text-[#13315c] mb-8 flex items-center gap-3 px-4">
-          <FileText className="text-[#13315c]" size={32} /> Review Answers
+        <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+          <FileText size={20} /> Question Review
         </h2>
 
-        <div className="space-y-8">
+        <div className="space-y-4">
           {result.answers?.map((item, idx) => (
-            <motion.div 
+            <div
               key={idx}
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              className={`card border-l-8 p-8 transition-shadow hover:shadow-lg bg-white border-t border-r border-b border-t-slate-800 border-r-slate-800 border-b-slate-800 ${item.isCorrect ? 'border-l-green-500' : 'border-l-red-500'}`}
+              className={`card p-5 border-l-4 ${
+                item.isCorrect ? 'border-l-emerald-500' : 'border-l-rose-500'
+              }`}
             >
-              <div className="flex justify-between items-start mb-6">
-                <h4 className="text-xl font-bold text-[#13315c] leading-tight">
-                  <span className="text-gray-500 mr-2 text-sm">Question {idx + 1}</span><br/>
+              <div className="flex justify-between items-start gap-3 mb-3">
+                <h4 className="text-sm sm:text-base font-semibold">
+                  <span className="text-xs text-[var(--text-muted)] block mb-0.5">
+                    Question {idx + 1}
+                  </span>
                   {item.questionId?.questionText}
                 </h4>
                 {item.isCorrect ? (
-                  <span className="inline-flex items-center gap-2 bg-emerald-500/20 text-green-400 px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider">
-                    <CheckCircle2 size={16} /> Correct
+                  <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-600 px-2.5 py-1 rounded-full text-xs font-semibold shrink-0">
+                    <CheckCircle2 size={14} /> Correct
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-2 bg-red-500/20 text-red-400 px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider">
-                    <XCircle size={16} /> Incorrect
+                  <span className="inline-flex items-center gap-1 bg-rose-500/10 text-rose-600 px-2.5 py-1 rounded-full text-xs font-semibold shrink-0">
+                    <XCircle size={14} /> Incorrect
                   </span>
                 )}
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm mt-6 p-6 bg-gray-50 rounded-xl border border-[#8da9c4]/30">
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs p-3.5 rounded-xl bg-[var(--bg-muted)] border border-[var(--border)]">
                 <div>
-                  <p className="text-gray-500 font-bold mb-2 uppercase tracking-tighter">Your Answer</p>
-                  <p className={`text-lg font-black ${item.isCorrect ? 'text-green-400' : 'text-red-400'}`}>{item.answer || 'No Answer'}</p>
+                  <p className="text-[var(--text-secondary)] font-semibold uppercase mb-1">Your Answer</p>
+                  <p className={`font-bold ${item.isCorrect ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {item.answer || 'No Answer'}
+                  </p>
                 </div>
-                {!item.isCorrect && (
+                {!item.isCorrect && item.questionId?.correctAnswer && (
                   <div>
-                    <p className="text-gray-500 font-bold mb-2 uppercase tracking-tighter">Correct Answer</p>
-                    <p className="text-lg font-black text-green-400">{item.questionId.correctAnswer}</p>
+                    <p className="text-[var(--text-secondary)] font-semibold uppercase mb-1">Correct Answer</p>
+                    <p className="font-bold text-emerald-600">{item.questionId.correctAnswer}</p>
                   </div>
                 )}
               </div>
-            </motion.div>
+
+              {item.questionId?.explanation && (
+                <p className="mt-3 text-xs text-[var(--text-secondary)] bg-[var(--accent-subtle)] p-2.5 rounded-lg">
+                  <strong>Explanation:</strong> {item.questionId.explanation}
+                </p>
+              )}
+            </div>
           ))}
         </div>
       </div>

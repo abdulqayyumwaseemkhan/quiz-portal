@@ -5,18 +5,21 @@ const questionSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Quiz',
     required: true,
+    index: true,
   },
   questionText: {
     type: String,
     required: true,
+    trim: true,
   },
   type: {
     type: String,
     enum: ['mcq', 'short'],
     required: true,
+    default: 'mcq',
   },
   options: [{
-    type: String, // Only for MCQ
+    type: String, // 4 or 5 options for MCQ
   }],
   correctAnswer: {
     type: String,
@@ -27,6 +30,12 @@ const questionSchema = new mongoose.Schema({
     required: true,
     default: 1,
   },
+  explanation: {
+    type: String,
+    default: '',
+  },
 }, { timestamps: true });
+
+questionSchema.index({ quizId: 1, createdAt: 1 });
 
 module.exports = mongoose.model('Question', questionSchema);

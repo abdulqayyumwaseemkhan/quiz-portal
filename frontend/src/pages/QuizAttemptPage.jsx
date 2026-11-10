@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import API from '../api';
-import { Clock, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Clock, AlertCircle, CheckCircle2, Cloud } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const QuizAttemptPage = () => {
   const { quizId } = useParams();
   const navigate = useNavigate();
-  
-  // Memoize student to prevent re-parsing and reference changes on every render
+
   const student = useMemo(() => {
     try {
       return JSON.parse(localStorage.getItem('studentInfo'));
@@ -17,89 +16,149 @@ const QuizAttemptPage = () => {
     }
   }, []);
 
+  const storageKey = useMemo(
+    () => (student ? `quiz_draft_${quizId}_${student.studentId}` : null),
+    [quizId, student]
+  );
+
   const [quiz, setQuiz] = useState(null);
   const [questions, setQuestions] = useState([]);
+  const [attemptInfo, setAttemptInfo] = useState(null);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [userAnswers, setUserAnswers] = useState([]);
   const [timeLeft, setTimeLeft] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [syncState, setSyncState] = useState('saved'); // 'saved' | 'saving' | 'offline'
 
-  // Stable submit function
-  const submitQuiz = useCallback(async (finalAnswers = userAnswers) => {
-    if (submitting || !student) return;
-    setSubmitting(true);
-    try {
-      const { data } = await API.post('/student/submit', {
-        studentName: student.fullName,
-        studentId: student.studentId,
-        quizId,
-        userAnswers: finalAnswers
-      });
-      toast.success('Quiz submitted successfully!');
-      navigate(`/result/${data._id}`, { replace: true });
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Error submitting quiz');
-      navigate('/quizzes', { replace: true });
-    } finally {
-      setSubmitting(false);
-    }
-  }, [quizId, student, userAnswers, navigate, submitting]);
+  const deadlineMsRef = useRef(null);
+  const dirtyRef = useRef(false);
+  const latestAnswersRef = useRef([]);
 
-  // Initial data fetch
   useEffect(() => {
-    const checkStatus = async () => {
+    latestAnswersRef.current = userAnswers;
+  }, [userAnswers]);
+
+  // Idempotent submit function
+  const submitQuiz = useCallback(
+    async (finalAnswers = latestAnswersRef.current) => {
+      if (submitting || !student) return;
+      setSubmitting(true);
+      try {
+        const { data } = await API.post('/student/submit', {
+          studentName: student.fullName,
+          studentId: student.studentId,
+          quizId,
+          attemptId: attemptInfo?._id,
+          userAnswers: finalAnswers,
+        });
+        if (storageKey) localStorage.removeItem(storageKey);
+        toast.success('Quiz submitted!');
+        navigate(`/result/${data._id}`, { replace: true });
+      } catch (error) {
+        toast.error(error.response?.data?.message || 'Error submitting quiz');
+        navigate('/quizzes', { replace: true });
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [quizId, student, attemptInfo, storageKey, navigate, submitting]
+  );
+
+  // Fetch quiz + questions + server-side timer in ONE request
+  useEffect(() => {
+    const startOrResume = async () => {
       if (!student) {
         navigate('/', { replace: true });
         return;
       }
       try {
-        const { data: status } = await API.get(`/student/check-attempt/${quizId}/${student.studentId}`);
-        if (status.attempted) {
-          toast.error('You have already attempted this quiz');
-          navigate('/quizzes', { replace: true });
-          return;
+        const { data } = await API.get(`/student/quiz/${quizId}/${student.studentId}`);
+        setQuiz(data.quiz);
+        setQuestions(data.questions || []);
+        setAttemptInfo(data.attempt || null);
+
+        // Merge server draftAnswers with localStorage draftAnswers
+        const serverDraft = Array.isArray(data.attempt?.draftAnswers) ? data.attempt.draftAnswers : [];
+        let localDraft = [];
+        if (storageKey) {
+          try {
+            const raw = localStorage.getItem(storageKey);
+            if (raw) localDraft = JSON.parse(raw);
+          } catch {
+            localDraft = [];
+          }
         }
-        
-        const { data: content } = await API.get(`/student/quiz/${quizId}/${student.studentId}`);
-        setQuiz(content.quiz);
-        setQuestions(content.questions);
-        
-        // Ensure duration is a valid number
-        const duration = content.quiz.duration || 30;
-        setTimeLeft(duration * 60);
+
+        const mergedMap = new Map();
+        serverDraft.forEach((d) => {
+          if (d?.questionId) mergedMap.set(d.questionId, d.answer);
+        });
+        localDraft.forEach((d) => {
+          if (d?.questionId) mergedMap.set(d.questionId, d.answer);
+        });
+
+        const merged = Array.from(mergedMap.entries()).map(([questionId, answer]) => ({
+          questionId,
+          answer,
+        }));
+        setUserAnswers(merged);
+        latestAnswersRef.current = merged;
+
+        const remainingSec =
+          data.attempt?.remainingSeconds ?? (Number(data.quiz?.duration) || 30) * 60;
+        deadlineMsRef.current = Date.now() + remainingSec * 1000;
+        setTimeLeft(remainingSec);
         setLoading(false);
       } catch (error) {
-        toast.error('Failed to load quiz');
+        toast.error(error.response?.data?.message || 'Failed to start quiz');
         navigate('/quizzes', { replace: true });
       }
     };
-    checkStatus();
-  }, [quizId, navigate, student]); // student is now memoized, so this is stable
+    startOrResume();
+  }, [quizId, navigate, student, storageKey]);
 
-  // Timer logic - simplified to avoid re-dependency loops
+  // Server-anchored wall-clock countdown timer (immune to mobile tab throttling)
   useEffect(() => {
-    if (loading || submitting || timeLeft <= 0) {
-        if (timeLeft <= 0 && !loading && !submitting) {
-            submitQuiz();
-        }
-        return;
-    }
+    if (loading || submitting || !deadlineMsRef.current) return;
 
     const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-            clearInterval(timer);
-            return 0;
-        }
-        return prev - 1;
-      });
+      const remaining = Math.max(0, Math.round((deadlineMsRef.current - Date.now()) / 1000));
+      setTimeLeft(remaining);
+      if (remaining <= 0) {
+        clearInterval(timer);
+        submitQuiz(latestAnswersRef.current);
+      }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [loading, submitting, timeLeft === 0, submitQuiz]); 
+  }, [loading, submitting, submitQuiz]);
 
-  // Anti-Cheat State Refs
+  // Periodic debounced autosave to backend every 6 seconds when dirty
+  useEffect(() => {
+    if (loading || submitting || !student) return;
+
+    const interval = setInterval(async () => {
+      if (!dirtyRef.current) return;
+      dirtyRef.current = false;
+      setSyncState('saving');
+      try {
+        await API.put(`/student/quiz/${quizId}/autosave`, {
+          studentId: student.studentId,
+          attemptId: attemptInfo?._id,
+          userAnswers: latestAnswersRef.current,
+        });
+        setSyncState('saved');
+      } catch {
+        dirtyRef.current = true;
+        setSyncState('offline');
+      }
+    }, 6000);
+
+    return () => clearInterval(interval);
+  }, [loading, submitting, quizId, student, attemptInfo]);
+
+  // Anti-cheat & accidental navigation protection
   const warningsRef = useRef(0);
   const submitQuizRef = useRef(submitQuiz);
   const stateRef = useRef({ submitting, timeLeft });
@@ -109,94 +168,59 @@ const QuizAttemptPage = () => {
     stateRef.current = { submitting, timeLeft };
   }, [submitQuiz, submitting, timeLeft]);
 
-  // Comprehensive Lockdown & Anti-Cheat
   useEffect(() => {
-    // 0. Prevent Refresh / Close Tab
     const handleBeforeUnload = (e) => {
       e.preventDefault();
       e.returnValue = '';
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
 
-    // 1. Prevent Back Navigation
-    window.history.pushState(null, null, window.location.href);
-    const handlePopState = () => {
-      window.history.pushState(null, null, window.location.href);
-      toast.error('Back navigation is disabled during the quiz!');
-    };
-    window.addEventListener('popstate', handlePopState);
-
-    // 2. Disable Inspect Element (Right-click & shortcuts)
-    const handleContextMenu = (e) => {
-      e.preventDefault();
-      toast.error('Right-click is disabled.');
-    };
-    const handleKeyDown = (e) => {
-      if (
-        e.key === 'F12' ||
-        ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key.toLowerCase() === 'i' || e.key.toLowerCase() === 'c' || e.key.toLowerCase() === 'j')) ||
-        ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'u') // View Source
-      ) {
-        e.preventDefault();
-        toast.error('Developer tools are disabled.');
-      }
-    };
-    window.addEventListener('contextmenu', handleContextMenu);
-    window.addEventListener('keydown', handleKeyDown);
-
-    // 3. Tab Switch Detection
     const handleVisibilityChange = () => {
-      const { submitting, timeLeft } = stateRef.current;
-      if (document.hidden && !submitting && timeLeft > 0) {
+      const { submitting: isSub, timeLeft: left } = stateRef.current;
+      if (document.hidden && !isSub && left > 0) {
         warningsRef.current += 1;
         if (warningsRef.current === 1) {
-          toast.error('WARNING: You switched tabs or minimized! Do not leave this page or your quiz will be auto-submitted.', { duration: 6000 });
-        } else if (warningsRef.current >= 2) {
-          toast.error('You left the page again. Auto-submitting quiz...', { duration: 4000 });
+          toast.error('Warning: Do not switch tabs during an active quiz attempt.', { duration: 5000 });
+        } else if (warningsRef.current >= 3) {
+          toast.error('Multiple tab switches detected. Submitting quiz...', { duration: 4000 });
           if (submitQuizRef.current) submitQuizRef.current();
         }
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // 4. Force Fullscreen on interaction
-    const enterFullscreen = () => {
-      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
-        document.documentElement.requestFullscreen().catch(() => {});
-      }
-    };
-    document.addEventListener('click', enterFullscreen);
-
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('popstate', handlePopState);
-      window.removeEventListener('contextmenu', handleContextMenu);
-      window.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      document.removeEventListener('click', enterFullscreen);
-      
-      // Exit fullscreen if they leave/finish
-      if (document.fullscreenElement && document.exitFullscreen) {
-        document.exitFullscreen().catch(() => {});
-      }
     };
   }, []);
 
   const handleAnswerSelect = (answer) => {
-    setUserAnswers(prev => {
+    const currentQ = questions[currentIdx];
+    if (!currentQ) return;
+
+    setUserAnswers((prev) => {
       const updated = [...prev];
-      const idx = updated.findIndex(ua => ua.questionId === questions[currentIdx]._id);
+      const idx = updated.findIndex((ua) => ua.questionId === currentQ._id);
       if (idx > -1) {
-        updated[idx].answer = answer;
+        updated[idx] = { questionId: currentQ._id, answer };
       } else {
-        updated.push({ questionId: questions[currentIdx]._id, answer });
+        updated.push({ questionId: currentQ._id, answer });
       }
+      if (storageKey) {
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(updated));
+        } catch {
+          // ignore quota errors
+        }
+      }
+      dirtyRef.current = true;
       return updated;
     });
   };
 
   const getFormatTime = (seconds) => {
-    if (!seconds || seconds < 0) return "0:00";
+    if (!seconds || seconds < 0) return '0:00';
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m}:${s < 10 ? '0' : ''}${s}`;
@@ -204,119 +228,167 @@ const QuizAttemptPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-transparent flex flex-col items-center justify-center p-6">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500 mb-4"></div>
-        <p className="text-gray-500 font-bold uppercase tracking-widest text-sm">Synchronizing Quiz Data...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center p-6">
+        <div className="w-full max-w-2xl space-y-4">
+          <div className="h-16 rounded-2xl bg-[var(--bg-muted)] animate-pulse" />
+          <div className="h-80 rounded-2xl bg-[var(--bg-muted)] animate-pulse" />
+        </div>
       </div>
     );
   }
 
   const currentQuestion = questions[currentIdx];
-  const selectedAnswer = userAnswers.find(ua => ua.questionId === currentQuestion?._id)?.answer || '';
+  const selectedAnswer =
+    userAnswers.find((ua) => ua.questionId === currentQuestion?._id)?.answer || '';
+  const answeredCount = userAnswers.filter((ua) => String(ua.answer || '').trim() !== '').length;
 
   return (
-    <div className="min-h-screen bg-transparent flex flex-col font-sans">
-      <header className="bg-white shadow-xl px-8 py-5 sticky top-0 z-50 flex justify-between items-center border-b border-[#8da9c4]/30">
-        <div className="flex items-center gap-4">
-           <div className="bg-[#8da9c4]/20 p-3 rounded-xl">
-              <CheckCircle2 className="text-[#13315c]" size={24} />
-           </div>
-           <div>
-              <h2 className="text-xl font-black text-[#13315c] tracking-tight uppercase">{quiz.title}</h2>
-              <div className="flex gap-4 mt-0.5">
-                 <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Question {currentIdx + 1} of {questions.length}</p>
-                 <p className="text-[10px] text-[#13315c] font-black uppercase tracking-widest">• {student?.fullName}</p>
-              </div>
-           </div>
+    <div className="min-h-screen flex flex-col">
+      <header className="bg-[var(--bg-surface)] px-4 sm:px-8 py-3.5 sticky top-0 z-50 flex flex-wrap justify-between items-center gap-3 border-b border-[var(--border)]">
+        <div>
+          <h2 className="text-base sm:text-lg font-bold truncate max-w-xs sm:max-w-md">
+            {quiz?.title}
+          </h2>
+          <p className="text-xs text-[var(--text-secondary)]">
+            Question {currentIdx + 1} of {questions.length} • Answered {answeredCount}/{questions.length}
+          </p>
         </div>
-        
-        <div className={`flex items-center gap-3 px-6 py-3 rounded-xl shadow-inner transition-all duration-500 ${timeLeft < 60 ? 'bg-red-500/20 text-rose-500 animate-pulse' : 'bg-gray-50 text-[#13315c]'}`}>
-          <Clock size={22} className={timeLeft < 60 ? 'animate-bounce' : ''} />
-          <span className="font-mono text-2xl font-black tracking-tighter">{getFormatTime(timeLeft)}</span>
+
+        <div className="flex items-center gap-3">
+          <span className="hidden sm:inline-flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+            <Cloud size={14} />
+            {syncState === 'saving'
+              ? 'Saving...'
+              : syncState === 'offline'
+              ? 'Saved locally'
+              : 'Progress saved'}
+          </span>
+
+          <div
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-mono text-base sm:text-lg font-bold ${
+              timeLeft < 60
+                ? 'bg-rose-500/15 text-rose-600 animate-pulse'
+                : 'bg-[var(--bg-muted)] text-[var(--text-primary)]'
+            }`}
+          >
+            <Clock size={18} />
+            <span>{getFormatTime(timeLeft)}</span>
+          </div>
         </div>
       </header>
 
-      <main className="flex-1 max-w-4xl w-full mx-auto p-8">
-        <div className="bg-white p-10 rounded-2xl shadow-2xl border border-[#8da9c4]/30 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-2 h-full bg-primary-600"></div>
-          
-          <div className="mb-10">
-            <span className="inline-flex items-center px-4 py-1.5 bg-gray-50 text-gray-600 text-[10px] font-black rounded-full mb-6 uppercase tracking-[0.15em]">
-              {currentQuestion?.type === 'mcq' ? 'Multiple Choice Scenario' : 'Direct Inquiry'} • {currentQuestion?.marks} Value
+      <main className="flex-1 max-w-3xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+        {/* Question Quick Navigator */}
+        <div className="flex flex-wrap gap-1.5 mb-5">
+          {questions.map((q, idx) => {
+            const isAnswered = userAnswers.some(
+              (ua) => ua.questionId === q._id && String(ua.answer || '').trim() !== ''
+            );
+            const isCurrent = idx === currentIdx;
+            return (
+              <button
+                key={q._id}
+                type="button"
+                onClick={() => setCurrentIdx(idx)}
+                className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
+                  isCurrent
+                    ? 'bg-[var(--accent)] text-white'
+                    : isAnswered
+                    ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
+                    : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] border border-[var(--border)]'
+                }`}
+              >
+                {idx + 1}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="card p-6 sm:p-8">
+          <div className="mb-6">
+            <span className="inline-block px-2.5 py-1 rounded-md bg-[var(--bg-muted)] text-[var(--text-secondary)] text-xs font-semibold mb-3">
+              {currentQuestion?.type === 'mcq' ? 'Multiple Choice' : 'Short Answer'} •{' '}
+              {currentQuestion?.marks} {currentQuestion?.marks === 1 ? 'Mark' : 'Marks'}
             </span>
-            <h3 className="text-3xl font-black text-[#13315c] leading-[1.2] tracking-tight">
+            <h3 className="text-lg sm:text-xl font-bold leading-snug">
               {currentQuestion?.questionText}
             </h3>
           </div>
 
-          <div className="space-y-4">
-            {currentQuestion?.type === 'mcq' ? (
-              <div className="grid grid-cols-1 gap-4">
-                {currentQuestion.options.map((opt, i) => (
+          {currentQuestion?.type === 'mcq' ? (
+            <div className="space-y-3">
+              {(currentQuestion.options || []).map((opt, i) => {
+                const isSelected = selectedAnswer === opt;
+                return (
                   <button
                     key={i}
+                    type="button"
                     onClick={() => handleAnswerSelect(opt)}
-                    className={`group w-full text-left p-6 rounded-xl border-2 transition-all flex items-center justify-between ${
-                      selectedAnswer === opt 
-                        ? 'border-primary-500 bg-[#8da9c4]/20 text-[#13315c] ring-2 ring-primary-500/20 shadow-lg' 
-                        : 'border-[#8da9c4]/30 bg-gray-50/50 hover:border-slate-600 hover:bg-gray-50 hover:shadow-md'
+                    className={`w-full text-left p-4 rounded-xl border transition-all flex items-center justify-between gap-3 ${
+                      isSelected
+                        ? 'border-[var(--accent)] bg-[var(--accent-subtle)] text-[var(--text-primary)] font-semibold'
+                        : 'border-[var(--border)] bg-[var(--bg-surface)] hover:bg-[var(--bg-muted)]'
                     }`}
                   >
-                    <span className={`text-lg font-bold ${selectedAnswer === opt ? 'text-[#13315c]' : 'text-[#13315c]'}`}>{opt}</span>
-                    <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${selectedAnswer === opt ? 'bg-primary-500 border-primary-500 text-white' : 'border-slate-600 group-hover:border-slate-500'}`}>
-                       {selectedAnswer === opt && <CheckCircle2 size={16} />}
+                    <span className="text-sm sm:text-base">{opt}</span>
+                    <div
+                      className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
+                        isSelected
+                          ? 'bg-[var(--accent)] border-[var(--accent)] text-white'
+                          : 'border-[var(--border)]'
+                      }`}
+                    >
+                      {isSelected && <CheckCircle2 size={13} />}
                     </div>
                   </button>
-                ))}
-              </div>
-            ) : (
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Enter your definitive answer..."
-                  className="w-full h-20 px-8 rounded-xl border-2 border-[#8da9c4]/30 bg-gray-50 focus:bg-white focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 text-[#13315c] outline-none text-xl font-bold transition-all shadow-inner"
-                  value={selectedAnswer}
-                  onChange={(e) => handleAnswerSelect(e.target.value)}
-                />
-              </div>
-            )}
-          </div>
+                );
+              })}
+            </div>
+          ) : (
+            <input
+              type="text"
+              placeholder="Type your answer..."
+              className="input-field py-3.5 text-base"
+              value={selectedAnswer}
+              onChange={(e) => handleAnswerSelect(e.target.value)}
+            />
+          )}
         </div>
 
-        <div className="mt-12 flex justify-between items-center gap-6">
+        <div className="mt-6 flex justify-between items-center gap-4">
           <button
+            type="button"
             disabled={currentIdx === 0}
-            onClick={() => setCurrentIdx(prev => prev - 1)}
-            className="h-16 px-10 rounded-xl bg-gray-50 text-gray-600 font-black uppercase text-xs tracking-widest shadow-sm border border-[#8da9c4]/30 hover:text-[#13315c] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            onClick={() => setCurrentIdx((prev) => prev - 1)}
+            className="btn-secondary py-2.5 px-5 text-xs sm:text-sm disabled:opacity-40"
           >
-            Previous Stage
+            Previous
           </button>
-          
-          <div className="flex-1 flex justify-end gap-4">
-            {currentIdx === questions.length - 1 ? (
-              <button
-                onClick={() => submitQuiz()}
-                disabled={submitting}
-                className="h-16 px-12 rounded-xl bg-green-600 text-white font-black uppercase text-sm tracking-[0.2em] shadow-xl shadow-green-500/20 hover:bg-emerald-500 transition-all flex items-center gap-3"
-              >
-                {submitting ? 'Transmitting...' : 'Final Submission'}
-              </button>
-            ) : (
-              <button
-                onClick={() => setCurrentIdx(prev => prev + 1)}
-                className="h-16 px-12 rounded-xl bg-primary-600 text-white font-black uppercase text-sm tracking-[0.2em] shadow-xl shadow-primary-900/30 hover:bg-primary-500 transition-all"
-              >
-                Proceed Next
-              </button>
-            )}
-          </div>
+
+          {currentIdx === questions.length - 1 ? (
+            <button
+              type="button"
+              onClick={() => submitQuiz()}
+              disabled={submitting}
+              className="btn-primary py-2.5 px-6 text-xs sm:text-sm"
+            >
+              {submitting ? 'Submitting...' : 'Submit Quiz'}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setCurrentIdx((prev) => prev + 1)}
+              className="btn-primary py-2.5 px-6 text-xs sm:text-sm"
+            >
+              Next Question
+            </button>
+          )}
         </div>
       </main>
 
-      <footer className="p-10 text-center">
-        <div className="inline-flex items-center gap-2 px-6 py-2 bg-amber-500/10 rounded-full border border-amber-500/20 text-[10px] font-black uppercase tracking-widest text-amber-400 shadow-sm animate-pulse">
-          <AlertCircle size={14} />
-          Session Integrity Monitor: Do not refresh this interface
+      <footer className="p-4 text-center">
+        <div className="inline-flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+          <AlertCircle size={13} /> Answers are automatically saved locally and synced to the server.
         </div>
       </footer>
     </div>

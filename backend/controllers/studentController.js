@@ -4,6 +4,7 @@ const Quiz = require('../models/Quiz');
 const Question = require('../models/Question');
 const Result = require('../models/Result');
 const Student = require('../models/Student');
+const cache = require('../utils/cache');
 const { hashPassword, verifyPassword } = require('../utils/password');
 
 const generateStudentToken = (student) => {
@@ -18,6 +19,66 @@ const generateStudentToken = (student) => {
     { expiresIn: '12h' }
   );
 };
+
+function shuffleArray(arr) {
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+async function getCachedQuizAndQuestions(quizId) {
+  const cacheKey = `quiz:${quizId}:bundle`;
+  const cached = cache.get(cacheKey);
+  if (cached) return cached;
+
+  const [quiz, fullQuestions] = await Promise.all([
+    Quiz.findById(quizId).lean(),
+    Question.find({ quizId }).sort({ createdAt: 1 }).lean(),
+  ]);
+
+  if (!quiz) return null;
+
+  const bundle = { quiz, fullQuestions };
+  cache.set(cacheKey, bundle, 15000); // 15s TTL for high-concurrency burst protection
+  return bundle;
+}
+
+function gradeAttemptAnswers(fullQuestions, userAnswers = []) {
+  let score = 0;
+  let totalPossibleMarks = 0;
+  const answerMap = new Map(
+    (Array.isArray(userAnswers) ? userAnswers : []).map((ua) => [String(ua.questionId), String(ua.answer ?? '')])
+  );
+
+  const processedAnswers = fullQuestions.map((q) => {
+    const marks = Number(q.marks) || 1;
+    totalPossibleMarks += marks;
+    const userAnswerText = answerMap.get(q._id.toString()) || '';
+
+    let isCorrect = false;
+    if (q.type === 'mcq') {
+      isCorrect = userAnswerText === q.correctAnswer;
+    } else {
+      isCorrect = userAnswerText.trim().toLowerCase() === String(q.correctAnswer || '').trim().toLowerCase();
+    }
+
+    const marksObtained = isCorrect ? marks : 0;
+    if (isCorrect) score += marks;
+
+    return {
+      questionId: q._id,
+      answer: userAnswerText,
+      isCorrect,
+      marksObtained,
+    };
+  });
+
+  const percentage = totalPossibleMarks > 0 ? Number(((score / totalPossibleMarks) * 100).toFixed(2)) : 0;
+  return { score, totalPossibleMarks, percentage, processedAnswers };
+}
 
 // @desc    Student login with Student ID + password
 // @route   POST /api/student/login
@@ -47,8 +108,6 @@ const loginStudent = asyncHandler(async (req, res) => {
   if (student.passwordHash) {
     isMatch = await verifyPassword(String(password), student.passwordHash);
   } else {
-    // Legacy migration fallback: if pre-Phase-1 student has no passwordHash yet,
-    // allow signing in with their studentId as initial password and require password change.
     isMatch = String(password).trim().toLowerCase() === student.studentId.toLowerCase();
   }
 
@@ -149,7 +208,7 @@ const updateStudentProfile = asyncHandler(async (req, res) => {
   });
 });
 
-// Legacy ID lookup (kept for backwards compatibility, never exposes passwordHash)
+// Legacy ID lookup
 const verifyStudentId = asyncHandler(async (req, res) => {
   const { studentId } = req.params;
   const student = await Student.findOne({ studentId }).select('-passwordHash').lean();
@@ -167,31 +226,80 @@ const verifyStudentId = asyncHandler(async (req, res) => {
 
 const getAvailableQuizzes = asyncHandler(async (req, res) => {
   const { studentId } = req.params;
-  const student = await Student.findOne({ studentId }).lean();
-  
+  const student = req.student?.studentId === studentId
+    ? req.student
+    : await Student.findOne({ studentId }).select('-passwordHash').lean();
+
   if (!student) {
     res.status(404);
     throw new Error('Student not found');
   }
 
-  const quizzes = await Quiz.find({ createdBy: student.addedBy }).sort({ createdAt: -1 }).lean();
-  res.json(quizzes);
+  // Single batch fetch for quizzes + student's attempts (avoids N+1 requests)
+  const [quizzes, studentResults] = await Promise.all([
+    Quiz.find({
+      createdBy: student.addedBy,
+      isPublished: { $ne: false },
+      $and: [
+        { $or: [{ campus: '' }, { campus: { $exists: false } }, { campus: student.campus }] },
+        { $or: [{ batch: '' }, { batch: { $exists: false } }, { batch: student.batch }] },
+      ],
+    })
+      .sort({ createdAt: -1 })
+      .lean(),
+    Result.find({ studentId: student.studentId })
+      .select('_id quizId status attemptNo score totalPossibleMarks percentage submittedAt startedAt')
+      .sort({ attemptNo: -1, createdAt: -1 })
+      .lean(),
+  ]);
+
+  const resultsByQuiz = new Map();
+  studentResults.forEach((r) => {
+    const key = r.quizId.toString();
+    if (!resultsByQuiz.has(key)) resultsByQuiz.set(key, []);
+    resultsByQuiz.get(key).push(r);
+  });
+
+  const enriched = quizzes.map((q) => {
+    const attempts = resultsByQuiz.get(q._id.toString()) || [];
+    const submittedAttempts = attempts.filter((a) => a.status !== 'in_progress');
+    const inProgress = attempts.find((a) => a.status === 'in_progress');
+    const latestSubmitted = submittedAttempts[0] || null;
+    const attemptsAllowed = q.attemptsAllowed || 1;
+    const exhaustedAttempts = submittedAttempts.length >= attemptsAllowed;
+
+    return {
+      ...q,
+      attemptInfo: {
+        attempted: exhaustedAttempts && !inProgress,
+        hasCompletedAttempt: submittedAttempts.length > 0,
+        attemptsUsed: submittedAttempts.length,
+        attemptsAllowed,
+        inProgress: Boolean(inProgress),
+        resultId: latestSubmitted ? latestSubmitted._id : null,
+        latestScore: latestSubmitted ? latestSubmitted.score : null,
+        latestPercentage: latestSubmitted ? latestSubmitted.percentage : null,
+      },
+    };
+  });
+
+  res.json(enriched);
 });
 
 const getQuizForAttempt = asyncHandler(async (req, res) => {
   const { quizId, studentId } = req.params;
 
-  // Check if student already attempted
-  const existingResult = await Result.findOne({ studentId, quizId }).lean();
-  if (existingResult) {
-    res.status(400);
-    throw new Error('You have already attempted this quiz');
-  }
-
-  const quiz = await Quiz.findById(quizId).lean();
-  if (!quiz) {
+  const bundle = await getCachedQuizAndQuestions(quizId);
+  if (!bundle || !bundle.quiz) {
     res.status(404);
     throw new Error('Quiz not found');
+  }
+
+  const { quiz, fullQuestions } = bundle;
+
+  if (quiz.isPublished === false) {
+    res.status(400);
+    throw new Error('This quiz is not currently published');
   }
 
   const now = new Date();
@@ -204,78 +312,223 @@ const getQuizForAttempt = asyncHandler(async (req, res) => {
     throw new Error('Quiz has already closed');
   }
 
-  let questions = await Question.find({ quizId }).select('-correctAnswer').lean();
-  
-  // Randomize questions
-  questions = questions.sort(() => Math.random() - 0.5);
+  const student = req.student?.studentId === studentId
+    ? req.student
+    : await Student.findOne({ studentId }).select('-passwordHash').lean();
 
-  // Randomize options for MCQ
-  questions = questions.map(q => {
-    if (q.type === 'mcq' && q.options) {
-      q.options = [...q.options].sort(() => Math.random() - 0.5);
-    }
-    return q;
-  });
-
-  res.json({ quiz, questions });
-});
-
-const submitQuiz = asyncHandler(async (req, res) => {
-  const { studentName, studentId, quizId, userAnswers } = req.body;
-
-  // Double check existence
-  const existingResult = await Result.findOne({ studentId, quizId }).lean();
-  if (existingResult) {
-    res.status(400);
-    throw new Error('Duplicate submission');
+  if (!student) {
+    res.status(404);
+    throw new Error('Student not found');
   }
 
-  const questions = await Question.find({ quizId }).lean();
-  let score = 0;
-  let totalPossibleMarks = 0;
-  const processedAnswers = [];
+  // Check existing attempts for this student + quiz
+  const existingAttempts = await Result.find({ studentId, quizId })
+    .sort({ attemptNo: -1, createdAt: -1 });
 
-  questions.forEach(q => {
-    totalPossibleMarks += q.marks;
-    const userAnswerObj = userAnswers.find(ua => ua.questionId === q._id.toString());
-    const userAnswerText = userAnswerObj ? userAnswerObj.answer : '';
-    
-    let isCorrect = false;
-    if (q.type === 'mcq') {
-      isCorrect = userAnswerText === q.correctAnswer;
-    } else {
-      // Short answer: Case insensitive, exact match
-      isCorrect = userAnswerText.trim().toLowerCase() === q.correctAnswer.trim().toLowerCase();
+  let activeAttempt = existingAttempts.find((a) => a.status === 'in_progress');
+  const submittedAttempts = existingAttempts.filter((a) => a.status !== 'in_progress');
+  const attemptsAllowed = Math.max(1, quiz.attemptsAllowed || 1);
+  const durationSeconds = Math.max(60, (quiz.duration || 30) * 60);
+
+  // If there is an active in_progress attempt, check if server timer already expired
+  if (activeAttempt) {
+    const elapsedSeconds = Math.floor((Date.now() - new Date(activeAttempt.startedAt).getTime()) / 1000);
+    const remainingSeconds = durationSeconds - elapsedSeconds;
+
+    if (remainingSeconds <= 0) {
+      // Auto-submit expired attempt on the server
+      const graded = gradeAttemptAnswers(fullQuestions, activeAttempt.draftAnswers || []);
+      activeAttempt.status = 'submitted';
+      activeAttempt.answers = graded.processedAnswers;
+      activeAttempt.score = graded.score;
+      activeAttempt.totalPossibleMarks = graded.totalPossibleMarks;
+      activeAttempt.percentage = graded.percentage;
+      activeAttempt.submittedAt = new Date();
+      activeAttempt.draftAnswers = [];
+      await activeAttempt.save();
+      submittedAttempts.unshift(activeAttempt);
+      activeAttempt = null;
+    }
+  }
+
+  if (!activeAttempt) {
+    if (submittedAttempts.length >= attemptsAllowed) {
+      res.status(400);
+      throw new Error('You have already attempted this quiz');
     }
 
-    const marksObtained = isCorrect ? q.marks : 0;
-    if (isCorrect) score += q.marks;
+    const nextAttemptNo = submittedAttempts.length + 1;
+    try {
+      activeAttempt = await Result.create({
+        studentName: student.fullName,
+        studentId: student.studentId,
+        campus: student.campus || '',
+        batch: student.batch || '',
+        quizId,
+        attemptNo: nextAttemptNo,
+        status: 'in_progress',
+        startedAt: new Date(),
+        lastSavedAt: new Date(),
+        draftAnswers: [],
+        answers: [],
+        score: 0,
+        totalPossibleMarks: quiz.totalMarks || 0,
+        percentage: 0,
+      });
+    } catch (err) {
+      // Handle race condition if student double-clicked Start Quiz
+      activeAttempt = await Result.findOne({ studentId, quizId, status: 'in_progress' });
+      if (!activeAttempt) throw err;
+    }
+  }
 
-    processedAnswers.push({
-      questionId: q._id,
-      answer: userAnswerText,
-      isCorrect,
-      marksObtained
+  const elapsed = Math.floor((Date.now() - new Date(activeAttempt.startedAt).getTime()) / 1000);
+  const remainingSeconds = Math.max(1, durationSeconds - elapsed);
+
+  // Strip correctAnswer and explanation before sending to client!
+  let sanitizedQuestions = fullQuestions.map((q) => ({
+    _id: q._id,
+    quizId: q.quizId,
+    questionText: q.questionText,
+    type: q.type,
+    options: q.type === 'mcq' && Array.isArray(q.options)
+      ? (quiz.shuffleOptions !== false ? shuffleArray(q.options) : [...q.options])
+      : [],
+    marks: q.marks,
+  }));
+
+  if (quiz.shuffleQuestions !== false) {
+    sanitizedQuestions = shuffleArray(sanitizedQuestions);
+  }
+
+  res.json({
+    quiz,
+    questions: sanitizedQuestions,
+    attempt: {
+      _id: activeAttempt._id,
+      attemptNo: activeAttempt.attemptNo,
+      startedAt: activeAttempt.startedAt,
+      remainingSeconds,
+      draftAnswers: activeAttempt.draftAnswers || [],
+    },
+  });
+});
+
+// @desc    Lightweight periodic autosave of student's in-progress answers
+// @route   PUT /api/student/quiz/:quizId/autosave
+const autosaveQuizAttempt = asyncHandler(async (req, res) => {
+  const { quizId } = req.params;
+  const { studentId, attemptId, userAnswers } = req.body;
+
+  if (!Array.isArray(userAnswers)) {
+    res.status(400);
+    throw new Error('Invalid answers payload');
+  }
+
+  const sanitizedDraft = userAnswers.slice(0, 300).map((ua) => ({
+    questionId: String(ua.questionId || ''),
+    answer: String(ua.answer ?? ''),
+  }));
+
+  const filter = attemptId
+    ? { _id: attemptId, studentId, quizId, status: 'in_progress' }
+    : { studentId, quizId, status: 'in_progress' };
+
+  await Result.updateOne(filter, {
+    $set: {
+      draftAnswers: sanitizedDraft,
+      lastSavedAt: new Date(),
+    },
+  });
+
+  res.json({ saved: true, savedAt: new Date() });
+});
+
+// @desc    Idempotent quiz submission with server-side grading
+// @route   POST /api/student/submit
+const submitQuiz = asyncHandler(async (req, res) => {
+  const { studentName, studentId, quizId, attemptId, userAnswers } = req.body;
+
+  const bundle = await getCachedQuizAndQuestions(quizId);
+  if (!bundle || !bundle.quiz) {
+    res.status(404);
+    throw new Error('Quiz not found');
+  }
+
+  const { fullQuestions } = bundle;
+
+  // Find either the specified attempt or latest attempt for this student+quiz
+  let attempt = attemptId
+    ? await Result.findOne({ _id: attemptId, studentId, quizId })
+    : await Result.findOne({ studentId, quizId }).sort({ attemptNo: -1, createdAt: -1 });
+
+  // Idempotency: if already submitted, return existing result without error!
+  if (attempt && attempt.status === 'submitted' && attempt.answers && attempt.answers.length > 0) {
+    return res.status(200).json({
+      _id: attempt._id,
+      studentName: attempt.studentName,
+      studentId: attempt.studentId,
+      quizId: attempt.quizId,
+      attemptNo: attempt.attemptNo,
+      submittedAt: attempt.submittedAt,
     });
+  }
+
+  const finalUserAnswers =
+    Array.isArray(userAnswers) && userAnswers.length > 0
+      ? userAnswers
+      : attempt?.draftAnswers || [];
+
+  const { score, totalPossibleMarks, percentage, processedAnswers } = gradeAttemptAnswers(
+    fullQuestions,
+    finalUserAnswers
+  );
+
+  if (attempt) {
+    attempt.status = 'submitted';
+    attempt.answers = processedAnswers;
+    attempt.draftAnswers = [];
+    attempt.score = score;
+    attempt.totalPossibleMarks = totalPossibleMarks;
+    attempt.percentage = percentage;
+    attempt.submittedAt = new Date();
+    await attempt.save();
+  } else {
+    const studentDoc = await Student.findOne({ studentId }).select('fullName campus batch').lean();
+    try {
+      attempt = await Result.create({
+        studentName: studentName || studentDoc?.fullName || studentId,
+        studentId,
+        campus: studentDoc?.campus || '',
+        batch: studentDoc?.batch || '',
+        quizId,
+        attemptNo: 1,
+        status: 'submitted',
+        answers: processedAnswers,
+        draftAnswers: [],
+        score,
+        totalPossibleMarks,
+        percentage,
+        submittedAt: new Date(),
+      });
+    } catch (err) {
+      // Idempotent fallback on unique index collision
+      const existing = await Result.findOne({ studentId, quizId }).sort({ attemptNo: -1 });
+      if (existing) {
+        return res.status(200).json(existing);
+      }
+      throw err;
+    }
+  }
+
+  res.status(201).json({
+    _id: attempt._id,
+    studentName: attempt.studentName,
+    studentId: attempt.studentId,
+    quizId: attempt.quizId,
+    attemptNo: attempt.attemptNo,
+    submittedAt: attempt.submittedAt,
   });
-
-  const percentage = totalPossibleMarks > 0 ? (score / totalPossibleMarks) * 100 : 0;
-
-  const studentDoc = await Student.findOne({ studentId }).lean();
-
-  const result = await Result.create({
-    studentName,
-    studentId,
-    campus: studentDoc?.campus,
-    batch: studentDoc?.batch,
-    quizId,
-    answers: processedAnswers,
-    score,
-    totalPossibleMarks,
-    percentage: Number(percentage.toFixed(2)),
-  });
-
-  res.status(201).json(result);
 });
 
 const getStudentResult = asyncHandler(async (req, res) => {
@@ -312,8 +565,23 @@ const getStudentResult = asyncHandler(async (req, res) => {
 
 const checkAttemptStatus = asyncHandler(async (req, res) => {
   const { studentId, quizId } = req.params;
-  const attempt = await Result.findOne({ studentId, quizId }).select('_id').lean();
-  res.json({ attempted: !!attempt, resultId: attempt ? attempt._id : null });
+  const [quiz, attempts] = await Promise.all([
+    Quiz.findById(quizId).select('attemptsAllowed').lean(),
+    Result.find({ studentId, quizId }).select('_id status attemptNo').sort({ attemptNo: -1 }).lean(),
+  ]);
+
+  const inProgress = attempts.find((a) => a.status === 'in_progress');
+  const submitted = attempts.filter((a) => a.status !== 'in_progress');
+  const attemptsAllowed = quiz?.attemptsAllowed || 1;
+  const exhausted = submitted.length >= attemptsAllowed && !inProgress;
+
+  res.json({
+    attempted: exhausted,
+    inProgress: Boolean(inProgress),
+    attemptsUsed: submitted.length,
+    attemptsAllowed,
+    resultId: submitted[0] ? submitted[0]._id : null,
+  });
 });
 
 module.exports = {
@@ -322,6 +590,7 @@ module.exports = {
   updateStudentProfile,
   getAvailableQuizzes,
   getQuizForAttempt,
+  autosaveQuizAttempt,
   submitQuiz,
   getStudentResult,
   checkAttemptStatus,
