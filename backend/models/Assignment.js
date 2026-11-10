@@ -9,10 +9,19 @@ const assignmentSchema = new mongoose.Schema(
     },
     description: {
       type: String,
+      default: '',
     },
     dueDate: {
       type: Date,
       required: true,
+    },
+    totalMarks: {
+      type: Number,
+      default: 100,
+    },
+    allowLateSubmission: {
+      type: Boolean,
+      default: true,
     },
     campus: {
       type: String,
@@ -37,6 +46,8 @@ const assignmentSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+assignmentSchema.index({ createdBy: 1, campus: 1, batch: 1, createdAt: -1 });
 
 const Assignment = mongoose.model('Assignment', assignmentSchema);
 

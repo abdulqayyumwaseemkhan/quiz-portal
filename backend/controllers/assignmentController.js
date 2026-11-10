@@ -4,15 +4,16 @@ const Submission = require('../models/Submission');
 const Student = require('../models/Student');
 const cloudinary = require('../config/cloudinary');
 const { Readable } = require('stream');
+const { getAdminScope } = require('../middleware/auth');
 
 // --- Helper for Cloudinary Buffer Upload ---
 const uploadToCloudinary = (buffer, folder, originalFilename) => {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
-      { 
-        resource_type: 'raw', 
+      {
+        resource_type: 'raw',
         folder,
-        public_id: originalFilename, // Cloudinary will sanitize this
+        public_id: `${originalFilename.replace(/[^a-zA-Z0-9._-]/g, '_')}_${Date.now()}`,
       },
       (error, result) => {
         if (error) reject(error);
@@ -29,13 +30,25 @@ const uploadToCloudinary = (buffer, folder, originalFilename) => {
 // --- Admin Controllers ---
 
 const createAssignment = asyncHandler(async (req, res) => {
-  const { title, description, dueDate, campus, batch, projectType } = req.body;
-  const assignment = await Assignment.create({
+  const {
     title,
     description,
     dueDate,
-    campus: campus || '',
-    batch: batch || '',
+    totalMarks,
+    allowLateSubmission,
+    campus,
+    batch,
+    projectType,
+  } = req.body;
+
+  const assignment = await Assignment.create({
+    title: title.trim(),
+    description: description || '',
+    dueDate,
+    totalMarks: Number(totalMarks) || 100,
+    allowLateSubmission: allowLateSubmission !== undefined ? Boolean(allowLateSubmission) : true,
+    campus: (campus || '').trim(),
+    batch: (batch || '').trim(),
     projectType: projectType || 'vanilla',
     createdBy: req.admin._id,
   });
@@ -44,17 +57,33 @@ const createAssignment = asyncHandler(async (req, res) => {
 
 const getAssignments = asyncHandler(async (req, res) => {
   const { campus, batch } = req.query;
-  let query = { createdBy: req.admin._id };
+  const query = { ...getAdminScope(req, 'createdBy') };
   if (campus) query.campus = campus;
   if (batch) query.batch = batch;
 
-  const assignments = await Assignment.find(query).sort({ createdAt: -1 });
-  res.json(assignments);
+  const assignments = await Assignment.find(query).sort({ createdAt: -1 }).lean();
+
+  if (assignments.length === 0) return res.json([]);
+
+  const ids = assignments.map((a) => a._id);
+  const subCounts = await Submission.aggregate([
+    { $match: { assignmentId: { $in: ids } } },
+    { $group: { _id: '$assignmentId', count: { $sum: 1 } } },
+  ]);
+  const countMap = new Map(subCounts.map((c) => [c._id.toString(), c.count]));
+
+  res.json(
+    assignments.map((a) => ({
+      ...a,
+      submissionCount: countMap.get(a._id.toString()) || 0,
+    }))
+  );
 });
 
 const updateAssignment = asyncHandler(async (req, res) => {
-  const assignment = await Assignment.findByIdAndUpdate(
-    req.params.id,
+  const scope = getAdminScope(req, 'createdBy');
+  const assignment = await Assignment.findOneAndUpdate(
+    { _id: req.params.id, ...scope },
     req.body,
     { new: true, runValidators: true }
   );
@@ -66,28 +95,26 @@ const updateAssignment = asyncHandler(async (req, res) => {
 });
 
 const deleteAssignment = asyncHandler(async (req, res) => {
-  const assignment = await Assignment.findById(req.params.id);
+  const scope = getAdminScope(req, 'createdBy');
+  const assignment = await Assignment.findOne({ _id: req.params.id, ...scope });
   if (!assignment) {
     res.status(404);
     throw new Error('Assignment not found');
   }
 
-  // Find all submissions
-  const submissions = await Submission.find({ assignmentId: assignment._id });
-  
-  // Delete all Cloudinary assets
+  const submissions = await Submission.find({ assignmentId: assignment._id }).lean();
+
   for (const sub of submissions) {
-    try {
-      await cloudinary.uploader.destroy(sub.filePublicId, { resource_type: 'raw' });
-    } catch (err) {
-      console.error(`Failed to delete Cloudinary asset ${sub.filePublicId}`, err);
+    if (sub.filePublicId) {
+      try {
+        await cloudinary.uploader.destroy(sub.filePublicId, { resource_type: 'raw' });
+      } catch (err) {
+        console.error(`Failed to delete Cloudinary asset ${sub.filePublicId}`, err);
+      }
     }
   }
 
-  // Delete all submissions from DB
   await Submission.deleteMany({ assignmentId: assignment._id });
-
-  // Delete assignment
   await assignment.deleteOne();
 
   res.json({ message: 'Assignment and related submissions deleted' });
@@ -95,75 +122,121 @@ const deleteAssignment = asyncHandler(async (req, res) => {
 
 const getSubmissionsForAssignment = asyncHandler(async (req, res) => {
   const { campus, batch } = req.query;
-  let query = { assignmentId: req.params.id };
+  const scope = getAdminScope(req, 'createdBy');
+  const assignment = await Assignment.findOne({ _id: req.params.id, ...scope }).lean();
+  if (!assignment) {
+    res.status(404);
+    throw new Error('Assignment not found');
+  }
+
+  const query = { assignmentId: req.params.id };
   if (campus) query.campus = campus;
   if (batch) query.batch = batch;
 
-  const submissions = await Submission.find(query).sort({ submittedAt: -1 });
+  const submissions = await Submission.find(query).sort({ submittedAt: -1 }).lean();
   res.json(submissions);
+});
+
+const gradeSubmission = asyncHandler(async (req, res) => {
+  const { submissionId } = req.params;
+  const { marksObtained, maxMarks, feedback } = req.body;
+
+  const submission = await Submission.findById(submissionId);
+  if (!submission) {
+    res.status(404);
+    throw new Error('Submission not found');
+  }
+
+  const scope = getAdminScope(req, 'createdBy');
+  const assignment = await Assignment.findOne({ _id: submission.assignmentId, ...scope }).lean();
+  if (!assignment) {
+    res.status(403);
+    throw new Error('Not authorized to grade this submission');
+  }
+
+  submission.marksObtained = marksObtained !== '' && marksObtained !== null ? Number(marksObtained) : null;
+  if (maxMarks !== undefined) {
+    submission.maxMarks = Number(maxMarks) || assignment.totalMarks || 100;
+  } else if (!submission.maxMarks) {
+    submission.maxMarks = assignment.totalMarks || 100;
+  }
+  if (feedback !== undefined) {
+    submission.feedback = String(feedback).trim();
+  }
+  submission.status = submission.marksObtained !== null ? 'graded' : submission.isLate ? 'late' : 'submitted';
+  submission.gradedAt = submission.marksObtained !== null ? new Date() : null;
+
+  const updated = await submission.save();
+  res.json(updated);
 });
 
 // --- Student Controllers ---
 
 const getAssignmentsForStudent = asyncHandler(async (req, res) => {
   const { studentId } = req.params;
-  const student = await Student.findOne({ studentId });
-  
+  const student = req.student?.studentId === studentId
+    ? req.student
+    : await Student.findOne({ studentId }).select('-passwordHash').lean();
+
   if (!student) {
     res.status(404);
     throw new Error('Student not found');
   }
 
-  const assignments = await Assignment.find({
-    createdBy: student.addedBy,
-    $and: [
-      { $or: [{ campus: '' }, { campus: student.campus }] },
-      { $or: [{ batch: '' }, { batch: student.batch }] }
-    ]
-  }).sort({ createdAt: -1 });
+  const [assignments, mySubmissions] = await Promise.all([
+    Assignment.find({
+      createdBy: student.addedBy,
+      $and: [
+        { $or: [{ campus: '' }, { campus: student.campus }] },
+        { $or: [{ batch: '' }, { batch: student.batch }] },
+      ],
+    })
+      .sort({ dueDate: 1, createdAt: -1 })
+      .lean(),
+    Submission.find({ studentId: student.studentId }).lean(),
+  ]);
 
-  res.json(assignments);
+  const subMap = new Map(mySubmissions.map((s) => [s.assignmentId.toString(), s]));
+
+  const enriched = assignments.map((a) => ({
+    ...a,
+    mySubmission: subMap.get(a._id.toString()) || null,
+  }));
+
+  res.json(enriched);
 });
 
 const submitAssignment = asyncHandler(async (req, res) => {
   const { id: assignmentId, studentId } = req.params;
   const { driveLink, assignmentTitle, assignmentDetails } = req.body;
-  
-  const assignment = await Assignment.findById(assignmentId);
+
+  const assignment = await Assignment.findById(assignmentId).lean();
   if (!assignment) {
     res.status(404);
     throw new Error('Assignment not found');
   }
 
-  if (assignment.projectType !== 'document' && !req.file) {
+  if (!req.file && !driveLink) {
     res.status(400);
-    throw new Error('No file uploaded or invalid file type');
-  }
-
-  if (assignment.projectType === 'document' && !req.file && !driveLink) {
-    res.status(400);
-    throw new Error('Please upload a document or provide a Google Drive link.');
+    throw new Error('Please upload a file or provide a project/Drive link.');
   }
 
   const isLate = new Date() > new Date(assignment.dueDate);
-  if (isLate) {
+  if (isLate && assignment.allowLateSubmission === false) {
     res.status(400);
-    throw new Error('The due date for this assignment has passed. Submission is no longer allowed.');
+    throw new Error('The due date for this assignment has passed and late submissions are disabled.');
   }
 
-  const student = await Student.findOne({ studentId });
+  const student = await Student.findOne({ studentId }).select('-passwordHash').lean();
   if (!student) {
     res.status(404);
     throw new Error('Student not found');
   }
 
-  // Check existing submission
-  let submission = await Submission.findOne({ assignmentId, studentId });
-
-  // If exists, throw error to prevent resubmission
-  if (submission) {
+  const existing = await Submission.findOne({ assignmentId, studentId }).lean();
+  if (existing) {
     res.status(400);
-    throw new Error('You have already submitted this assignment. Resubmission is not allowed.');
+    throw new Error('You have already submitted this assignment.');
   }
 
   let fileUrl = null;
@@ -171,7 +244,6 @@ const submitAssignment = asyncHandler(async (req, res) => {
   let originalFileName = null;
   let fileSizeBytes = null;
 
-  // Upload to Cloudinary
   if (req.file) {
     const folder = `quiz-portal/assignments/${student.campus || 'General'}/${student.batch || 'General'}`;
     const uploadResult = await uploadToCloudinary(req.file.buffer, folder, req.file.originalname);
@@ -181,9 +253,14 @@ const submitAssignment = asyncHandler(async (req, res) => {
     fileSizeBytes = req.file.size;
   }
 
-  const subType = assignment.projectType === 'document' ? 'document' : 'file';
+  const subType =
+    assignment.projectType === 'document'
+      ? 'document'
+      : req.file
+      ? 'file'
+      : 'link';
 
-  const submissionData = {
+  const submission = await Submission.create({
     assignmentId,
     studentId,
     studentName: student.fullName,
@@ -194,23 +271,21 @@ const submitAssignment = asyncHandler(async (req, res) => {
     filePublicId,
     originalFileName,
     fileSizeBytes,
-    driveLink,
-    assignmentTitle,
-    assignmentDetails,
+    driveLink: (driveLink || '').trim(),
+    assignmentTitle: (assignmentTitle || '').trim(),
+    assignmentDetails: (assignmentDetails || '').trim(),
     isLate,
+    status: isLate ? 'late' : 'submitted',
+    maxMarks: assignment.totalMarks || 100,
     submittedAt: Date.now(),
-  };
-
-  submission = await Submission.create(submissionData);
+  });
 
   res.status(200).json(submission);
 });
 
 const getMySubmissionStatus = asyncHandler(async (req, res) => {
   const { id: assignmentId, studentId } = req.params;
-  
-  const submission = await Submission.findOne({ assignmentId, studentId });
-  
+  const submission = await Submission.findOne({ assignmentId, studentId }).lean();
   if (submission) {
     res.json({ exists: true, submission });
   } else {
@@ -227,34 +302,31 @@ const submitIdeAssignment = asyncHandler(async (req, res) => {
     throw new Error('Project data is required for IDE submission');
   }
 
-  const assignment = await Assignment.findById(assignmentId);
+  const assignment = await Assignment.findById(assignmentId).lean();
   if (!assignment) {
     res.status(404);
     throw new Error('Assignment not found');
   }
 
   const isLate = new Date() > new Date(assignment.dueDate);
-  if (isLate) {
+  if (isLate && assignment.allowLateSubmission === false) {
     res.status(400);
-    throw new Error('The due date for this assignment has passed. Submission is no longer allowed.');
+    throw new Error('The due date for this assignment has passed and late submissions are disabled.');
   }
 
-  const student = await Student.findOne({ studentId });
+  const student = await Student.findOne({ studentId }).select('-passwordHash').lean();
   if (!student) {
     res.status(404);
     throw new Error('Student not found');
   }
 
-  // Check existing submission
-  let submission = await Submission.findOne({ assignmentId, studentId });
-
-  // If exists, throw error to prevent resubmission
-  if (submission) {
+  const existing = await Submission.findOne({ assignmentId, studentId }).lean();
+  if (existing) {
     res.status(400);
-    throw new Error('You have already submitted this assignment. Resubmission is not allowed.');
+    throw new Error('You have already submitted this assignment.');
   }
 
-  const submissionData = {
+  const submission = await Submission.create({
     assignmentId,
     studentId,
     studentName: student.fullName,
@@ -263,15 +335,14 @@ const submitIdeAssignment = asyncHandler(async (req, res) => {
     submissionType: 'ide',
     projectData,
     isLate,
+    status: isLate ? 'late' : 'submitted',
+    maxMarks: assignment.totalMarks || 100,
     submittedAt: Date.now(),
-    // Clear out file fields if overriding a previous file submission (redundant now but safe)
     fileUrl: null,
     filePublicId: null,
     originalFileName: null,
     fileSizeBytes: null,
-  };
-
-  submission = await Submission.create(submissionData);
+  });
 
   res.status(200).json(submission);
 });
@@ -283,7 +354,7 @@ const uploadIdeImage = asyncHandler(async (req, res) => {
   }
 
   const folder = `quiz-portal/ide_images`;
-  
+
   const uploadPromise = new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       { folder, resource_type: 'auto' },
@@ -302,10 +373,8 @@ const uploadIdeImage = asyncHandler(async (req, res) => {
     const result = await uploadPromise;
     res.status(200).json({ url: result.secure_url });
   } catch (error) {
-    console.error('Cloudinary IDE Image Upload Error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: `Failed to upload image to Cloudinary: ${error.message || error}`,
-      error: error.toString() 
     });
   }
 });
@@ -316,6 +385,7 @@ module.exports = {
   updateAssignment,
   deleteAssignment,
   getSubmissionsForAssignment,
+  gradeSubmission,
   getAssignmentsForStudent,
   submitAssignment,
   submitIdeAssignment,

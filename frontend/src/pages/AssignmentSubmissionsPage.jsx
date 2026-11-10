@@ -1,16 +1,27 @@
 import React, { useState, useEffect } from 'react';
+import * as XLSX from 'xlsx';
 import API from '../api';
 import Navbar from '../components/AdminNavbar';
-import { Filter, Download, ArrowLeft, Clock, CheckCircle, BookOpen } from 'lucide-react';
+import {
+  Filter,
+  Download,
+  ArrowLeft,
+  Clock,
+  CheckCircle,
+  BookOpen,
+  Award,
+  ExternalLink,
+  X,
+} from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import WebIDE from '../components/WebIDE/WebIDE';
 
-const formatBytes = (bytes, decimals = 2) => {
-  if (!+bytes) return '0 Bytes';
+const formatBytes = (bytes, decimals = 1) => {
+  if (!+bytes) return '0 B';
   const k = 1024;
   const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+  const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 };
@@ -23,38 +34,82 @@ const AssignmentSubmissionsPage = () => {
   const [loading, setLoading] = useState(true);
   const [activeWorkspace, setActiveWorkspace] = useState(null);
   const [activeVideo, setActiveVideo] = useState(null);
+  const [gradingSub, setGradingSub] = useState(null);
+  const [gradeForm, setGradeForm] = useState({ marksObtained: '', maxMarks: 100, feedback: '' });
+  const [savingGrade, setSavingGrade] = useState(false);
 
   useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [sRes, mRes] = await Promise.all([
+          API.get(`/assignments/${id}/submissions`),
+          API.get('/admin/students/meta'),
+        ]);
+        setSubmissions(sRes.data);
+        setMeta(mRes.data);
+      } catch {
+        toast.error('Failed to load submissions');
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    try {
-      const [sRes, mRes] = await Promise.all([
-        API.get(`/assignments/${id}/submissions`),
-        API.get('/admin/students/meta')
-      ]);
-      setSubmissions(sRes.data);
-      setMeta(mRes.data);
-    } catch (error) {
-      console.error(error);
-      toast.error('Failed to load submissions');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [id]);
 
   const handleFilter = async () => {
     setLoading(true);
     try {
       const { data } = await API.get(`/assignments/${id}/submissions`, { params: filter });
       setSubmissions(data);
-    } catch (error) {
-       console.error(error);
-       toast.error('Filter failed');
+    } catch {
+      toast.error('Filter failed');
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
+  };
+
+  const openGradeModal = (sub) => {
+    setGradingSub(sub);
+    setGradeForm({
+      marksObtained: sub.marksObtained ?? '',
+      maxMarks: sub.maxMarks || 100,
+      feedback: sub.feedback || '',
+    });
+  };
+
+  const handleSaveGrade = async (e) => {
+    e.preventDefault();
+    if (!gradingSub) return;
+    setSavingGrade(true);
+    try {
+      const { data } = await API.put(`/assignments/submissions/${gradingSub._id}/grade`, gradeForm);
+      setSubmissions(submissions.map((s) => (s._id === data._id ? data : s)));
+      setGradingSub(null);
+      toast.success('Marks and feedback saved');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to save grade');
+    } finally {
+      setSavingGrade(false);
+    }
+  };
+
+  const handleExportExcel = () => {
+    if (!submissions.length) return toast.error('No submissions to export');
+    const rows = submissions.map((s) => ({
+      'Student ID': s.studentId,
+      'Student Name': s.studentName,
+      Campus: s.campus || '',
+      Batch: s.batch || '',
+      Status: s.status || (s.isLate ? 'late' : 'submitted'),
+      'Marks Obtained': s.marksObtained ?? 'Not Graded',
+      'Max Marks': s.maxMarks || 100,
+      Feedback: s.feedback || '',
+      'Submitted At': s.submittedAt ? new Date(s.submittedAt).toLocaleString() : '',
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Submissions');
+    XLSX.writeFile(wb, `assignment_submissions_${id.slice(-6)}.xlsx`);
   };
 
   if (activeVideo) {
@@ -65,35 +120,30 @@ const AssignmentSubmissionsPage = () => {
     }
 
     return (
-      <div className="fixed inset-0 z-50 flex flex-col bg-black bg-opacity-90">
-        <div className="flex items-center justify-between px-6 py-4 bg-gray-900 border-b border-gray-800">
-          <div className="flex items-center space-x-4">
-            <button 
-              onClick={() => setActiveVideo(null)}
-              className="text-gray-400 font-bold hover:text-white transition-colors flex items-center gap-2"
-            >
-              <ArrowLeft size={20} /> Back to Submissions
-            </button>
-            <h2 className="text-xl font-bold text-white">{activeVideo.assignmentTitle || 'Video Submission'}</h2>
-          </div>
+      <div className="fixed inset-0 z-50 flex flex-col bg-slate-950">
+        <div className="flex items-center justify-between px-6 py-4 bg-slate-900 border-b border-slate-800">
+          <button
+            onClick={() => setActiveVideo(null)}
+            className="text-slate-300 font-semibold hover:text-white flex items-center gap-2 text-sm"
+          >
+            <ArrowLeft size={18} /> Back to Submissions
+          </button>
+          <h2 className="text-sm font-bold text-white">
+            {activeVideo.studentName} — {activeVideo.assignmentTitle || 'Submission Preview'}
+          </h2>
         </div>
-        <div className="flex-1 min-h-0 flex items-center justify-center p-8 relative">
-          {activeVideo.assignmentDetails && (
-            <div className="absolute top-8 right-8 bg-gray-800 p-4 rounded-lg text-white max-w-sm shadow-xl z-10 opacity-80 hover:opacity-100 transition-opacity">
-              <h3 className="font-bold text-sm mb-2 text-gray-300">Assignment Details</h3>
-              <p className="text-sm whitespace-pre-wrap">{activeVideo.assignmentDetails}</p>
-            </div>
-          )}
+        <div className="flex-1 flex items-center justify-center p-6">
           {embedLink ? (
-             <iframe 
-               src={embedLink} 
-               width="100%" 
-               height="100%" 
-               allow="autoplay" 
-               className="rounded-xl shadow-2xl max-w-5xl w-full h-[80vh] border-0"
-             ></iframe>
+            <iframe
+              src={embedLink}
+              width="100%"
+              height="100%"
+              allow="autoplay"
+              title="Submission preview"
+              className="rounded-xl max-w-5xl w-full h-[80vh] border-0"
+            />
           ) : (
-             <div className="text-white font-bold">Invalid Google Drive Link provided.</div>
+            <div className="text-white">Cannot embed this link directly.</div>
           )}
         </div>
       </div>
@@ -102,193 +152,296 @@ const AssignmentSubmissionsPage = () => {
 
   if (activeWorkspace) {
     return (
-      <div className="fixed inset-0 z-50 flex flex-col bg-transparent">
-        <div className="flex items-center justify-between px-6 py-3 bg-white border-b border-[#8da9c4]/30">
-          <div className="flex items-center space-x-4">
-            <button 
+      <div className="fixed inset-0 z-50 flex flex-col bg-[var(--bg-primary)]">
+        <div className="flex items-center justify-between px-6 py-3 bg-[var(--bg-surface)] border-b border-[var(--border)]">
+          <div className="flex items-center gap-4">
+            <button
               onClick={() => setActiveWorkspace(null)}
-              className="text-gray-500 font-bold hover:text-[#13315c] transition-colors"
+              className="text-sm font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             >
               ← Back to Submissions
             </button>
-            <h2 className="text-xl font-bold text-[#13315c]">{activeWorkspace.studentName}'s Workspace</h2>
+            <h2 className="text-base font-bold">{activeWorkspace.studentName}&apos;s Workspace</h2>
           </div>
+          <button
+            onClick={() => {
+              const sub = activeWorkspace;
+              setActiveWorkspace(null);
+              openGradeModal(sub);
+            }}
+            className="btn-primary py-1.5 px-4 text-xs"
+          >
+            Grade Submission
+          </button>
         </div>
         <div className="flex-1 min-h-0">
-          <WebIDE 
-            initialProjectData={activeWorkspace.projectData}
-            readOnly={true}
-          />
+          <WebIDE initialProjectData={activeWorkspace.projectData} readOnly={true} />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-transparent text-[#13315c] flex">
+    <div className="min-h-screen flex flex-col lg:flex-row">
       <Navbar />
-      <main className="flex-1 ml-64 p-8">
-        <header className="mb-10">
-          <div className="flex items-center gap-4 mb-2">
-            <Link to="/admin/manage-assignments" className="text-gray-500 hover:text-[#13315c] transition-colors">
-              <ArrowLeft size={24} />
+      <main className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8">
+        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <Link
+              to="/admin/manage-assignments"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] mb-2"
+            >
+              <ArrowLeft size={15} /> Back to Assignments
             </Link>
-            <h1 className="text-3xl font-extrabold text-[#13315c]">Assignment Submissions</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Assignment Submissions</h1>
+            <p className="text-sm text-[var(--text-secondary)] mt-0.5">
+              Review student files, links, and code workspaces and assign marks & feedback
+            </p>
           </div>
-          <p className="text-gray-600 ml-10">Review and download student project files</p>
+          <button
+            onClick={handleExportExcel}
+            className="btn-secondary flex items-center gap-2 text-xs sm:text-sm py-2.5 px-4"
+          >
+            <Download size={16} /> Export Grades (.xlsx)
+          </button>
         </header>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-[#8da9c4]/30 mb-8 flex flex-col md:flex-row gap-6 items-end">
-            <div className="flex-1 w-full">
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Campus Filter</label>
-                <div className="relative">
-                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
-                    <select 
-                      className="input-field pl-10"
-                      value={filter.campus}
-                      onChange={(e) => setFilter({...filter, campus: e.target.value})}
-                    >
-                        <option value="">All Campuses</option>
-                        {meta.campuses?.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                </div>
+        <div className="card p-5 mb-6 flex flex-col sm:flex-row gap-4 items-end">
+          <div className="flex-1 w-full">
+            <label className="block text-xs font-semibold uppercase mb-1">Campus</label>
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={15} />
+              <select
+                className="input-field pl-9 py-2 text-sm"
+                value={filter.campus}
+                onChange={(e) => setFilter({ ...filter, campus: e.target.value })}
+              >
+                <option value="">All Campuses</option>
+                {meta.campuses?.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
             </div>
-            <div className="flex-1 w-full">
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Batch Filter</label>
-                <div className="relative">
-                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
-                    <select 
-                      className="input-field pl-10"
-                      value={filter.batch}
-                      onChange={(e) => setFilter({...filter, batch: e.target.value})}
-                    >
-                        <option value="">All Batches</option>
-                        {meta.batches?.map(b => <option key={b} value={b}>{b}</option>)}
-                    </select>
-                </div>
-            </div>
-            <button 
-              onClick={handleFilter}
-              className="btn-primary flex items-center gap-2 h-11 px-8 whitespace-nowrap"
+          </div>
+          <div className="flex-1 w-full">
+            <label className="block text-xs font-semibold uppercase mb-1">Batch</label>
+            <select
+              className="input-field py-2 text-sm"
+              value={filter.batch}
+              onChange={(e) => setFilter({ ...filter, batch: e.target.value })}
             >
-              Apply Filters
-            </button>
+              <option value="">All Batches</option>
+              {meta.batches?.map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button onClick={handleFilter} className="btn-primary py-2.5 px-6 text-sm whitespace-nowrap">
+            Apply Filters
+          </button>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-[#8da9c4]/30 overflow-hidden">
-          <table className="w-full text-left">
-            <thead className="bg-white text-gray-600 text-xs font-bold uppercase tracking-wider">
-              <tr>
-                <th className="px-6 py-4">Student</th>
-                <th className="px-6 py-4">Campus / Batch</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">File Info</th>
-                <th className="px-6 py-4 text-right">Download</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {submissions.map((sub) => (
-                <tr key={sub._id} className="hover:bg-white transition-colors">
-                  <td className="px-6 py-4">
-                    <p className="font-bold text-[#13315c]">{sub.studentName}</p>
-                    <p className="text-xs text-gray-600">{sub.studentId}</p>
-                  </td>
-                  <td className="px-6 py-4">
-                     <p className="font-semibold text-[#13315c]">{sub.campus || '-'}</p>
-                     <p className="text-xs text-gray-600">{sub.batch || '-'}</p>
-                  </td>
-                  <td className="px-6 py-4">
-                     {sub.isLate ? (
-                         <span className="inline-flex items-center gap-1 text-rose-400 bg-rose-500/10 px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-widest">
-                           <Clock size={12} /> Late
-                         </span>
-                     ) : (
-                         <span className="inline-flex items-center gap-1 text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-widest">
-                           <CheckCircle size={12} /> On Time
-                         </span>
-                     )}
-                     <p className="text-xs text-gray-500 font-medium mt-1">
-                        {new Date(sub.submittedAt).toLocaleDateString()}
-                     </p>
-                  </td>
-                  <td className="px-6 py-4">
-                    {sub.submissionType === 'ide' ? (
-                      <div>
-                        <p className="font-medium text-purple-400 line-clamp-1">Web IDE Workspace</p>
-                        <p className="text-xs text-gray-600 font-mono">Cloud Project</p>
-                      </div>
-                    ) : sub.submissionType === 'document' ? (
-                      <div>
-                        {sub.assignmentTitle && <p className="font-bold text-[#13315c] line-clamp-1 mb-1">{sub.assignmentTitle}</p>}
-                        {sub.driveLink && <p className="font-medium text-blue-500 line-clamp-1 text-xs mb-1">Drive Video Attached</p>}
-                        {sub.fileUrl && (
-                          <p className="text-xs text-gray-600 font-mono flex gap-1 items-center">
-                             File: {sub.originalFileName} ({formatBytes(sub.fileSizeBytes)})
-                          </p>
+        <div className="card p-0 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-[var(--bg-muted)] text-[var(--text-secondary)] text-xs font-semibold uppercase border-b border-[var(--border)]">
+                <tr>
+                  <th className="px-5 py-3.5">Student</th>
+                  <th className="px-5 py-3.5">Campus / Batch</th>
+                  <th className="px-5 py-3.5">Status</th>
+                  <th className="px-5 py-3.5">Submission</th>
+                  <th className="px-5 py-3.5">Marks & Feedback</th>
+                  <th className="px-5 py-3.5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border)]">
+                {submissions.map((sub) => (
+                  <tr key={sub._id} className="hover:bg-[var(--bg-muted)]/40 transition-colors">
+                    <td className="px-5 py-4">
+                      <p className="font-semibold">{sub.studentName}</p>
+                      <p className="text-xs font-mono text-[var(--text-secondary)]">{sub.studentId}</p>
+                    </td>
+                    <td className="px-5 py-4 text-xs">
+                      <p className="font-medium">{sub.campus || '—'}</p>
+                      <p className="text-[var(--text-secondary)]">{sub.batch || '—'}</p>
+                    </td>
+                    <td className="px-5 py-4 text-xs">
+                      <div className="flex flex-col gap-1">
+                        {sub.marksObtained !== null && sub.marksObtained !== undefined ? (
+                          <span className="inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 font-semibold">
+                            <CheckCircle size={12} /> Graded
+                          </span>
+                        ) : sub.isLate ? (
+                          <span className="inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-600 font-semibold">
+                            <Clock size={12} /> Late
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-600 font-semibold">
+                            <CheckCircle size={12} /> Submitted
+                          </span>
                         )}
+                        <span className="text-[var(--text-muted)]">
+                          {new Date(sub.submittedAt).toLocaleDateString()}
+                        </span>
                       </div>
-                    ) : (
-                      <div>
-                        <p className="font-medium text-[#13315c] line-clamp-1 max-w-[200px]" title={sub.originalFileName}>
-                          {sub.originalFileName}
-                        </p>
-                        <p className="text-xs text-gray-600 font-mono">
-                          {formatBytes(sub.fileSizeBytes)}
-                        </p>
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                     {sub.submissionType === 'ide' ? (
-                       <button 
-                         onClick={() => setActiveWorkspace(sub)}
-                         className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 font-semibold rounded-lg transition-colors text-sm"
-                       >
-                         <BookOpen size={16} /> View Code
-                       </button>
-                     ) : sub.submissionType === 'document' ? (
-                        <div className="flex flex-col items-end gap-2">
-                          {sub.driveLink && (
-                            <button 
-                              onClick={() => setActiveVideo(sub)}
-                              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 font-semibold rounded-lg transition-colors text-sm"
-                            >
-                              <BookOpen size={16} /> Play Video
-                            </button>
+                    </td>
+                    <td className="px-5 py-4 text-xs">
+                      {sub.submissionType === 'ide' ? (
+                        <span className="font-medium text-[var(--accent)]">Web IDE Project</span>
+                      ) : (
+                        <div className="space-y-1">
+                          {sub.originalFileName && (
+                            <p className="font-medium truncate max-w-[180px]" title={sub.originalFileName}>
+                              {sub.originalFileName} ({formatBytes(sub.fileSizeBytes)})
+                            </p>
                           )}
-                          {sub.fileUrl && (
-                            <a 
-                              href={sub.fileUrl} 
-                              target="_blank" 
+                          {sub.driveLink && (
+                            <a
+                              href={sub.driveLink}
+                              target="_blank"
                               rel="noreferrer"
-                              className="inline-flex items-center gap-2 px-4 py-2 bg-[#8da9c4]/20 text-[#13315c] hover:bg-[#8da9c4]/20 font-semibold rounded-lg transition-colors text-sm"
+                              className="inline-flex items-center gap-1 text-[var(--accent)] hover:underline"
                             >
-                              <Download size={16} /> Document
+                              External Link <ExternalLink size={11} />
                             </a>
                           )}
                         </div>
-                     ) : (
-                       <a 
-                         href={sub.fileUrl} 
-                         target="_blank" 
-                         rel="noreferrer"
-                         className="inline-flex items-center gap-2 px-4 py-2 bg-[#8da9c4]/20 text-[#13315c] hover:bg-[#8da9c4]/20 font-semibold rounded-lg transition-colors text-sm"
-                       >
-                         <Download size={16} /> Get File
-                       </a>
-                     )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      )}
+                    </td>
+                    <td className="px-5 py-4 text-xs">
+                      {sub.marksObtained !== null && sub.marksObtained !== undefined ? (
+                        <div>
+                          <p className="font-bold text-sm text-emerald-600">
+                            {sub.marksObtained} / {sub.maxMarks || 100}
+                          </p>
+                          {sub.feedback && (
+                            <p className="text-[var(--text-secondary)] line-clamp-1 max-w-[180px]" title={sub.feedback}>
+                              {sub.feedback}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-[var(--text-muted)]">Pending Grade</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-4 text-right">
+                      <div className="inline-flex flex-wrap justify-end gap-1.5">
+                        {sub.submissionType === 'ide' && (
+                          <button
+                            onClick={() => setActiveWorkspace(sub)}
+                            className="btn-secondary py-1.5 px-3 text-xs flex items-center gap-1"
+                          >
+                            <BookOpen size={13} /> Code
+                          </button>
+                        )}
+                        {sub.driveLink && sub.driveLink.includes('drive.google.com') && (
+                          <button
+                            onClick={() => setActiveVideo(sub)}
+                            className="btn-secondary py-1.5 px-3 text-xs flex items-center gap-1"
+                          >
+                            <BookOpen size={13} /> Preview
+                          </button>
+                        )}
+                        {sub.fileUrl && (
+                          <a
+                            href={sub.fileUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="btn-secondary py-1.5 px-3 text-xs flex items-center gap-1"
+                          >
+                            <Download size={13} /> File
+                          </a>
+                        )}
+                        <button
+                          onClick={() => openGradeModal(sub)}
+                          className="btn-primary py-1.5 px-3 text-xs flex items-center gap-1"
+                        >
+                          <Award size={13} /> Grade
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
           {submissions.length === 0 && !loading && (
-              <div className="p-16 text-center">
-                  <Download className="mx-auto text-slate-700 mb-4" size={56} />
-                  <p className="text-gray-500 font-medium">No submissions found</p>
-              </div>
+            <div className="p-14 text-center">
+              <Download className="mx-auto text-[var(--text-muted)] mb-3" size={40} />
+              <p className="text-sm text-[var(--text-secondary)]">No submissions received yet.</p>
+            </div>
           )}
         </div>
+
+        {/* Grade & Feedback Modal */}
+        {gradingSub && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <form onSubmit={handleSaveGrade} className="card max-w-md w-full p-6 space-y-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg font-bold">Grade Submission</h3>
+                  <p className="text-xs text-[var(--text-secondary)]">
+                    {gradingSub.studentName} ({gradingSub.studentId})
+                  </p>
+                </div>
+                <button type="button" onClick={() => setGradingSub(null)}>
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold uppercase mb-1">Marks Obtained *</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={gradeForm.maxMarks || 1000}
+                    step="0.5"
+                    className="input-field"
+                    value={gradeForm.marksObtained}
+                    onChange={(e) => setGradeForm({ ...gradeForm, marksObtained: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase mb-1">Out Of (Max Marks)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    className="input-field"
+                    value={gradeForm.maxMarks}
+                    onChange={(e) => setGradeForm({ ...gradeForm, maxMarks: Number(e.target.value) })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase mb-1">Instructor Feedback</label>
+                <textarea
+                  placeholder="Constructive feedback on code quality, UI, or completeness..."
+                  className="input-field min-h-[90px]"
+                  value={gradeForm.feedback}
+                  onChange={(e) => setGradeForm({ ...gradeForm, feedback: e.target.value })}
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-[var(--border)]">
+                <button type="button" onClick={() => setGradingSub(null)} className="btn-secondary text-xs">
+                  Cancel
+                </button>
+                <button type="submit" disabled={savingGrade} className="btn-primary text-xs">
+                  {savingGrade ? 'Saving...' : 'Save Grade'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
       </main>
     </div>
   );

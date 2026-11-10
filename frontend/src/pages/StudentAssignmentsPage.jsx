@@ -1,15 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import API from '../api';
-import { FileArchive, UploadCloud, CheckCircle, Clock, Search, BookOpen, ChevronRight, User } from 'lucide-react';
-// eslint-disable-next-line no-unused-vars
-import { motion, AnimatePresence } from 'framer-motion';
-import { Link, useNavigate } from 'react-router-dom';
+import {
+  FileArchive,
+  UploadCloud,
+  CheckCircle,
+  Clock,
+  Search,
+  BookOpen,
+  Award,
+  ExternalLink,
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import StudentNavbar from '../components/StudentNavbar';
 import WebIDE from '../components/WebIDE/WebIDE';
 
-const AssignmentCard = ({ assignment, student, setIdeAssignment }) => {
-  const [status, setStatus] = useState(null);
+const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) => {
+  const [status, setStatus] = useState(assignment.mySubmission || null);
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -18,49 +25,25 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment }) => {
   const [driveLink, setDriveLink] = useState('');
 
   useEffect(() => {
-    const checkStatus = async () => {
-      try {
-        const { data } = await API.get(`/student/assignments/${assignment._id}/status/${student.studentId}`);
-        if (data.exists) setStatus(data.submission);
-      } catch (error) {
-        console.error(error);
-      }
-    };
-    checkStatus();
-  }, [assignment._id, student.studentId]);
-
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      const selected = e.target.files[0];
-      if (!selected.name.toLowerCase().endsWith('.zip')) {
-        toast.error('Only .zip files are allowed');
-        setFile(null);
-        return;
-      }
-      setFile(selected);
+    if (assignment.mySubmission) {
+      setStatus(assignment.mySubmission);
     }
-  };
+  }, [assignment.mySubmission]);
 
   const handleUpload = async () => {
-    if (assignment.projectType === 'document') {
-      if (!file && !driveLink) {
-        toast.error('Please provide either a file or a Google Drive link');
-        return;
-      }
-    } else {
-      if (!file) return;
+    if (!file && !driveLink.trim()) {
+      toast.error('Please attach a file or provide a project/Drive link');
+      return;
     }
-    
+
     setUploading(true);
     setProgress(0);
 
     const formData = new FormData();
     if (file) formData.append('file', file);
-    if (assignment.projectType === 'document') {
-      formData.append('assignmentTitle', assignmentTitle);
-      formData.append('assignmentDetails', assignmentDetails);
-      formData.append('driveLink', driveLink);
-    }
+    if (assignmentTitle.trim()) formData.append('assignmentTitle', assignmentTitle.trim());
+    if (assignmentDetails.trim()) formData.append('assignmentDetails', assignmentDetails.trim());
+    if (driveLink.trim()) formData.append('driveLink', driveLink.trim());
 
     try {
       const { data } = await API.post(
@@ -69,209 +52,235 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment }) => {
         {
           headers: { 'Content-Type': 'multipart/form-data' },
           onUploadProgress: (progressEvent) => {
-            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-            setProgress(percentCompleted);
+            if (progressEvent.total) {
+              setProgress(Math.round((progressEvent.loaded * 100) / progressEvent.total));
+            }
           },
         }
       );
       setStatus(data);
       setFile(null);
-      toast.success('Assignment submitted successfully');
+      if (onSubmitted) onSubmitted(assignment._id, data);
+      toast.success('Assignment submitted');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Upload failed');
+      toast.error(error.response?.data?.message || 'Submission failed');
     } finally {
       setUploading(false);
       setProgress(0);
     }
   };
 
-  const isLate = new Date() > new Date(assignment.dueDate);
+  const isPastDue = new Date() > new Date(assignment.dueDate);
+  const canSubmitLate = assignment.allowLateSubmission !== false;
+  const isLocked = !status && isPastDue && !canSubmitLate;
+
+  const renderStatusBadge = () => {
+    if (status) {
+      if (status.marksObtained !== null && status.marksObtained !== undefined) {
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-600">
+            <Award size={13} /> Graded: {status.marksObtained}/{status.maxMarks || assignment.totalMarks || 100}
+          </span>
+        );
+      }
+      if (status.isLate) {
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-600">
+            <Clock size={13} /> Submitted Late
+          </span>
+        );
+      }
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-sky-500/15 text-sky-600">
+          <CheckCircle size={13} /> Submitted
+        </span>
+      );
+    }
+
+    if (isPastDue) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/15 text-rose-600">
+          <Clock size={13} /> Past Due
+        </span>
+      );
+    }
+
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-[var(--bg-muted)] text-[var(--text-secondary)]">
+        Pending
+      </span>
+    );
+  };
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="card flex flex-col justify-between overflow-hidden p-8 border border-[#8da9c4]/30 shadow-xl hover:shadow-2xl transition-all rounded-xl bg-white"
-    >
+    <div className="card flex flex-col justify-between p-6">
       <div>
-        <div className="flex items-start justify-between mb-6">
-          <div className="p-3 rounded-xl bg-[#8da9c4]/20 text-[#13315c]">
-            <FileArchive size={24} />
+        <div className="flex items-start justify-between gap-2 mb-4">
+          <div className="p-2.5 rounded-xl bg-[var(--accent-subtle)] text-[var(--accent)]">
+            <FileArchive size={20} />
           </div>
-          <div className="flex flex-col items-end">
-            <span className={`text-xs font-bold px-3 py-1 rounded-full ${isLate ? 'bg-red-400/10 text-red-400' : 'bg-green-400/10 text-green-400'}`}>
-              Due: {new Date(assignment.dueDate).toLocaleDateString()}
+          <div className="flex flex-col items-end gap-1">
+            {renderStatusBadge()}
+            <span className="text-[11px] text-[var(--text-muted)]">
+              Due: {new Date(assignment.dueDate).toLocaleString()}
             </span>
           </div>
         </div>
-        
-        <h3 className="text-2xl font-black text-[#13315c] mb-2 truncate leading-tight">{assignment.title}</h3>
-        <p className="text-gray-600 text-sm font-medium line-clamp-3 mb-6 leading-relaxed">{assignment.description || 'No description provided.'}</p>
+
+        <h3 className="text-lg font-bold mb-1.5">{assignment.title}</h3>
+        <p className="text-xs text-[var(--text-secondary)] leading-relaxed mb-4 whitespace-pre-line">
+          {assignment.description || 'No additional instructions.'}
+        </p>
       </div>
 
-      <div className="mt-auto border-t border-[#8da9c4]/30 pt-6">
+      <div className="pt-4 border-t border-[var(--border)] space-y-3">
         {status ? (
-          <div className="mb-4">
-            <div className="flex items-center gap-2 text-green-400 bg-green-400/10 p-4 rounded-xl text-xs font-bold uppercase tracking-wider mb-4">
-              <CheckCircle size={16} /> 
-              Submitted ✓ {status.isLate ? '(Late)' : ''}
-            </div>
-            <p className="text-xs text-gray-500 mb-2 truncate">
-              {status.submissionType === 'ide' ? 'Web IDE Workspace' : `File: ${status.originalFileName}`}
-            </p>
-          </div>
-        ) : null}
-
-        {!status && !isLate ? (
-          <div className="flex flex-col gap-3">
-            {assignment.projectType === 'document' && (
-              <>
-                <input 
-                  type="text" 
-                  placeholder="Assignment Title (Optional)" 
-                  className="input-field h-10 w-full text-sm"
-                  value={assignmentTitle}
-                  onChange={(e) => setAssignmentTitle(e.target.value)}
-                />
-                <textarea 
-                  placeholder="Assignment Details (Optional)" 
-                  className="input-field h-20 w-full text-sm p-2"
-                  value={assignmentDetails}
-                  onChange={(e) => setAssignmentDetails(e.target.value)}
-                ></textarea>
-                <input 
-                  type="url" 
-                  placeholder="Google Drive Video Link (Optional)" 
-                  className="input-field h-10 w-full text-sm"
-                  value={driveLink}
-                  onChange={(e) => setDriveLink(e.target.value)}
-                />
-                <div className="flex items-center justify-center space-x-4 my-2">
-                  <span className="h-px bg-gray-50 w-full"></span>
-                  <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">AND/OR</span>
-                  <span className="h-px bg-gray-50 w-full"></span>
-                </div>
-              </>
-            )}
-
-            <label className="flex items-center justify-center w-full h-12 px-4 transition bg-gray-50 border-2 border-[#8da9c4]/30 border-dashed rounded-xl appearance-none cursor-pointer hover:border-primary-500 focus:outline-none relative">
-                <span className="flex items-center space-x-2">
-                    <UploadCloud className="w-5 h-5 text-gray-600" />
-                    <span className="font-medium text-gray-600 text-sm">
-                      {file ? file.name : (assignment.projectType === 'document' ? 'Select PDF/DOC/ZIP' : 'Select .zip file')}
-                    </span>
-                </span>
-                <input 
-                  type="file" 
-                  name="file_upload" 
-                  className="hidden" 
-                  accept={assignment.projectType === 'document' ? ".zip,.pdf,.doc,.docx" : ".zip"} 
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      const selected = e.target.files[0];
-                      const name = selected.name.toLowerCase();
-                      if (assignment.projectType === 'document' && !name.match(/\.(zip|pdf|doc|docx)$/)) {
-                        toast.error('Only .zip, .pdf, .doc, .docx files are allowed');
-                        setFile(null);
-                        return;
-                      } else if (assignment.projectType !== 'document' && !name.endsWith('.zip')) {
-                        toast.error('Only .zip files are allowed');
-                        setFile(null);
-                        return;
-                      }
-                      if (selected.size > 10 * 1024 * 1024) {
-                        toast.error('File size exceeds 10MB limit');
-                        setFile(null);
-                        return;
-                      }
-                      setFile(selected);
-                    }
-                  }} 
-                  disabled={uploading} 
-                />
-            </label>
-
-            {uploading && (
-              <div className="w-full bg-gray-50 h-2 rounded-full overflow-hidden mb-2">
-                <div className="h-full bg-primary-500 transition-all duration-300" style={{ width: `${progress}%` }}></div>
+          <div className="space-y-3">
+            {status.marksObtained !== null && status.marksObtained !== undefined && (
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs">
+                <p className="font-bold text-emerald-700 dark:text-emerald-400">
+                  Score: {status.marksObtained} / {status.maxMarks || assignment.totalMarks || 100}
+                </p>
+                {status.feedback && (
+                  <p className="text-[var(--text-secondary)] mt-1">
+                    <strong>Feedback:</strong> {status.feedback}
+                  </p>
+                )}
               </div>
             )}
 
-            <button 
-              onClick={handleUpload}
-              disabled={uploading || (assignment.projectType !== 'document' && !file) || (assignment.projectType === 'document' && !file && !driveLink)}
-              className={`w-full py-3 rounded-xl font-black uppercase tracking-widest text-sm transition-all ${
-                (!uploading && (file || (assignment.projectType === 'document' && driveLink)))
-                  ? 'btn-primary' 
-                  : 'bg-gray-50 text-gray-500 cursor-not-allowed'
-              }`}
-            >
-              {uploading ? `Uploading ${progress}%` : 'Submit Assignment'}
-            </button>
-            
-            {assignment.projectType !== 'document' && (
-              <>
-                <div className="flex items-center justify-center space-x-4 my-2">
-                  <span className="h-px bg-gray-50 w-full"></span>
-                  <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">OR</span>
-                  <span className="h-px bg-gray-50 w-full"></span>
-                </div>
-
-                <button 
-                  onClick={() => setIdeAssignment({ assignment, status })}
-                  className="w-full py-3 rounded-xl font-black uppercase tracking-widest text-sm transition-all btn-primary flex items-center justify-center space-x-2"
+            <div className="flex flex-wrap gap-2">
+              {status.submissionType === 'ide' && (
+                <button
+                  onClick={() => setIdeAssignment({ assignment, status, readOnly: true })}
+                  className="btn-secondary w-full py-2 text-xs flex items-center justify-center gap-1.5"
                 >
-                  <BookOpen size={18} />
-                  <span>Start Web IDE</span>
+                  <BookOpen size={15} /> View Submitted Workspace
                 </button>
-              </>
-            )}
+              )}
+              {status.fileUrl && (
+                <a
+                  href={status.fileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn-secondary w-full py-2 text-xs flex items-center justify-center gap-1.5"
+                >
+                  <FileArchive size={15} /> Download Submitted File
+                </a>
+              )}
+              {status.driveLink && (
+                <a
+                  href={status.driveLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn-secondary w-full py-2 text-xs flex items-center justify-center gap-1.5"
+                >
+                  <ExternalLink size={15} /> View Submitted Link
+                </a>
+              )}
+            </div>
           </div>
-        ) : !status && isLate ? (
-          <div className="flex flex-col gap-3">
-            <button disabled className="w-full py-3 rounded-xl bg-gray-50 text-gray-500 font-black uppercase tracking-widest text-sm cursor-not-allowed">
-              Submission Closed
-            </button>
-          </div>
+        ) : isLocked ? (
+          <button
+            disabled
+            className="w-full py-2.5 rounded-xl bg-[var(--bg-muted)] text-[var(--text-muted)] text-xs font-semibold cursor-not-allowed"
+          >
+            Submission Closed
+          </button>
         ) : (
-          <div className="flex flex-col gap-3">
-            {status.submissionType === 'ide' && (
-              <button 
-                onClick={() => setIdeAssignment({ assignment, status, readOnly: true })}
-                className="w-full py-3 rounded-xl font-black uppercase tracking-widest text-sm transition-all btn-primary flex items-center justify-center space-x-2"
-              >
-                <BookOpen size={18} />
-                <span>View Workspace</span>
-              </button>
+          <div className="space-y-2.5">
+            {assignment.projectType === 'document' && (
+              <input
+                type="text"
+                placeholder="Submission Title (Optional)"
+                className="input-field py-2 text-xs"
+                value={assignmentTitle}
+                onChange={(e) => setAssignmentTitle(e.target.value)}
+              />
             )}
-            {status.submissionType === 'file' && status.fileUrl && (
-              <a 
-                href={status.fileUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="w-full py-3 rounded-xl font-black uppercase tracking-widest text-sm transition-all btn-primary flex items-center justify-center space-x-2"
+
+            <input
+              type="url"
+              placeholder="GitHub / Google Drive / Live Link (Optional)"
+              className="input-field py-2 text-xs"
+              value={driveLink}
+              onChange={(e) => setDriveLink(e.target.value)}
+            />
+
+            <label className="flex items-center justify-center w-full py-2.5 px-3 bg-[var(--bg-muted)] border border-dashed border-[var(--border)] rounded-xl cursor-pointer hover:border-[var(--accent)] text-xs">
+              <UploadCloud className="w-4 h-4 mr-2 text-[var(--text-secondary)]" />
+              <span className="truncate text-[var(--text-secondary)] font-medium">
+                {file
+                  ? file.name
+                  : assignment.projectType === 'document'
+                  ? 'Upload PDF / DOC / ZIP (Max 4MB)'
+                  : 'Upload .ZIP File (Max 4MB)'}
+              </span>
+              <input
+                type="file"
+                className="hidden"
+                accept=".zip,.pdf,.doc,.docx,.ppt,.pptx"
+                onChange={(e) => {
+                  const selected = e.target.files?.[0];
+                  if (!selected) return;
+                  if (selected.size > 4 * 1024 * 1024) {
+                    toast.error('File exceeds 4MB limit. Use a Drive/GitHub link for larger files.');
+                    return;
+                  }
+                  setFile(selected);
+                }}
+                disabled={uploading}
+              />
+            </label>
+
+            {uploading && (
+              <div className="w-full bg-[var(--bg-muted)] h-1.5 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-[var(--accent)] transition-all"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={handleUpload}
+              disabled={uploading || (!file && !driveLink.trim())}
+              className="btn-primary w-full py-2.5 text-xs disabled:opacity-40"
+            >
+              {uploading ? `Uploading ${progress}%...` : isPastDue ? 'Submit Late' : 'Submit Assignment'}
+            </button>
+
+            {assignment.projectType !== 'document' && (
+              <button
+                type="button"
+                onClick={() => setIdeAssignment({ assignment, status })}
+                className="btn-secondary w-full py-2.5 text-xs flex items-center justify-center gap-1.5"
               >
-                <FileArchive size={18} />
-                <span>Download Submission</span>
-              </a>
+                <BookOpen size={15} /> Open Built-in Web IDE
+              </button>
             )}
           </div>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 };
 
 const StudentAssignmentsPage = () => {
   const [assignments, setAssignments] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState(''); // '' | 'pending' | 'submitted' | 'graded'
   const [loading, setLoading] = useState(true);
-  const [ideAssignment, setIdeAssignment] = useState(null); // { assignment, status }
+  const [ideAssignment, setIdeAssignment] = useState(null);
   const navigate = useNavigate();
-  
-  const student = React.useMemo(() => {
-    try { return JSON.parse(localStorage.getItem('studentInfo')); } 
-    catch { return null; }
+
+  const student = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem('studentInfo'));
+    } catch {
+      return null;
+    }
   }, []);
 
   useEffect(() => {
@@ -279,8 +288,6 @@ const StudentAssignmentsPage = () => {
       navigate('/', { replace: true });
     }
   }, [student, navigate]);
-
-
 
   useEffect(() => {
     const fetchAssignments = async () => {
@@ -296,27 +303,39 @@ const StudentAssignmentsPage = () => {
     if (student) fetchAssignments();
   }, [student]);
 
-  const filteredAssignments = assignments.filter(a => 
-    a.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleSubmittedUpdate = (assignmentId, subData) => {
+    setAssignments((prev) =>
+      prev.map((a) => (a._id === assignmentId ? { ...a, mySubmission: subData } : a))
+    );
+  };
 
-  if (loading) return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 text-[#13315c]"></div>
-    </div>
-  );
+  const filteredAssignments = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    return assignments.filter((a) => {
+      const matchSearch = !q || a.title.toLowerCase().includes(q);
+      const sub = a.mySubmission;
+      const matchStatus =
+        filterStatus === ''
+          ? true
+          : filterStatus === 'pending'
+          ? !sub
+          : filterStatus === 'graded'
+          ? sub && sub.marksObtained !== null && sub.marksObtained !== undefined
+          : Boolean(sub);
+      return matchSearch && matchStatus;
+    });
+  }, [assignments, searchTerm, filterStatus]);
 
   const handleIdeSubmit = async (projectData) => {
     if (!ideAssignment) return;
     try {
-      await API.post(`/student/assignments/${ideAssignment.assignment._id}/submit-ide/${student.studentId}`, { projectData });
-      toast.success('Workspace submitted successfully!');
-      
-      // Update local status so UI reflects submitted immediately
-      setAssignments((prev) => prev.map(a => a)); // Trigger re-render (status fetched in card, ideally we'd pass it down, but let's just close IDE for now and let card refetch if needed. To force refetch, we could reload, but closing is fine)
+      const { data } = await API.post(
+        `/student/assignments/${ideAssignment.assignment._id}/submit-ide/${student.studentId}`,
+        { projectData }
+      );
+      toast.success('Workspace submitted!');
+      handleSubmittedUpdate(ideAssignment.assignment._id, data);
       setIdeAssignment(null);
-      // Reload page to refresh statuses simply
-      window.location.reload();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to submit workspace');
       throw err;
@@ -325,22 +344,22 @@ const StudentAssignmentsPage = () => {
 
   if (ideAssignment) {
     return (
-      <div className="fixed inset-0 z-50 flex flex-col bg-transparent">
-        <div className="flex items-center justify-between px-6 py-3 bg-white border-b border-[#8da9c4]/30">
-          <div className="flex items-center space-x-4">
-            <button 
+      <div className="fixed inset-0 z-50 flex flex-col bg-[var(--bg-primary)]">
+        <div className="flex items-center justify-between px-6 py-3 bg-[var(--bg-surface)] border-b border-[var(--border)]">
+          <div className="flex items-center gap-4">
+            <button
               onClick={() => setIdeAssignment(null)}
-              className="text-gray-500 font-bold hover:text-[#13315c] transition-colors"
+              className="text-sm font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             >
               ← Back to Assignments
             </button>
-            <h2 className="text-xl font-bold text-[#13315c]">{ideAssignment.assignment.title} Workspace</h2>
+            <h2 className="text-base font-bold">{ideAssignment.assignment.title} Workspace</h2>
           </div>
         </div>
         <div className="flex-1 min-h-0">
-          <WebIDE 
+          <WebIDE
             initialProjectData={ideAssignment.status?.projectData}
-            onSubmit={handleIdeSubmit} 
+            onSubmit={handleIdeSubmit}
             studentId={student.studentId}
             assignmentId={ideAssignment.assignment._id}
             projectType={ideAssignment.assignment.projectType}
@@ -352,48 +371,68 @@ const StudentAssignmentsPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-transparent font-sans">
+    <div className="min-h-screen pb-20 md:pb-12">
       <StudentNavbar student={student} />
-      <div className="p-6 md:p-12">
-        <div className="max-w-6xl mx-auto">
-          <header className="mb-12">
-            <h1 className="text-3xl font-black text-blue-900 tracking-tight">Assignments</h1>
-            <p className="text-gray-600 font-medium">Upload your projects as .zip files</p>
-          </header>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 sm:pt-8">
+        <header className="mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Assignments</h1>
+          <p className="text-sm text-[var(--text-secondary)] mt-1">
+            Submit projects via file upload, repository/Drive link, or built-in Web IDE
+          </p>
+        </header>
 
-        <div className="relative mb-12">
-            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-500" size={24} />
-            <input 
-               type="text"
-               placeholder="Search assignments..."
-               className="w-full h-16 pl-16 pr-8 bg-white rounded-xl shadow-sm border border-[#8da9c4]/30 focus:ring-4 focus:ring-primary-500/20 text-[#13315c] text-lg font-medium transition-all"
-               value={searchTerm}
-               onChange={(e) => setSearchTerm(e.target.value)}
+        <div className="flex flex-col sm:flex-row gap-3 mb-6">
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={18} />
+            <input
+              type="text"
+              placeholder="Search assignments..."
+              className="input-field pl-10"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
+          </div>
+          <select
+            className="input-field sm:w-48"
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+          >
+            <option value="">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="submitted">Submitted</option>
+            <option value="graded">Graded</option>
+          </select>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          <AnimatePresence>
-            {filteredAssignments.map((assignment) => (
-               <AssignmentCard key={assignment._id} assignment={assignment} student={student} setIdeAssignment={setIdeAssignment} />
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {[1, 2, 3].map((n) => (
+              <div key={n} className="h-64 rounded-2xl bg-[var(--bg-muted)] animate-pulse" />
             ))}
-          </AnimatePresence>
-        </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {filteredAssignments.map((assignment) => (
+              <AssignmentCard
+                key={assignment._id}
+                assignment={assignment}
+                student={student}
+                setIdeAssignment={setIdeAssignment}
+                onSubmitted={handleSubmittedUpdate}
+              />
+            ))}
+          </div>
+        )}
 
         {filteredAssignments.length === 0 && !loading && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-32 bg-white rounded-xl shadow-sm border border-[#8da9c4]/30"
-          >
-            <div className="bg-gray-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
-               <FileArchive className="text-gray-500" size={48} />
-            </div>
-            <p className="text-[#13315c] font-black text-2xl tracking-tight">No assignments found.</p>
-            <p className="text-gray-600 font-medium mt-1">You're all caught up!</p>
-          </motion.div>
+          <div className="card p-14 text-center">
+            <FileArchive className="mx-auto text-[var(--text-muted)] mb-3" size={40} />
+            <p className="font-semibold text-base">No assignments found</p>
+            <p className="text-xs text-[var(--text-secondary)] mt-1">
+              You are all caught up on your coursework.
+            </p>
+          </div>
         )}
-      </div>
       </div>
     </div>
   );

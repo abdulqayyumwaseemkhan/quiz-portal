@@ -17,29 +17,31 @@ const submissionSchema = new mongoose.Schema(
     },
     campus: {
       type: String,
+      default: '',
     },
     batch: {
       type: String,
+      default: '',
     },
     fileUrl: {
       type: String,
-      required: function() { return this.submissionType === 'file'; },
+      default: null,
     },
     filePublicId: {
       type: String,
-      required: function() { return this.submissionType === 'file'; },
+      default: null,
     },
     originalFileName: {
       type: String,
-      required: function() { return this.submissionType === 'file'; },
+      default: null,
     },
     fileSizeBytes: {
       type: Number,
-      required: function() { return this.submissionType === 'file'; },
+      default: null,
     },
     submissionType: {
       type: String,
-      enum: ['file', 'ide', 'document'],
+      enum: ['file', 'ide', 'document', 'link'],
       default: 'file',
     },
     projectData: {
@@ -47,27 +49,51 @@ const submissionSchema = new mongoose.Schema(
     },
     driveLink: {
       type: String,
+      default: '',
     },
     assignmentTitle: {
       type: String,
+      default: '',
     },
     assignmentDetails: {
       type: String,
+      default: '',
     },
     isLate: {
       type: Boolean,
       default: false,
+    },
+    status: {
+      type: String,
+      enum: ['submitted', 'late', 'graded'],
+      default: 'submitted',
+    },
+    marksObtained: {
+      type: Number,
+      default: null,
+    },
+    maxMarks: {
+      type: Number,
+      default: 100,
+    },
+    feedback: {
+      type: String,
+      default: '',
+    },
+    gradedAt: {
+      type: Date,
+      default: null,
     },
     submittedAt: {
       type: Date,
       default: Date.now,
     },
   },
-  { timestamps: true } // also useful to have createdAt/updatedAt just in case
+  { timestamps: true }
 );
 
-// Not unique so resubmission can happen and overwrite
 submissionSchema.index({ assignmentId: 1, studentId: 1 });
+submissionSchema.index({ studentId: 1, submittedAt: -1 });
 
 const Submission = mongoose.model('Submission', submissionSchema);
 
