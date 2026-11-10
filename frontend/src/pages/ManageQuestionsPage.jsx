@@ -88,7 +88,6 @@ const ManageQuestionsPage = () => {
   // Bulk MCQ upload modal state
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [rawRows, setRawRows] = useState([]);
-  const [headers, setHeaders] = useState([]);
   const [colMap, setColMap] = useState(autoMapMcqColumns([]));
   const [importing, setImporting] = useState(false);
 
@@ -221,7 +220,6 @@ const ManageQuestionsPage = () => {
           return;
         }
         const cols = Object.keys(json[0]);
-        setHeaders(cols);
         setRawRows(json);
         setColMap(autoMapMcqColumns(cols));
       } catch {

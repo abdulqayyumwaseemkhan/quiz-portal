@@ -372,6 +372,7 @@ const AdminDashboard = () => {
   );
 };
 
+// eslint-disable-next-line no-unused-vars
 const StatCard = ({ title, value, icon: Icon }) => (
   <div className="card p-5 flex items-center gap-4">
     <div className="p-3.5 rounded-xl bg-[var(--accent-subtle)] text-[var(--accent)]">

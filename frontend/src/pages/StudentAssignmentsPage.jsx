@@ -21,7 +21,6 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [assignmentTitle, setAssignmentTitle] = useState('');
-  const [assignmentDetails, setAssignmentDetails] = useState('');
   const [driveLink, setDriveLink] = useState('');
 
   useEffect(() => {
@@ -42,7 +41,6 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
     const formData = new FormData();
     if (file) formData.append('file', file);
     if (assignmentTitle.trim()) formData.append('assignmentTitle', assignmentTitle.trim());
-    if (assignmentDetails.trim()) formData.append('assignmentDetails', assignmentDetails.trim());
     if (driveLink.trim()) formData.append('driveLink', driveLink.trim());
 
     try {
