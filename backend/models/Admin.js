@@ -1,22 +1,56 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
-const adminSchema = new mongoose.Schema({
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    lowercase: true,
+const securityKeySchema = new mongoose.Schema(
+  {
+    credentialId: { type: String, required: true },
+    publicKeySpki: { type: String, required: true },
+    alg: { type: Number, default: -7 },
+    label: { type: String, default: 'Windows Security Key' },
+    createdAt: { type: Date, default: Date.now },
   },
-  password: {
-    type: String,
-    required: true,
+  { _id: true }
+);
+
+const adminSchema = new mongoose.Schema(
+  {
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+    },
+    password: {
+      type: String,
+      required: true,
+    },
+    role: {
+      type: String,
+      default: 'admin',
+    },
+    totpEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    totpSecret: {
+      type: String,
+      default: '',
+    },
+    totpPendingSecret: {
+      type: String,
+      default: '',
+    },
+    securityKeys: {
+      type: [securityKeySchema],
+      default: [],
+    },
+    currentChallenge: {
+      type: String,
+      default: '',
+    },
   },
-  role: {
-    type: String,
-    default: 'admin',
-  },
-}, { timestamps: true });
+  { timestamps: true }
+);
 
 adminSchema.pre('save', async function () {
   if (!this.isModified('password')) return;

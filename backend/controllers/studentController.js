@@ -10,7 +10,7 @@ const Submission = require('../models/Submission');
 const AttendanceSession = require('../models/AttendanceSession');
 const AttendanceRecord = require('../models/AttendanceRecord');
 const cache = require('../utils/cache');
-const { hashPassword, verifyPassword } = require('../utils/password');
+const { hashPassword, verifyPassword, encryptStudentPassword } = require('../utils/password');
 
 const generateStudentToken = (student) => {
   return jwt.sign(
@@ -165,6 +165,7 @@ const changeStudentPassword = asyncHandler(async (req, res) => {
   }
 
   student.passwordHash = await hashPassword(String(newPassword));
+  student.passwordCipher = encryptStudentPassword(String(newPassword));
   student.mustChangePassword = false;
   await student.save();
 

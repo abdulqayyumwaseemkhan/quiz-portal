@@ -36,6 +36,11 @@ const studentSchema = new mongoose.Schema({
     type: String,
     select: false,
   },
+  passwordCipher: {
+    type: String,
+    select: false,
+    default: '',
+  },
   mustChangePassword: {
     type: Boolean,
     default: true,

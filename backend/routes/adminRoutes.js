@@ -2,6 +2,14 @@ const express = require('express');
 const router = express.Router();
 const {
   loginAdmin,
+  verifyAdmin2FA,
+  get2FAStatus,
+  setupTotp,
+  enableTotp,
+  disableTotp,
+  getSecurityKeyChallenge,
+  registerSecurityKey,
+  removeSecurityKey,
   registerAdmin,
   addStudent,
   bulkAddStudents,
@@ -21,7 +29,16 @@ const { getAllResults } = require('../controllers/quizController');
 const { protectAdmin } = require('../middleware/auth');
 
 router.post('/login', loginAdmin);
-// router.post('/register', protectAdmin, registerAdmin); // Blocked as per requirement
+router.post('/login/verify-2fa', verifyAdmin2FA);
+
+// Admin 2FA Management (Google Authenticator & Windows Security Key)
+router.get('/2fa/status', protectAdmin, get2FAStatus);
+router.post('/2fa/totp/setup', protectAdmin, setupTotp);
+router.post('/2fa/totp/enable', protectAdmin, enableTotp);
+router.post('/2fa/totp/disable', protectAdmin, disableTotp);
+router.post('/2fa/security-key/challenge', protectAdmin, getSecurityKeyChallenge);
+router.post('/2fa/security-key/register', protectAdmin, registerSecurityKey);
+router.delete('/2fa/security-key/:keyId', protectAdmin, removeSecurityKey);
 
 // Student routes (Admin scoped)
 router.post('/students', protectAdmin, addStudent);

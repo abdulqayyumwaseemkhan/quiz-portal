@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { IdCard, GraduationCap, Lock, Eye, EyeOff, KeyRound, ShieldCheck } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { IdCard, BookOpen, Lock, Eye, EyeOff, KeyRound, ShieldCheck, Sun, Moon } from 'lucide-react';
 import API from '../api';
+import { useTheme } from '../context/ThemeContext';
 import toast from 'react-hot-toast';
 
 const StudentLoginPage = () => {
@@ -18,6 +19,7 @@ const StudentLoginPage = () => {
   const [contact, setContact] = useState('');
   const [updatingPassword, setUpdatingPassword] = useState(false);
 
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
@@ -88,32 +90,55 @@ const StudentLoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="max-w-md w-full card p-8">
-        <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-[var(--accent-subtle)] text-[var(--accent)] flex items-center justify-center mx-auto mb-4">
-            <GraduationCap size={28} />
+    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] flex flex-col justify-between p-4 relative">
+      {/* Top Bar */}
+      <div className="max-w-6xl w-full mx-auto pt-2 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)] flex items-center justify-center text-[var(--text-primary)]">
+            <BookOpen size={18} />
           </div>
+          <div>
+            <span className="text-sm font-bold tracking-tight block leading-none">BanoQabil</span>
+            <span className="text-[11px] text-[var(--text-muted)] font-medium">Learning Portal</span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={toggleTheme}
+          className="p-2.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-muted)] transition-colors"
+          title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+        >
+          {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+        </button>
+      </div>
+
+      {/* Main Centered Login Card */}
+      <div className="max-w-md w-full mx-auto my-8 card p-7 sm:p-9">
+        <div className="mb-7">
+          <span className="inline-block text-[11px] font-semibold uppercase tracking-widest px-2.5 py-1 rounded-md bg-[var(--bg-muted)] text-[var(--text-secondary)] mb-3">
+            Student Sign In
+          </span>
           <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
-            Student Portal
+            Welcome to LMS Portal
           </h1>
-          <p className="text-sm text-[var(--text-secondary)] mt-1">
-            Web Development LMS
+          <p className="text-xs text-[var(--text-secondary)] mt-1">
+            Enter your Student ID and password to access lectures, quizzes, and assignments.
           </p>
         </div>
 
         {!mustChangeStep ? (
-          <form onSubmit={handleLogin} className="space-y-5">
+          <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)] mb-2">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)] mb-1.5">
                 Student ID
               </label>
               <div className="relative">
-                <IdCard className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={18} />
+                <IdCard className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={17} />
                 <input
                   type="text"
                   placeholder="e.g. BQ-WD-101"
-                  className="input-field pl-10"
+                  className="input-field pl-10 font-mono"
                   value={studentId}
                   onChange={(e) => setStudentId(e.target.value)}
                   autoComplete="username"
@@ -123,11 +148,11 @@ const StudentLoginPage = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)] mb-2">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)] mb-1.5">
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={18} />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={17} />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Enter your password"
@@ -143,7 +168,7 @@ const StudentLoginPage = () => {
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                 </button>
               </div>
             </div>
@@ -151,34 +176,31 @@ const StudentLoginPage = () => {
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary w-full py-3 text-sm font-semibold flex items-center justify-center gap-2"
+              className="btn-primary w-full py-3 text-sm font-semibold flex items-center justify-center gap-2 mt-2"
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? 'Signing in...' : 'Sign In to Portal'}
             </button>
 
-            <div className="pt-4 border-t border-[var(--border)] flex justify-between items-center text-xs text-[var(--text-muted)]">
-              <span>Use credentials sent to your email</span>
-              <Link to="/admin/login" className="text-[var(--accent)] hover:underline font-medium">
-                Admin Login
-              </Link>
+            <div className="pt-4 border-t border-[var(--border)] text-center text-xs text-[var(--text-muted)]">
+              Use the Student ID and password provided by your instructor.
             </div>
           </form>
         ) : (
-          <form onSubmit={handleFirstPasswordChange} className="space-y-5">
-            <div className="p-3.5 rounded-xl bg-[var(--accent-subtle)] border border-[var(--border)] flex items-start gap-3">
-              <ShieldCheck className="text-[var(--accent)] shrink-0 mt-0.5" size={18} />
+          <form onSubmit={handleFirstPasswordChange} className="space-y-4">
+            <div className="p-3.5 rounded-xl bg-[var(--bg-muted)] border border-[var(--border)] flex items-start gap-3">
+              <ShieldCheck className="text-[var(--text-primary)] shrink-0 mt-0.5" size={18} />
               <div className="text-xs text-[var(--text-secondary)] leading-relaxed">
-                <p className="font-semibold text-[var(--text-primary)]">First Login Security Check</p>
-                Signed in as <strong>{loggedStudent?.fullName}</strong> ({loggedStudent?.studentId}). Please choose a new password you will remember.
+                <p className="font-semibold text-[var(--text-primary)]">Set Personal Password</p>
+                Signed in as <strong>{loggedStudent?.fullName}</strong> ({loggedStudent?.studentId}). Choose a new password to secure your account.
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)] mb-2">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)] mb-1.5">
                 New Password
               </label>
               <div className="relative">
-                <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={18} />
+                <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={17} />
                 <input
                   type="password"
                   placeholder="Minimum 6 characters"
@@ -192,11 +214,11 @@ const StudentLoginPage = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)] mb-2">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)] mb-1.5">
                 Confirm New Password
               </label>
               <div className="relative">
-                <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={18} />
+                <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={17} />
                 <input
                   type="password"
                   placeholder="Re-enter new password"
@@ -210,7 +232,7 @@ const StudentLoginPage = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)] mb-2">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)] mb-1.5">
                 Contact Number (Optional)
               </label>
               <input
@@ -231,6 +253,11 @@ const StudentLoginPage = () => {
             </button>
           </form>
         )}
+      </div>
+
+      {/* Footer */}
+      <div className="text-center text-[11px] text-[var(--text-muted)] pb-2">
+        BanoQabil Web Development Learning Management System
       </div>
     </div>
   );
