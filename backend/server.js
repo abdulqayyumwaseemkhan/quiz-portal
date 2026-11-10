@@ -13,6 +13,7 @@ const studentRoutes = require('./routes/studentRoutes');
 const assignmentRoutes = require('./routes/assignmentRoutes');
 const noteRoutes = require('./routes/noteRoutes');
 const lectureRoutes = require('./routes/lectureRoutes');
+const attendanceRoutes = require('./routes/attendanceRoutes');
 
 const app = express();
 
@@ -52,7 +53,7 @@ app.use(express.json({ limit: '4mb' }));
 // Rate limiters tuned for 100+ concurrent students on shared campus IPs
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 600, // 600 req/min per IP (allows 100 students behind a single campus NAT router)
+  max: 600, // 600 req/min per IP
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many requests from this IP, please try again shortly.' },
@@ -67,6 +68,7 @@ app.use('/api/student', studentRoutes);
 app.use('/api/assignments', assignmentRoutes);
 app.use('/api/notes', noteRoutes);
 app.use('/api/lectures', lectureRoutes);
+app.use('/api/attendance', attendanceRoutes);
 
 // Base route
 app.get('/', (req, res) => {

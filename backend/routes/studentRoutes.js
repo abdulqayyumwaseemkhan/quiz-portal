@@ -30,6 +30,10 @@ const {
   toggleLectureWatched,
 } = require('../controllers/lectureController');
 
+const {
+  getStudentAttendance,
+} = require('../controllers/attendanceController');
+
 const { protectStudent } = require('../middleware/auth');
 const { assignmentUpload, ideImageUpload } = require('../middleware/upload');
 
@@ -60,5 +64,8 @@ router.get('/notes/:studentId', protectStudent, getNotesForStudent);
 // Lecture Routes
 router.get('/lectures/:studentId', protectStudent, getLecturesForStudent);
 router.post('/lectures/:id/watched', protectStudent, toggleLectureWatched);
+
+// Attendance Route
+router.get('/attendance/:studentId', protectStudent, getStudentAttendance);
 
 module.exports = router;
