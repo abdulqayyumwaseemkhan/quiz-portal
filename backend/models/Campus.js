@@ -6,6 +6,10 @@ const campusSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
+  batches: {
+    type: [String],
+    default: [],
+  },
   addedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Admin',

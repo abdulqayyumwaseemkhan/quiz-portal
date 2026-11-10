@@ -5,10 +5,18 @@ const API = axios.create({
 });
 
 API.interceptors.request.use((req) => {
-  const token = localStorage.getItem('adminToken');
-  if (token) {
-    req.headers.Authorization = `Bearer ${token}`;
+  const isStudentEndpoint = req.url?.startsWith('/student');
+  const studentToken = localStorage.getItem('studentToken');
+  const adminToken = localStorage.getItem('adminToken');
+
+  if (isStudentEndpoint && studentToken) {
+    req.headers.Authorization = `Bearer ${studentToken}`;
+  } else if (adminToken) {
+    req.headers.Authorization = `Bearer ${adminToken}`;
+  } else if (studentToken) {
+    req.headers.Authorization = `Bearer ${studentToken}`;
   }
+
   return req;
 });
 
