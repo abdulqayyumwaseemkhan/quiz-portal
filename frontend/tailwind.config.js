@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
@@ -8,17 +9,17 @@ export default {
     extend: {
       colors: {
         primary: {
-          50: '#f6f9fc',
-          100: '#eef4ed', // Pale Mint / Off-White
-          200: '#c5d5e4',
-          300: '#8da9c4', // Soft Blue-Gray
-          400: '#5a7fa5',
-          500: '#345e8b',
-          600: '#234771',
-          700: '#1a3759',
-          800: '#172f4e',
-          900: '#13315c', // Deep Navy Blue
-          950: '#0c2243',
+          50: '#eff6ff',
+          100: '#dbeafe',
+          200: '#bfdbfe',
+          300: '#93c5fd',
+          400: '#60a5fa',
+          500: '#3b82f6',
+          600: '#2563eb',
+          700: '#1d4ed8',
+          800: '#1e40af',
+          900: '#1e3a8a',
+          950: '#172554',
         },
         light: {
           50: '#ffffff',
@@ -28,7 +29,8 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['Poppins', 'system-ui', 'sans-serif'],
+        sans: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
     },
   },
