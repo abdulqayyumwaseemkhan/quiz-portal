@@ -89,12 +89,14 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
   const canSubmitLate = assignment.allowLateSubmission !== false;
   const isLocked = !status && isPastDue && !canSubmitLate;
 
+  const maxScore = assignment.totalMarks || status?.maxMarks || 20;
+
   const renderStatusBadge = () => {
     if (status) {
       if (status.marksObtained !== null && status.marksObtained !== undefined) {
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-600">
-            <Award size={13} /> Graded: {status.marksObtained}/{status.maxMarks || assignment.totalMarks || 100}
+            <Award size={13} /> Graded: {status.marksObtained}/{maxScore}
           </span>
         );
       }
@@ -136,9 +138,13 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
           </div>
           <div className="flex flex-col items-end gap-1">
             {renderStatusBadge()}
-            <span className="text-[11px] text-[var(--text-muted)]">
-              Due: {new Date(assignment.dueDate).toLocaleString()}
-            </span>
+            <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)]">
+              <span className="font-semibold text-[var(--text-secondary)]">
+                {maxScore} Marks
+              </span>
+              <span>•</span>
+              <span>Due: {new Date(assignment.dueDate).toLocaleDateString()}</span>
+            </div>
           </div>
         </div>
 
@@ -155,10 +161,10 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
               <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-emerald-700 dark:text-emerald-400 text-sm">
-                    Score: {status.marksObtained} / {status.maxMarks || assignment.totalMarks || 100}
+                    Score: {status.marksObtained} / {maxScore}
                   </span>
                   <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-500/15 px-2 py-0.5 rounded-full">
-                    {Math.round(((status.marksObtained) / (status.maxMarks || assignment.totalMarks || 100)) * 100)}%
+                    {Math.round(((status.marksObtained) / maxScore) * 100)}%
                   </span>
                 </div>
                 {(status.remarks || status.feedback) && (

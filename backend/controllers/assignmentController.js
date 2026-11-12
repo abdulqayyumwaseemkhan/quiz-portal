@@ -91,6 +91,15 @@ const updateAssignment = asyncHandler(async (req, res) => {
     res.status(404);
     throw new Error('Assignment not found');
   }
+
+  if (req.body.totalMarks !== undefined) {
+    const newTotal = Number(req.body.totalMarks) || 100;
+    await Submission.updateMany(
+      { assignmentId: assignment._id },
+      { $set: { maxMarks: newTotal } }
+    );
+  }
+
   res.json(assignment);
 });
 
@@ -134,7 +143,13 @@ const getSubmissionsForAssignment = asyncHandler(async (req, res) => {
   if (batch) query.batch = batch;
 
   const submissions = await Submission.find(query).sort({ submittedAt: -1 }).lean();
-  res.json(submissions);
+  const assignmentTotal = Number(assignment.totalMarks) || 100;
+  const synced = submissions.map((s) => ({
+    ...s,
+    maxMarks: assignmentTotal,
+    assignmentTotalMarks: assignmentTotal,
+  }));
+  res.json(synced);
 });
 
 const gradeSubmission = asyncHandler(async (req, res) => {
@@ -154,14 +169,16 @@ const gradeSubmission = asyncHandler(async (req, res) => {
     throw new Error('Not authorized to grade this submission');
   }
 
+  const assignmentTotal = Number(assignment.totalMarks) || 100;
+
   submission.marksObtained = marksObtained !== '' && marksObtained !== null && marksObtained !== undefined
     ? Number(marksObtained)
     : null;
 
-  if (maxMarks !== undefined) {
-    submission.maxMarks = Number(maxMarks) || assignment.totalMarks || 100;
-  } else if (!submission.maxMarks) {
-    submission.maxMarks = assignment.totalMarks || 100;
+  if (maxMarks !== undefined && Number(maxMarks) > 0) {
+    submission.maxMarks = Number(maxMarks);
+  } else {
+    submission.maxMarks = assignmentTotal;
   }
 
   const commentText = feedback !== undefined ? String(feedback).trim() : remarks !== undefined ? String(remarks).trim() : null;
@@ -175,7 +192,9 @@ const gradeSubmission = asyncHandler(async (req, res) => {
   submission.gradedAt = isGraded ? new Date() : null;
 
   const updated = await submission.save();
-  res.json(updated);
+  const resObj = updated.toObject();
+  resObj.assignmentTotalMarks = assignmentTotal;
+  res.json(resObj);
 });
 
 // --- Student Controllers ---
@@ -206,10 +225,18 @@ const getAssignmentsForStudent = asyncHandler(async (req, res) => {
 
   const subMap = new Map(mySubmissions.map((s) => [s.assignmentId.toString(), s]));
 
-  const enriched = assignments.map((a) => ({
-    ...a,
-    mySubmission: subMap.get(a._id.toString()) || null,
-  }));
+  const enriched = assignments.map((a) => {
+    const sub = subMap.get(a._id.toString()) || null;
+    const total = Number(a.totalMarks) || 100;
+    if (sub) {
+      sub.maxMarks = total;
+    }
+    return {
+      ...a,
+      totalMarks: total,
+      mySubmission: sub,
+    };
+  });
 
   res.json(enriched);
 });

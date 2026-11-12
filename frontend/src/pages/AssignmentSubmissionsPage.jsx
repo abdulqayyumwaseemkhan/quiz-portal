@@ -112,9 +112,10 @@ const AssignmentSubmissionsPage = () => {
 
   const openInspectStudio = (sub) => {
     setInspectingSub(sub);
+    const resolvedMax = sub.assignmentTotalMarks || sub.maxMarks || 20;
     setGradeForm({
       marksObtained: sub.marksObtained ?? '',
-      maxMarks: sub.maxMarks || 100,
+      maxMarks: resolvedMax,
       feedback: sub.remarks || sub.feedback || '',
     });
     setIframeKey((prev) => prev + 1);
@@ -771,7 +772,7 @@ const AssignmentSubmissionsPage = () => {
                       {sub.marksObtained !== null && sub.marksObtained !== undefined ? (
                         <div>
                           <p className="font-bold text-sm text-emerald-600">
-                            {sub.marksObtained} / {sub.maxMarks || 100}
+                            {sub.marksObtained} / {sub.assignmentTotalMarks || sub.maxMarks || 20}
                           </p>
                           {(sub.remarks || sub.feedback) && (
                             <p

@@ -1,6 +1,28 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
-import { Play, Save, Upload, FolderPlus, FilePlus, X, Image as ImageIcon, FileCode, Edit2, Trash2, Monitor, Tablet, Smartphone, Maximize2, Minimize2, Copy } from 'lucide-react';
+import {
+  Play,
+  Save,
+  Upload,
+  FolderPlus,
+  FilePlus,
+  X,
+  Image as ImageIcon,
+  FileCode,
+  Edit2,
+  Trash2,
+  Monitor,
+  Tablet,
+  Smartphone,
+  Maximize2,
+  Minimize2,
+  Copy,
+  Code,
+  Eye,
+  Folder,
+  RotateCcw,
+  ArrowLeft,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import API from '../../api';
 
@@ -87,6 +109,7 @@ export default function WebIDE({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewMode, setPreviewMode] = useState('default'); // 'hidden', 'default', 'full'
   const [deviceWidth, setDeviceWidth] = useState('100%'); // '100%', '768px', '375px'
+  const [mobileTab, setMobileTab] = useState('code'); // 'code' | 'preview' | 'files'
   const iframeRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -477,9 +500,12 @@ ${combinedJsx}
   return (
     <div className="flex flex-col h-full w-full bg-[#eef4ed] text-[#13315c]">
       {/* Top Bar */}
-      <div className="flex items-center justify-between px-6 py-3 bg-white border-b border-[#8da9c4]/30 shadow-sm z-10">
-        <div className="flex items-center space-x-6">
-          <span className="font-black text-[#13315c] tracking-tight hidden sm:inline">Web IDE Workspace</span>
+      <div className="flex flex-wrap items-center justify-between px-3 sm:px-6 py-2 sm:py-3 bg-white border-b border-[#8da9c4]/30 shadow-sm z-10 gap-2 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
+          <span className="font-black text-[#13315c] tracking-tight hidden lg:inline">
+            Web IDE Workspace
+          </span>
+
           <button 
             onClick={() => {
               if (activeFile.endsWith('.html') && activeFile !== previewFile) {
@@ -487,56 +513,138 @@ ${combinedJsx}
               } else {
                 runCode();
               }
+              if (typeof window !== 'undefined' && window.innerWidth < 768) {
+                setMobileTab('preview');
+              }
             }}
-            className="flex items-center space-x-2 px-4 py-1.5 bg-[#13315c] text-white hover:bg-opacity-90 rounded-lg text-sm font-bold transition-all shadow-sm"
+            className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-[#13315c] text-white hover:bg-opacity-90 rounded-lg text-xs sm:text-sm font-bold transition-all shadow-sm"
           >
-            <Play size={16} />
+            <Play size={15} />
             <span>Run Code</span>
           </button>
+
+          {/* Desktop Preview Toggle */}
           <button
             onClick={() => setPreviewMode(previewMode === 'hidden' ? 'default' : 'hidden')}
-            className="flex items-center space-x-2 px-3 py-1.5 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg text-sm font-bold transition-all shadow-sm"
+            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg text-xs sm:text-sm font-bold transition-all shadow-sm"
           >
             {previewMode === 'hidden' ? 'Show Result' : 'Hide Result'}
           </button>
+
+          {/* Mobile View Switcher (< md screens) */}
+          <div className="flex md:hidden items-center bg-gray-100 p-0.5 rounded-lg border border-gray-200 text-xs">
+            <button
+              type="button"
+              onClick={() => setMobileTab('code')}
+              className={`px-2.5 py-1 rounded-md font-semibold transition-colors flex items-center gap-1 ${
+                mobileTab === 'code'
+                  ? 'bg-white text-[#13315c] shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Code size={13} />
+              <span>Code</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                runCode();
+                setMobileTab('preview');
+              }}
+              className={`px-2.5 py-1 rounded-md font-semibold transition-colors flex items-center gap-1 ${
+                mobileTab === 'preview'
+                  ? 'bg-white text-[#13315c] shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Eye size={13} />
+              <span>Result</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileTab('files')}
+              className={`px-2.5 py-1 rounded-md font-semibold transition-colors flex items-center gap-1 ${
+                mobileTab === 'files'
+                  ? 'bg-white text-[#13315c] shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Folder size={13} />
+              <span>Files</span>
+            </button>
+          </div>
         </div>
+
         {!readOnly && (
-           <button 
-             onClick={handleSubmit}
-             disabled={isSubmitting}
-             className="flex items-center space-x-2 px-4 py-1.5 bg-green-600 text-white hover:bg-green-700 rounded-lg text-sm font-bold transition-all shadow-sm disabled:opacity-50"
-           >
-             <Save size={16} />
-             <span>{isSubmitting ? 'Saving...' : 'Submit Workspace'}</span>
-           </button>
+          <button 
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-green-600 text-white hover:bg-green-700 rounded-lg text-xs sm:text-sm font-bold transition-all shadow-sm disabled:opacity-50"
+          >
+            <Save size={15} />
+            <span>{isSubmitting ? 'Saving...' : 'Submit Workspace'}</span>
+          </button>
         )}
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
-        <div className={`w-48 md:w-64 bg-gray-50 border-r border-[#8da9c4]/30 flex flex-col ${previewMode === 'full' ? 'hidden' : ''}`}>
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Sidebar / Explorer */}
+        <div
+          className={`${
+            mobileTab === 'files'
+              ? 'flex w-full absolute inset-0 z-20 md:static md:w-56 lg:w-64'
+              : 'hidden md:flex md:w-56 lg:w-64'
+          } bg-gray-50 border-r border-[#8da9c4]/30 flex-col shrink-0 ${
+            previewMode === 'full' ? 'md:hidden' : ''
+          }`}
+        >
           <div className="px-4 py-3 text-xs font-bold text-gray-500 tracking-widest uppercase flex justify-between items-center border-b border-[#8da9c4]/20">
-            <span>Explorer</span>
-            {!readOnly && (
-              <div className="flex space-x-3">
-                <button onClick={handleCreateFile} title="New File" className="hover:text-[#13315c] transition-colors"><FilePlus size={16} /></button>
-                <button onClick={handleImageUploadClick} title="Upload Image" className="hover:text-[#13315c] transition-colors"><Upload size={16} /></button>
-              </div>
-            )}
+            <span className="flex items-center gap-1.5">
+              <Folder size={14} /> Explorer
+            </span>
+            <div className="flex items-center gap-2">
+              {!readOnly && (
+                <>
+                  <button onClick={handleCreateFile} title="New File" className="hover:text-[#13315c] p-1 rounded hover:bg-gray-200 transition-colors">
+                    <FilePlus size={16} />
+                  </button>
+                  <button onClick={handleImageUploadClick} title="Upload Image" className="hover:text-[#13315c] p-1 rounded hover:bg-gray-200 transition-colors">
+                    <Upload size={16} />
+                  </button>
+                </>
+              )}
+              {/* Mobile Close Button */}
+              <button
+                onClick={() => setMobileTab('code')}
+                className="md:hidden p-1 text-gray-500 hover:text-gray-900 rounded"
+                title="Back to Code"
+              >
+                <X size={16} />
+              </button>
+            </div>
           </div>
           <div className="flex-1 overflow-y-auto py-2">
             {Object.values(files).map((file) => (
               <div 
                 key={file.name}
-                onClick={() => setActiveFile(file.name)}
-                className={`group flex items-center justify-between px-4 py-2 cursor-pointer text-sm font-medium transition-colors ${activeFile === file.name ? 'bg-[#eef4ed] text-[#13315c] border-r-2 border-[#13315c]' : 'text-gray-600 hover:bg-gray-100 hover:text-[#13315c]'}`}
+                onClick={() => {
+                  setActiveFile(file.name);
+                  if (typeof window !== 'undefined' && window.innerWidth < 768) {
+                    setMobileTab('code');
+                  }
+                }}
+                className={`group flex items-center justify-between px-4 py-2.5 cursor-pointer text-sm font-medium transition-colors ${
+                  activeFile === file.name
+                    ? 'bg-[#eef4ed] text-[#13315c] border-r-2 border-[#13315c] font-semibold'
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-[#13315c]'
+                }`}
               >
                 <div className="flex items-center flex-1 min-w-0">
                   {file.isImage ? <ImageIcon size={16} className="mr-3 flex-shrink-0 text-purple-500" /> : <FileCode size={16} className="mr-3 flex-shrink-0 text-blue-500" />}
                   <span className="truncate">{file.name}</span>
                 </div>
                 {!readOnly && file.name !== 'index.html' && (
-                  <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center opacity-80 md:opacity-0 group-hover:opacity-100 transition-opacity gap-1">
                     <button 
                       onClick={(e) => handleRenameFile(e, file.name)} 
                       title="Rename File"
@@ -559,67 +667,121 @@ ${combinedJsx}
         </div>
 
         {/* Editor Area */}
-        <div className={`flex-1 flex flex-col min-w-0 bg-white ${previewMode === 'full' ? 'hidden' : ''}`}>
+        <div
+          className={`${
+            mobileTab === 'code' ? 'flex flex-1' : 'hidden md:flex md:flex-1'
+          } flex-col min-w-0 bg-white ${previewMode === 'full' ? 'md:hidden' : ''}`}
+        >
+          {/* Horizontal File Tabs Strip */}
+          <div className="flex items-center border-b border-gray-200 bg-[#f8fafc] overflow-x-auto no-scrollbar shrink-0 px-2 pt-1 gap-1">
+            {Object.values(files).map((f) => (
+              <button
+                key={f.name}
+                type="button"
+                onClick={() => setActiveFile(f.name)}
+                className={`px-3 py-1.5 rounded-t-lg text-xs font-semibold flex items-center gap-1.5 border-t border-x transition-colors whitespace-nowrap ${
+                  activeFile === f.name
+                    ? 'bg-white text-[#13315c] border-gray-300 -mb-px font-bold shadow-sm'
+                    : 'bg-transparent text-gray-500 border-transparent hover:text-gray-900 hover:bg-gray-200/50'
+                }`}
+              >
+                {f.isImage ? <ImageIcon size={13} className="text-purple-500" /> : <FileCode size={13} className="text-blue-500" />}
+                <span>{f.name}</span>
+              </button>
+            ))}
+          </div>
+
           {files[activeFile] && files[activeFile].isImage ? (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 bg-gray-50 relative">
+            <div className="flex-1 flex flex-col items-center justify-center p-6 bg-gray-50 relative overflow-y-auto">
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(files[activeFile].url);
                   toast.success('Link copied to clipboard!');
                 }}
-                className="absolute top-4 right-4 flex items-center space-x-2 px-3 py-1.5 bg-white border border-[#8da9c4]/30 text-[#13315c] hover:bg-gray-100 rounded-lg text-sm font-bold transition-all shadow-sm"
+                className="absolute top-4 right-4 flex items-center space-x-2 px-3 py-1.5 bg-white border border-[#8da9c4]/30 text-[#13315c] hover:bg-gray-100 rounded-lg text-xs sm:text-sm font-bold transition-all shadow-sm"
                 title="Copy Image Link"
               >
-                <Copy size={16} />
+                <Copy size={15} />
                 <span>Copy Link</span>
               </button>
-              <img src={files[activeFile].url} alt={files[activeFile].name} className="max-w-full max-h-full object-contain mb-6 border border-[#8da9c4]/30 rounded-xl bg-white shadow-sm" />
-              <div className="bg-white border border-[#8da9c4]/30 px-4 py-2 rounded-lg text-sm text-[#13315c] select-all w-full max-w-xl overflow-x-auto whitespace-nowrap font-mono shadow-sm">
+              <img src={files[activeFile].url} alt={files[activeFile].name} className="max-w-full max-h-[60vh] object-contain mb-4 border border-[#8da9c4]/30 rounded-xl bg-white shadow-sm" />
+              <div className="bg-white border border-[#8da9c4]/30 px-3 py-2 rounded-lg text-xs font-mono text-[#13315c] select-all w-full max-w-xl overflow-x-auto whitespace-nowrap shadow-sm">
                 {files[activeFile].url}
               </div>
-              <p className="text-xs text-gray-500 mt-3 font-semibold">Copy the URL to use in your HTML/CSS.</p>
+              <p className="text-xs text-gray-500 mt-2 font-medium">Use this URL inside your img src in HTML or React.</p>
             </div>
           ) : (
-            <Editor
-              height="100%"
-              theme="light"
-              path={activeFile}
-              language={files[activeFile]?.language || 'javascript'}
-              value={files[activeFile]?.content || ''}
-              onChange={handleEditorChange}
-              options={{
-                readOnly: readOnly,
-                minimap: { enabled: false },
-                fontSize: 14,
-                wordWrap: 'on',
-                padding: { top: 16 },
-                autoClosingBrackets: 'always',
-                autoClosingQuotes: 'always',
-                autoIndent: 'full',
-                formatOnPaste: true,
-                quickSuggestions: true,
-                suggestOnTriggerCharacters: true,
-                snippetSuggestions: "inline",
-                wordBasedSuggestions: true,
-                parameterHints: { enabled: true }
-              }}
-            />
+            <div className="flex-1 min-h-0 relative">
+              <Editor
+                height="100%"
+                theme="light"
+                path={activeFile}
+                language={files[activeFile]?.language || 'javascript'}
+                value={files[activeFile]?.content || ''}
+                onChange={handleEditorChange}
+                options={{
+                  readOnly: readOnly,
+                  minimap: { enabled: false },
+                  fontSize: 13,
+                  wordWrap: 'on',
+                  padding: { top: 12 },
+                  autoClosingBrackets: 'always',
+                  autoClosingQuotes: 'always',
+                  autoIndent: 'full',
+                  formatOnPaste: true,
+                  quickSuggestions: true,
+                  suggestOnTriggerCharacters: true,
+                  snippetSuggestions: "inline",
+                  wordBasedSuggestions: true,
+                  parameterHints: { enabled: true },
+                  automaticLayout: true,
+                  lineNumbersMinChars: 3,
+                  scrollBeyondLastLine: false,
+                }}
+              />
+            </div>
           )}
         </div>
 
         {/* Preview Area */}
-        <div className={`${previewMode === 'hidden' ? 'hidden' : 'flex'} ${previewMode === 'full' ? 'w-full' : 'hidden md:flex w-1/3 lg:w-2/5'} bg-white border-l border-[#8da9c4]/30 flex-col`}>
-          <div className="px-3 py-1.5 bg-[#f3f4f6] border-b border-gray-200 text-xs font-semibold text-gray-600 flex justify-between items-center">
-            <span>Preview</span>
-            <div className="flex space-x-2 items-center">
+        <div
+          className={`${
+            mobileTab === 'preview'
+              ? 'flex w-full absolute inset-0 z-30 md:static md:w-1/3 lg:w-2/5'
+              : previewMode === 'hidden'
+              ? 'hidden'
+              : 'hidden md:flex md:w-1/3 lg:w-2/5'
+          } ${previewMode === 'full' ? 'md:w-full' : ''} bg-white border-l border-[#8da9c4]/30 flex-col shrink-0`}
+        >
+          <div className="px-3 py-2 bg-[#f3f4f6] border-b border-gray-200 text-xs font-semibold text-gray-600 flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setMobileTab('code')}
+                className="md:hidden flex items-center gap-1 text-[#13315c] font-bold py-1 px-2.5 bg-white rounded border border-gray-300 shadow-sm"
+              >
+                <ArrowLeft size={13} />
+                <span>Code</span>
+              </button>
+              <span className="font-bold">Live Output</span>
+            </div>
+
+            <div className="flex space-x-1.5 items-center">
+              <button
+                onClick={runCode}
+                title="Refresh Output"
+                className="p-1 rounded text-gray-500 hover:text-[#13315c] hover:bg-gray-200"
+              >
+                <RotateCcw size={14} />
+              </button>
               <button onClick={() => setDeviceWidth('375px')} title="Mobile View" className={`hover:text-[#13315c] transition-colors p-1 rounded ${deviceWidth === '375px' ? 'text-blue-600 bg-blue-100' : 'text-gray-400'}`}><Smartphone size={14} /></button>
               <button onClick={() => setDeviceWidth('768px')} title="Tablet View" className={`hover:text-[#13315c] transition-colors p-1 rounded ${deviceWidth === '768px' ? 'text-blue-600 bg-blue-100' : 'text-gray-400'}`}><Tablet size={14} /></button>
               <button onClick={() => setDeviceWidth('100%')} title="Desktop View" className={`hover:text-[#13315c] transition-colors p-1 rounded ${deviceWidth === '100%' ? 'text-blue-600 bg-blue-100' : 'text-gray-400'}`}><Monitor size={14} /></button>
-              <div className="w-px h-4 bg-gray-300 mx-1"></div>
+              <div className="w-px h-4 bg-gray-300 mx-1 hidden md:block"></div>
               {previewMode === 'full' ? (
-                <button onClick={() => setPreviewMode('default')} title="Restore View" className="text-gray-400 hover:text-[#13315c] p-1"><Minimize2 size={14} /></button>
+                <button onClick={() => setPreviewMode('default')} title="Restore View" className="hidden md:inline-block text-gray-400 hover:text-[#13315c] p-1"><Minimize2 size={14} /></button>
               ) : (
-                <button onClick={() => setPreviewMode('full')} title="Full Screen Preview" className="text-gray-400 hover:text-[#13315c] p-1"><Maximize2 size={14} /></button>
+                <button onClick={() => setPreviewMode('full')} title="Full Screen Preview" className="hidden md:inline-block text-gray-400 hover:text-[#13315c] p-1"><Maximize2 size={14} /></button>
               )}
             </div>
           </div>
@@ -629,7 +791,7 @@ ${combinedJsx}
                   ref={iframeRef}
                   title="Preview"
                   className="w-full h-full border-none bg-white"
-                  sandbox="allow-scripts"
+                  sandbox="allow-scripts allow-modals allow-forms allow-same-origin"
                 />
              </div>
           </div>
