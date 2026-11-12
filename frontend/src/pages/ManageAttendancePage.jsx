@@ -18,6 +18,7 @@ import {
   UserX,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { broadcastLiveUpdate } from '../utils/liveSync';
 
 const BUBBLE_OPTIONS = [
   {
@@ -227,6 +228,11 @@ const ManageAttendancePage = () => {
         date: activeSessionData.session.date,
         time: activeSessionData.session.time,
         entries,
+      });
+      broadcastLiveUpdate('ATTENDANCE_UPDATED', {
+        sessionId: activeSessionData.session._id,
+        campus: activeSessionData.session.campus,
+        batch: activeSessionData.session.batch,
       });
       toast.success(`Saved attendance for ${entries.length} students`);
       setActiveSessionData(null);

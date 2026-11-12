@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
 import StudentNavbar from '../components/StudentNavbar';
@@ -12,12 +12,28 @@ import {
   ArrowRight,
   Play,
 } from 'lucide-react';
+import { useLiveRefresh } from '../utils/liveSync';
 
 const StudentDashboardPage = () => {
   const [student, setStudent] = useState(null);
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+
+  const fetchDashboard = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    try {
+      const stored = JSON.parse(localStorage.getItem('studentInfo') || '{}');
+      const sid = stored?.studentId;
+      if (!sid) return;
+      const { data } = await api.get(`/student/dashboard/${sid}`);
+      setDashboard(data);
+    } catch (error) {
+      console.error('Failed to load student dashboard:', error);
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     const raw = localStorage.getItem('studentInfo');
@@ -27,20 +43,17 @@ const StudentDashboardPage = () => {
     }
     const parsed = JSON.parse(raw);
     setStudent(parsed);
-    fetchDashboard(parsed.studentId);
-  }, [navigate]);
+    fetchDashboard(false);
+  }, [navigate, fetchDashboard]);
 
-  const fetchDashboard = async (studentId) => {
-    setLoading(true);
-    try {
-      const { data } = await api.get(`/student/dashboard/${studentId}`);
-      setDashboard(data);
-    } catch (error) {
-      console.error('Failed to load student dashboard:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Silently re-sync dashboard when activities occur or tab is refocused
+  useLiveRefresh(fetchDashboard, 12000, [
+    'ATTENDANCE_UPDATED',
+    'ASSIGNMENT_GRADED',
+    'ASSIGNMENT_SUBMITTED',
+    'QUIZ_SUBMITTED',
+    'QUIZ_PUBLISHED',
+  ]);
 
   const attendancePct = dashboard?.attendanceSummary?.percentage || 0;
 

@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import API from '../api';
 import { Clock, BookOpen, ChevronRight, Search, Calendar, AlertCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import StudentNavbar from '../components/StudentNavbar';
+import { useLiveRefresh } from '../utils/liveSync';
 
 const QuizListPage = () => {
   const [quizzes, setQuizzes] = useState([]);
@@ -24,20 +25,24 @@ const QuizListPage = () => {
     }
   }, [student, navigate]);
 
-  useEffect(() => {
-    const fetchQuizzes = async () => {
-      try {
-        // Single request returns quizzes + attemptInfo (no N+1 loop)
-        const { data } = await API.get(`/student/quizzes/${student.studentId}`);
-        setQuizzes(data);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (student) fetchQuizzes();
+  const fetchQuizzes = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    try {
+      const { data } = await API.get(`/student/quizzes/${student.studentId}`);
+      setQuizzes(data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      if (!silent) setLoading(false);
+    }
   }, [student]);
+
+  useEffect(() => {
+    if (student) fetchQuizzes(false);
+  }, [student, fetchQuizzes]);
+
+  // Silently re-sync quizzes when admin publishes a quiz or user refocused window
+  useLiveRefresh(fetchQuizzes, 12000, ['QUIZ_PUBLISHED', 'QUIZ_SUBMITTED']);
 
   const filteredQuizzes = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();

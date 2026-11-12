@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import API from '../api';
 import {
   FileArchive,
@@ -17,6 +17,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import StudentNavbar from '../components/StudentNavbar';
 import WebIDE from '../components/WebIDE/WebIDE';
+import { broadcastLiveUpdate, useLiveRefresh } from '../utils/liveSync';
 
 const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) => {
   const [status, setStatus] = useState(assignment.mySubmission || null);
@@ -29,9 +30,7 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
   const [assignmentTitle, setAssignmentTitle] = useState('');
 
   useEffect(() => {
-    if (assignment.mySubmission) {
-      setStatus(assignment.mySubmission);
-    }
+    setStatus(assignment.mySubmission || null);
   }, [assignment.mySubmission]);
 
   const handleUpload = async () => {
@@ -73,6 +72,10 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
       setGithubUrl('');
       setDriveLink('');
       if (onSubmitted) onSubmitted(assignment._id, data);
+      broadcastLiveUpdate('ASSIGNMENT_SUBMITTED', {
+        studentId: student.studentId,
+        assignmentId: assignment._id,
+      });
       toast.success('Assignment submitted successfully');
     } catch (error) {
       toast.error(error.response?.data?.message || 'Submission failed');
@@ -345,19 +348,24 @@ const StudentAssignmentsPage = () => {
     }
   }, [student, navigate]);
 
-  useEffect(() => {
-    const fetchAssignments = async () => {
-      try {
-        const { data } = await API.get(`/student/assignments/${student.studentId}`);
-        setAssignments(data);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (student) fetchAssignments();
+  const fetchAssignments = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    try {
+      const { data } = await API.get(`/student/assignments/${student.studentId}`);
+      setAssignments(data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      if (!silent) setLoading(false);
+    }
   }, [student]);
+
+  useEffect(() => {
+    if (student) fetchAssignments(false);
+  }, [student, fetchAssignments]);
+
+  // Live silent background sync: revalidates when admin grades/creates an assignment or when student re-focuses tab
+  useLiveRefresh(fetchAssignments, 8000, ['ASSIGNMENT_GRADED', 'ASSIGNMENT_CREATED', 'ASSIGNMENT_UPDATED']);
 
   const handleSubmittedUpdate = (assignmentId, subData) => {
     setAssignments((prev) =>

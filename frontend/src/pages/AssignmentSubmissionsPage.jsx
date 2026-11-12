@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import API from '../api';
 import Navbar from '../components/AdminNavbar';
@@ -30,6 +30,7 @@ import {
 import { Link, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import WebIDE from '../components/WebIDE/WebIDE';
+import { broadcastLiveUpdate, useLiveRefresh } from '../utils/liveSync';
 
 const formatBytes = (bytes, decimals = 1) => {
   if (!+bytes) return '0 B';
@@ -59,23 +60,28 @@ const AssignmentSubmissionsPage = () => {
   const [gradeForm, setGradeForm] = useState({ marksObtained: '', maxMarks: 100, feedback: '' });
   const [savingGrade, setSavingGrade] = useState(false);
 
+  const fetchData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    try {
+      const [sRes, mRes] = await Promise.all([
+        API.get(`/assignments/${id}/submissions`, { params: filter }),
+        API.get('/admin/students/meta'),
+      ]);
+      setSubmissions(sRes.data);
+      setMeta(mRes.data);
+    } catch {
+      if (!silent) toast.error('Failed to load submissions');
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  }, [id, filter]);
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [sRes, mRes] = await Promise.all([
-          API.get(`/assignments/${id}/submissions`),
-          API.get('/admin/students/meta'),
-        ]);
-        setSubmissions(sRes.data);
-        setMeta(mRes.data);
-      } catch {
-        toast.error('Failed to load submissions');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [id]);
+    fetchData(false);
+  }, [fetchData]);
+
+  // Live silent background sync: revalidates when a student submits an assignment or when admin re-focuses tab
+  useLiveRefresh(fetchData, 8000, ['ASSIGNMENT_SUBMITTED']);
 
   const handleFilter = async () => {
     setLoading(true);
@@ -135,6 +141,11 @@ const AssignmentSubmissionsPage = () => {
       };
       const { data } = await API.put(`/assignments/submissions/${inspectingSub._id}/grade`, payload);
       setSubmissions((prev) => prev.map((s) => (s._id === data._id ? data : s)));
+      broadcastLiveUpdate('ASSIGNMENT_GRADED', {
+        submissionId: data._id,
+        studentId: data.studentId,
+        assignmentId: data.assignmentId,
+      });
       toast.success(`Grade saved for ${data.studentName}`);
 
       if (shouldGoNext) {

@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api';
 import StudentNavbar from '../components/StudentNavbar';
 import { CalendarCheck, CheckCircle2, XCircle, Clock, Calendar } from 'lucide-react';
+import { useLiveRefresh } from '../utils/liveSync';
 
 const StudentAttendancePage = () => {
   const [data, setData] = useState({
@@ -34,19 +35,24 @@ const StudentAttendancePage = () => {
     }
   }, [student, navigate]);
 
-  useEffect(() => {
-    const fetchAttendance = async () => {
-      try {
-        const res = await API.get(`/student/attendance/${student.studentId}`);
-        setData(res.data);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (student) fetchAttendance();
+  const fetchAttendance = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    try {
+      const res = await API.get(`/student/attendance/${student.studentId}`);
+      setData(res.data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      if (!silent) setLoading(false);
+    }
   }, [student]);
+
+  useEffect(() => {
+    if (student) fetchAttendance(false);
+  }, [student, fetchAttendance]);
+
+  // Silently revalidates when admin updates attendance or student focuses window
+  useLiveRefresh(fetchAttendance, 10000, ['ATTENDANCE_UPDATED']);
 
   const { summary, history } = data;
 

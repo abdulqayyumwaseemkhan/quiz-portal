@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import API from '../api';
 import Navbar from '../components/AdminNavbar';
 import { Plus, Trash2, Edit, FileArchive, Eye, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { broadcastLiveUpdate, useLiveRefresh } from '../utils/liveSync';
 
 const ManageAssignmentsPage = () => {
   const [assignments, setAssignments] = useState([]);
@@ -23,21 +24,25 @@ const ManageAssignmentsPage = () => {
     projectType: 'vanilla',
   });
 
-  useEffect(() => {
-    fetchAssignments();
-    fetchMeta();
-  }, []);
-
-  const fetchAssignments = async () => {
+  const fetchAssignments = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const { data } = await API.get('/assignments');
       setAssignments(data);
     } catch {
-      toast.error('Failed to load assignments');
+      if (!silent) toast.error('Failed to load assignments');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchAssignments(false);
+    fetchMeta();
+  }, [fetchAssignments]);
+
+  // Live silent background sync: re-syncs submission counts when students submit projects
+  useLiveRefresh(fetchAssignments, 10000, ['ASSIGNMENT_SUBMITTED']);
 
   const fetchMeta = async () => {
     try {
@@ -89,10 +94,12 @@ const ManageAssignmentsPage = () => {
       if (editingId) {
         const { data } = await API.put(`/assignments/${editingId}`, formData);
         setAssignments(assignments.map((a) => (a._id === editingId ? { ...a, ...data } : a)));
+        broadcastLiveUpdate('ASSIGNMENT_UPDATED', { assignmentId: data._id });
         toast.success('Assignment updated');
       } else {
         const { data } = await API.post('/assignments', formData);
         setAssignments([data, ...assignments]);
+        broadcastLiveUpdate('ASSIGNMENT_CREATED', { assignmentId: data._id });
         toast.success('Assignment created');
       }
       setShowForm(false);
