@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import API from '../api';
 import Navbar from '../components/AdminNavbar';
+import { useLiveRefresh } from '../utils/liveSync';
 import {
   UserPlus,
   Trash2,
@@ -133,12 +134,19 @@ const ManageStudentsPage = () => {
   // Bulk email progress state
   const [emailProgress, setEmailProgress] = useState(null);
 
-  useEffect(() => {
-    fetchStudents();
-    fetchMeta();
+  const fetchStudents = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    try {
+      const { data } = await API.get('/admin/students');
+      setStudents(data);
+    } catch {
+      if (!silent) toast.error('Failed to load students');
+    } finally {
+      if (!silent) setLoading(false);
+    }
   }, []);
 
-  const fetchMeta = async () => {
+  const fetchMeta = useCallback(async () => {
     try {
       const { data } = await API.get('/admin/students/meta');
       setMeta({
@@ -149,19 +157,19 @@ const ManageStudentsPage = () => {
     } catch (error) {
       console.error(error);
     }
-  };
+  }, []);
 
-  const fetchStudents = async () => {
-    setLoading(true);
-    try {
-      const { data } = await API.get('/admin/students');
-      setStudents(data);
-    } catch {
-      toast.error('Failed to load students');
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    fetchStudents(false);
+    fetchMeta();
+  }, [fetchStudents, fetchMeta]);
+
+  // Live silent background sync: re-syncs directory when students change passwords, update profile, or register
+  useLiveRefresh(fetchStudents, 10000, [
+    'STUDENT_PROFILE_UPDATED',
+    'STUDENT_PASSWORD_CHANGED',
+    'STUDENT_REGISTERED',
+  ]);
 
   // Filtered students
   const filteredStudents = useMemo(() => {

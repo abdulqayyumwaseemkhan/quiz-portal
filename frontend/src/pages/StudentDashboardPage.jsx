@@ -12,7 +12,7 @@ import {
   ArrowRight,
   Play,
 } from 'lucide-react';
-import { useLiveRefresh } from '../utils/liveSync';
+import { useLiveRefresh, subscribeLiveUpdate } from '../utils/liveSync';
 
 const StudentDashboardPage = () => {
   const [student, setStudent] = useState(null);
@@ -46,6 +46,16 @@ const StudentDashboardPage = () => {
     fetchDashboard(false);
   }, [navigate, fetchDashboard]);
 
+  // Immediately reflect profile updates across dashboard
+  useEffect(() => {
+    const unsubscribe = subscribeLiveUpdate((event) => {
+      if (event?.type === 'STUDENT_PROFILE_UPDATED' && event.payload) {
+        setStudent((prev) => ({ ...prev, ...event.payload }));
+      }
+    });
+    return unsubscribe;
+  }, []);
+
   // Silently re-sync dashboard when activities occur or tab is refocused
   useLiveRefresh(fetchDashboard, 12000, [
     'ATTENDANCE_UPDATED',
@@ -53,6 +63,7 @@ const StudentDashboardPage = () => {
     'ASSIGNMENT_SUBMITTED',
     'QUIZ_SUBMITTED',
     'QUIZ_PUBLISHED',
+    'STUDENT_PROFILE_UPDATED',
   ]);
 
   const attendancePct = dashboard?.attendanceSummary?.percentage || 0;

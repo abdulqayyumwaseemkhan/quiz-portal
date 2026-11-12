@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import api from '../api';
+import { broadcastLiveUpdate, subscribeLiveUpdate } from '../utils/liveSync';
 
 const StudentNavbar = ({ student }) => {
   const navigate = useNavigate();
@@ -56,6 +57,18 @@ const StudentNavbar = ({ student }) => {
       setContact(student.contact || '');
     }
   }, [student]);
+
+  // Immediately reflect profile updates across open tabs & modals
+  useEffect(() => {
+    const unsubscribe = subscribeLiveUpdate((event) => {
+      if (event?.type === 'STUDENT_PROFILE_UPDATED' && event.payload) {
+        setProfileData((prev) => ({ ...prev, ...event.payload }));
+        if (event.payload.email !== undefined) setEmail(event.payload.email);
+        if (event.payload.contact !== undefined) setContact(event.payload.contact);
+      }
+    });
+    return unsubscribe;
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('studentInfo');
@@ -115,10 +128,9 @@ const StudentNavbar = ({ student }) => {
       setContact(data.contact || '');
 
       const stored = JSON.parse(localStorage.getItem('studentInfo') || '{}');
-      localStorage.setItem(
-        'studentInfo',
-        JSON.stringify({ ...stored, email: data.email, contact: data.contact })
-      );
+      const updatedInfo = { ...stored, email: data.email, contact: data.contact };
+      localStorage.setItem('studentInfo', JSON.stringify(updatedInfo));
+      broadcastLiveUpdate('STUDENT_PROFILE_UPDATED', data);
       setFeedback({ type: 'success', message: 'Contact details updated successfully.' });
     } catch (err) {
       setFeedback({
@@ -150,6 +162,7 @@ const StudentNavbar = ({ student }) => {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+      broadcastLiveUpdate('STUDENT_PASSWORD_CHANGED', { studentId: activeUser.studentId });
       setFeedback({ type: 'success', message: 'Password updated successfully.' });
     } catch (err) {
       setFeedback({
