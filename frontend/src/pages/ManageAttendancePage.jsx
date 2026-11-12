@@ -13,10 +13,50 @@ import {
   Search,
   Users,
   X,
+  Check,
+  UserCheck,
+  UserX,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const STATUS_OPTIONS = ['Present', 'Absent', 'Late', 'Leave'];
+const BUBBLE_OPTIONS = [
+  {
+    key: 'Present',
+    short: 'P',
+    label: 'Present',
+    activeClass:
+      'bg-emerald-600 text-white border-emerald-600 shadow-sm ring-2 ring-emerald-500/40 font-bold',
+    inactiveClass:
+      'border-[var(--border)] bg-[var(--bg-surface)] text-emerald-600/80 hover:bg-emerald-500/10',
+  },
+  {
+    key: 'Absent',
+    short: 'A',
+    label: 'Absent',
+    activeClass:
+      'bg-rose-600 text-white border-rose-600 shadow-sm ring-2 ring-rose-500/40 font-bold',
+    inactiveClass:
+      'border-[var(--border)] bg-[var(--bg-surface)] text-rose-600/80 hover:bg-rose-500/10',
+  },
+  {
+    key: 'Leave',
+    short: 'L',
+    label: 'Leave',
+    activeClass:
+      'bg-sky-600 text-white border-sky-600 shadow-sm ring-2 ring-sky-500/40 font-bold',
+    inactiveClass:
+      'border-[var(--border)] bg-[var(--bg-surface)] text-sky-600/80 hover:bg-sky-500/10',
+  },
+  {
+    key: 'Late',
+    short: 'T',
+    label: 'Late',
+    activeClass:
+      'bg-amber-500 text-white border-amber-500 shadow-sm ring-2 ring-amber-500/40 font-bold',
+    inactiveClass:
+      'border-[var(--border)] bg-[var(--bg-surface)] text-amber-600/80 hover:bg-amber-500/10',
+  },
+];
 
 const ManageAttendancePage = () => {
   const [activeTab, setActiveTab] = useState('sessions'); // 'sessions' | 'reports'
@@ -87,6 +127,7 @@ const ManageAttendancePage = () => {
     try {
       const { data } = await API.get(`/attendance/sessions/${sessionId}`);
       const recordsMap = {};
+      // By default, every active student is initialized to 'Present'
       (data.students || []).forEach((st) => {
         recordsMap[st.studentId] = {
           studentId: st.studentId,
@@ -95,6 +136,7 @@ const ManageAttendancePage = () => {
           remarks: '',
         };
       });
+      // Overlay any existing saved records
       (data.records || []).forEach((rec) => {
         recordsMap[rec.studentId] = {
           studentId: rec.studentId,
@@ -110,6 +152,7 @@ const ManageAttendancePage = () => {
         recordsMap,
       });
       setShowCreate(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch {
       toast.error('Failed to load session roster');
     }
@@ -123,6 +166,7 @@ const ManageAttendancePage = () => {
     try {
       const { data } = await API.post('/attendance/sessions', sessionForm);
       const recordsMap = {};
+      // By default all students default to Present
       (data.students || []).forEach((st) => {
         recordsMap[st.studentId] = {
           studentId: st.studentId,
@@ -138,7 +182,8 @@ const ManageAttendancePage = () => {
       });
       setShowCreate(false);
       fetchSessions();
-      toast.success('Session created. Mark attendance below and click Save.');
+      toast.success('Session created! All students defaulted to Present. Tap Absent for missing students.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to create session');
     }
@@ -151,6 +196,7 @@ const ManageAttendancePage = () => {
       updated[sid] = { ...updated[sid], status };
     });
     setActiveSessionData({ ...activeSessionData, recordsMap: updated });
+    toast.success(`Marked all as ${status}`);
   };
 
   const handleStudentStatusChange = (studentId, fullName, status) => {
@@ -256,15 +302,33 @@ const ManageAttendancePage = () => {
     );
   }, [activeSessionData, rosterSearch]);
 
+  const activeSessionCounts = useMemo(() => {
+    if (!activeSessionData?.recordsMap) {
+      return { Present: 0, Absent: 0, Late: 0, Leave: 0, total: 0 };
+    }
+    const values = Object.values(activeSessionData.recordsMap);
+    let Present = 0;
+    let Absent = 0;
+    let Late = 0;
+    let Leave = 0;
+    values.forEach((v) => {
+      if (v.status === 'Absent') Absent++;
+      else if (v.status === 'Leave') Leave++;
+      else if (v.status === 'Late') Late++;
+      else Present++;
+    });
+    return { Present, Absent, Late, Leave, total: values.length };
+  }, [activeSessionData]);
+
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
       <Navbar />
-      <main className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8">
+      <main className="flex-1 lg:ml-64 p-3.5 sm:p-6 lg:p-8 pb-24 sm:pb-10">
         <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Lecture Attendance</h1>
-            <p className="text-sm text-[var(--text-secondary)] mt-1">
-              Mark class attendance in bulk and generate campus/batch attendance reports
+            <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-1">
+              Tap-friendly bubble marking with default Present & mobile responsive layout
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -291,13 +355,14 @@ const ManageAttendancePage = () => {
           <>
             {/* Active Session Marking Panel */}
             {activeSessionData ? (
-              <div className="card p-6 mb-6 space-y-5">
-                <div className="flex flex-wrap items-start justify-between gap-4 pb-4 border-b border-[var(--border)]">
+              <div className="card p-4 sm:p-6 mb-6 space-y-4">
+                {/* Session Header */}
+                <div className="flex flex-wrap items-start justify-between gap-3 pb-3 border-b border-[var(--border)]">
                   <div>
-                    <span className="text-xs font-semibold uppercase tracking-wider text-[var(--accent)]">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--accent)]">
                       Marking Attendance
                     </span>
-                    <h2 className="text-xl font-bold mt-0.5">
+                    <h2 className="text-lg sm:text-xl font-bold mt-0.5">
                       {activeSessionData.session.lectureTitle}
                     </h2>
                     <p className="text-xs text-[var(--text-secondary)] mt-0.5">
@@ -306,117 +371,205 @@ const ManageAttendancePage = () => {
                       {activeSessionData.session.time ? `(${activeSessionData.session.time})` : ''}
                     </p>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleSetAllStatus('Present')}
-                      className="btn-secondary py-1.5 px-3 text-xs flex items-center gap-1.5"
-                    >
-                      <CheckCircle2 size={14} className="text-emerald-600" /> Mark All Present
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleSetAllStatus('Absent')}
-                      className="btn-secondary py-1.5 px-3 text-xs"
-                    >
-                      Mark All Absent
-                    </button>
+
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => setActiveSessionData(null)}
-                      className="p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                      className="p-1.5 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-muted)]"
+                      title="Close"
                     >
                       <X size={18} />
                     </button>
                   </div>
                 </div>
 
-                <div className="relative max-w-md">
-                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={16} />
+                {/* Live Bubble Counters & Quick Bulk Toggles */}
+                <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-[var(--bg-muted)] border border-[var(--border)]">
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold">
+                    <span className="px-2.5 py-1 rounded-full bg-emerald-600/15 text-emerald-600 border border-emerald-500/20">
+                      P: {activeSessionCounts.Present}
+                    </span>
+                    <span className="px-2.5 py-1 rounded-full bg-rose-600/15 text-rose-600 border border-rose-500/20">
+                      A: {activeSessionCounts.Absent}
+                    </span>
+                    <span className="px-2.5 py-1 rounded-full bg-sky-600/15 text-sky-600 border border-sky-500/20">
+                      L: {activeSessionCounts.Leave}
+                    </span>
+                    <span className="px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-600 border border-amber-500/20">
+                      T: {activeSessionCounts.Late}
+                    </span>
+                    <span className="text-[var(--text-muted)] text-[11px] font-normal ml-1">
+                      ({activeSessionCounts.total} total)
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleSetAllStatus('Present')}
+                      className="btn-secondary py-1 px-2.5 text-xs flex items-center gap-1"
+                      title="Set all to Present"
+                    >
+                      <UserCheck size={13} className="text-emerald-600" />
+                      <span className="hidden sm:inline">All</span> Present
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSetAllStatus('Absent')}
+                      className="btn-secondary py-1 px-2.5 text-xs flex items-center gap-1"
+                      title="Set all to Absent"
+                    >
+                      <UserX size={13} className="text-rose-600" />
+                      <span className="hidden sm:inline">All</span> Absent
+                    </button>
+                  </div>
+                </div>
+
+                {/* Student Filter Search */}
+                <div className="relative">
+                  <Search
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
+                    size={16}
+                  />
                   <input
                     type="text"
-                    placeholder="Filter student in this session..."
-                    className="input-field pl-9 py-2 text-sm"
+                    placeholder="Search student by name or roll number..."
+                    className="input-field pl-9 py-2 text-xs sm:text-sm"
                     value={rosterSearch}
                     onChange={(e) => setRosterSearch(e.target.value)}
                   />
                 </div>
 
+                {/* Roster Listing: Responsive Layout */}
                 {filteredRoster.length === 0 ? (
-                  <p className="text-sm text-[var(--text-muted)] py-8 text-center">
-                    No active students found in {activeSessionData.session.campus} /{' '}
-                    {activeSessionData.session.batch}.
+                  <p className="text-xs sm:text-sm text-[var(--text-muted)] py-8 text-center">
+                    No active students found in this roster.
                   </p>
                 ) : (
-                  <div className="border border-[var(--border)] rounded-xl overflow-hidden">
-                    <table className="w-full text-left text-sm">
-                      <thead className="bg-[var(--bg-muted)] text-[var(--text-secondary)] text-xs font-semibold uppercase">
-                        <tr>
-                          <th className="px-4 py-3">#</th>
-                          <th className="px-4 py-3">Student</th>
-                          <th className="px-4 py-3 text-right">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-[var(--border)]">
-                        {filteredRoster.map((st, idx) => {
-                          const currentStatus =
-                            activeSessionData.recordsMap[st.studentId]?.status || 'Present';
-                          return (
-                            <tr key={st._id} className="hover:bg-[var(--bg-muted)]/40">
-                              <td className="px-4 py-3 text-xs text-[var(--text-muted)]">
-                                {idx + 1}
-                              </td>
-                              <td className="px-4 py-3">
-                                <p className="font-semibold text-sm">{st.fullName}</p>
+                  <div>
+                    {/* Mobile-Friendly Touch Card View (Shown on screens < md) */}
+                    <div className="md:hidden space-y-2.5">
+                      {filteredRoster.map((st, idx) => {
+                        const currentStatus =
+                          activeSessionData.recordsMap[st.studentId]?.status || 'Present';
+                        return (
+                          <div
+                            key={st._id}
+                            className="p-3 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] flex flex-col gap-2.5"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="min-w-0">
+                                <p className="font-semibold text-sm truncate">{st.fullName}</p>
                                 <p className="text-xs font-mono text-[var(--text-secondary)]">
-                                  {st.studentId}
+                                  #{idx + 1} • {st.studentId}
                                 </p>
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                <div className="inline-flex flex-wrap justify-end gap-1.5">
-                                  {STATUS_OPTIONS.map((status) => {
-                                    const isSelected = currentStatus === status;
-                                    const activeStyles =
-                                      status === 'Present'
-                                        ? 'bg-emerald-600 text-white border-emerald-600'
-                                        : status === 'Absent'
-                                        ? 'bg-rose-600 text-white border-rose-600'
-                                        : status === 'Late'
-                                        ? 'bg-amber-500 text-white border-amber-500'
-                                        : 'bg-sky-600 text-white border-sky-600';
+                              </div>
+                              <span
+                                className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                                  currentStatus === 'Present'
+                                    ? 'bg-emerald-500/15 text-emerald-600'
+                                    : currentStatus === 'Absent'
+                                    ? 'bg-rose-500/15 text-rose-600'
+                                    : currentStatus === 'Leave'
+                                    ? 'bg-sky-500/15 text-sky-600'
+                                    : 'bg-amber-500/15 text-amber-600'
+                                }`}
+                              >
+                                {currentStatus}
+                              </span>
+                            </div>
 
-                                    return (
-                                      <button
-                                        key={status}
-                                        type="button"
-                                        onClick={() =>
-                                          handleStudentStatusChange(
-                                            st.studentId,
-                                            st.fullName,
-                                            status
-                                          )
-                                        }
-                                        className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-all ${
-                                          isSelected
-                                            ? activeStyles
-                                            : 'border-[var(--border)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-muted)]'
-                                        }`}
-                                      >
-                                        {status}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                            {/* Large Touch-Friendly Bubbles for Mobile */}
+                            <div className="grid grid-cols-4 gap-1.5 pt-1">
+                              {BUBBLE_OPTIONS.map((opt) => {
+                                const isSelected = currentStatus === opt.key;
+                                return (
+                                  <button
+                                    key={opt.key}
+                                    type="button"
+                                    onClick={() =>
+                                      handleStudentStatusChange(st.studentId, st.fullName, opt.key)
+                                    }
+                                    className={`py-2 px-1 rounded-xl text-xs font-bold border transition-all flex flex-col items-center justify-center min-h-[44px] ${
+                                      isSelected ? opt.activeClass : opt.inactiveClass
+                                    }`}
+                                  >
+                                    <span className="text-sm font-black">{opt.short}</span>
+                                    <span className="text-[10px] opacity-80">{opt.label}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Desktop Table View (Shown on md+ screens) */}
+                    <div className="hidden md:block border border-[var(--border)] rounded-xl overflow-hidden">
+                      <table className="w-full text-left text-sm">
+                        <thead className="bg-[var(--bg-muted)] text-[var(--text-secondary)] text-xs font-semibold uppercase">
+                          <tr>
+                            <th className="px-4 py-3">#</th>
+                            <th className="px-4 py-3">Student Name</th>
+                            <th className="px-4 py-3">Roll Number</th>
+                            <th className="px-4 py-3 text-right">Attendance Bubble</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[var(--border)]">
+                          {filteredRoster.map((st, idx) => {
+                            const currentStatus =
+                              activeSessionData.recordsMap[st.studentId]?.status || 'Present';
+                            return (
+                              <tr key={st._id} className="hover:bg-[var(--bg-muted)]/40">
+                                <td className="px-4 py-3 text-xs text-[var(--text-muted)]">
+                                  {idx + 1}
+                                </td>
+                                <td className="px-4 py-3 font-semibold text-sm">
+                                  {st.fullName}
+                                </td>
+                                <td className="px-4 py-3 text-xs font-mono text-[var(--text-secondary)]">
+                                  {st.studentId}
+                                </td>
+                                <td className="px-4 py-3 text-right">
+                                  <div className="inline-flex items-center gap-1.5">
+                                    {BUBBLE_OPTIONS.map((opt) => {
+                                      const isSelected = currentStatus === opt.key;
+                                      return (
+                                        <button
+                                          key={opt.key}
+                                          type="button"
+                                          onClick={() =>
+                                            handleStudentStatusChange(
+                                              st.studentId,
+                                              st.fullName,
+                                              opt.key
+                                            )
+                                          }
+                                          className={`py-1.5 px-3 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1 ${
+                                            isSelected ? opt.activeClass : opt.inactiveClass
+                                          }`}
+                                          title={`Mark as ${opt.label}`}
+                                        >
+                                          <span>{opt.short}</span>
+                                          <span className="hidden lg:inline">• {opt.label}</span>
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )}
 
-                <div className="flex justify-end gap-3 pt-2">
+                {/* Desktop Save Action Buttons */}
+                <div className="hidden sm:flex justify-end gap-3 pt-2">
                   <button
                     type="button"
                     onClick={() => setActiveSessionData(null)}
@@ -431,6 +584,25 @@ const ManageAttendancePage = () => {
                     className="btn-primary text-sm flex items-center gap-2"
                   >
                     <Save size={16} />
+                    {savingAttendance
+                      ? 'Saving...'
+                      : `Save Attendance (${activeSessionCounts.Present} Present, ${activeSessionCounts.Absent} Absent)`}
+                  </button>
+                </div>
+
+                {/* Sticky Mobile Floating Save Bar */}
+                <div className="sm:hidden fixed bottom-3 left-3 right-3 z-40 p-2.5 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border)] shadow-2xl flex items-center justify-between gap-2">
+                  <div className="text-xs font-bold pl-1 truncate">
+                    <span className="text-emerald-600">{activeSessionCounts.Present}P</span> •{' '}
+                    <span className="text-rose-600">{activeSessionCounts.Absent}A</span>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={savingAttendance || activeSessionData.students.length === 0}
+                    onClick={handleSaveBulkAttendance}
+                    className="btn-primary py-2 px-4 text-xs font-bold flex items-center gap-1.5 shrink-0"
+                  >
+                    <Save size={14} />
                     {savingAttendance ? 'Saving...' : 'Save Attendance'}
                   </button>
                 </div>
@@ -445,22 +617,23 @@ const ManageAttendancePage = () => {
                     <Plus size={18} /> New Lecture Session
                   </button>
                 ) : (
-                  <form onSubmit={handleCreateSession} className="card p-6 space-y-4">
+                  <form onSubmit={handleCreateSession} className="card p-4 sm:p-6 space-y-4">
                     <div className="flex justify-between items-center">
                       <h2 className="text-base font-bold">Create Lecture Session</h2>
                       <button type="button" onClick={() => setShowCreate(false)}>
                         <X size={18} />
                       </button>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                      <div className="lg:col-span-2">
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+                      <div className="sm:col-span-2">
                         <label className="block text-xs font-semibold uppercase mb-1">
                           Lecture Title *
                         </label>
                         <input
                           type="text"
-                          placeholder="e.g. Lecture 12: Express Middleware & JWT"
-                          className="input-field"
+                          placeholder="e.g. Lecture 12: Express Middleware & React Deployment"
+                          className="input-field text-xs sm:text-sm"
                           value={sessionForm.lectureTitle}
                           onChange={(e) =>
                             setSessionForm({ ...sessionForm, lectureTitle: e.target.value })
@@ -472,7 +645,7 @@ const ManageAttendancePage = () => {
                         <label className="block text-xs font-semibold uppercase mb-1">Date *</label>
                         <input
                           type="date"
-                          className="input-field"
+                          className="input-field text-xs sm:text-sm"
                           value={sessionForm.date}
                           onChange={(e) => setSessionForm({ ...sessionForm, date: e.target.value })}
                           required
@@ -483,7 +656,7 @@ const ManageAttendancePage = () => {
                         <input
                           type="text"
                           placeholder="02:00 PM - 04:00 PM"
-                          className="input-field"
+                          className="input-field text-xs sm:text-sm"
                           value={sessionForm.time}
                           onChange={(e) => setSessionForm({ ...sessionForm, time: e.target.value })}
                         />
@@ -493,7 +666,7 @@ const ManageAttendancePage = () => {
                           Campus *
                         </label>
                         <select
-                          className="input-field"
+                          className="input-field text-xs sm:text-sm"
                           value={sessionForm.campus}
                           onChange={(e) =>
                             setSessionForm({ ...sessionForm, campus: e.target.value })
@@ -513,7 +686,7 @@ const ManageAttendancePage = () => {
                           Batch *
                         </label>
                         <select
-                          className="input-field"
+                          className="input-field text-xs sm:text-sm"
                           value={sessionForm.batch}
                           onChange={(e) =>
                             setSessionForm({ ...sessionForm, batch: e.target.value })
@@ -529,16 +702,17 @@ const ManageAttendancePage = () => {
                         </select>
                       </div>
                     </div>
-                    <div className="flex justify-end gap-2">
+
+                    <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
                       <button
                         type="button"
                         onClick={() => setShowCreate(false)}
-                        className="btn-secondary text-sm"
+                        className="btn-secondary text-xs sm:text-sm py-2 px-4"
                       >
                         Cancel
                       </button>
-                      <button type="submit" className="btn-primary text-sm">
-                        Load Student Roster & Mark Attendance
+                      <button type="submit" className="btn-primary text-xs sm:text-sm py-2 px-4">
+                        Load Roster (Default Present)
                       </button>
                     </div>
                   </form>
@@ -546,10 +720,10 @@ const ManageAttendancePage = () => {
               </div>
             )}
 
-            {/* Past Sessions Table */}
+            {/* Past Sessions List */}
             <div className="card p-0 overflow-hidden">
-              <div className="p-5 border-b border-[var(--border)] flex justify-between items-center">
-                <h2 className="text-base font-bold">Attendance Sessions</h2>
+              <div className="p-4 sm:p-5 border-b border-[var(--border)] flex justify-between items-center">
+                <h2 className="text-sm sm:text-base font-bold">Attendance Sessions</h2>
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[var(--accent-subtle)] text-[var(--accent)]">
                   {sessions.length} Sessions
                 </span>
@@ -559,50 +733,53 @@ const ManageAttendancePage = () => {
                 <table className="w-full text-left text-sm">
                   <thead className="bg-[var(--bg-muted)] text-[var(--text-secondary)] text-xs font-semibold uppercase tracking-wider border-b border-[var(--border)]">
                     <tr>
-                      <th className="px-5 py-3.5">Date & Time</th>
-                      <th className="px-5 py-3.5">Lecture Title</th>
-                      <th className="px-5 py-3.5">Campus / Batch</th>
-                      <th className="px-5 py-3.5">Attendance Summary</th>
-                      <th className="px-5 py-3.5 text-right">Actions</th>
+                      <th className="px-4 sm:px-5 py-3.5">Date & Time</th>
+                      <th className="px-4 sm:px-5 py-3.5">Lecture Title</th>
+                      <th className="px-4 sm:px-5 py-3.5">Campus / Batch</th>
+                      <th className="px-4 sm:px-5 py-3.5">Attendance Summary</th>
+                      <th className="px-4 sm:px-5 py-3.5 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[var(--border)]">
                     {sessions.map((s) => (
                       <tr key={s._id} className="hover:bg-[var(--bg-muted)]/40 transition-colors">
-                        <td className="px-5 py-4 text-xs">
+                        <td className="px-4 sm:px-5 py-4 text-xs">
                           <p className="font-bold text-sm text-[var(--text-primary)]">
                             {new Date(s.date).toLocaleDateString()}
                           </p>
                           <p className="text-[var(--text-secondary)]">{s.time || '—'}</p>
                         </td>
-                        <td className="px-5 py-4 font-semibold">{s.lectureTitle}</td>
-                        <td className="px-5 py-4 text-xs">
+                        <td className="px-4 sm:px-5 py-4 font-semibold text-xs sm:text-sm">
+                          {s.lectureTitle}
+                        </td>
+                        <td className="px-4 sm:px-5 py-4 text-xs">
                           <p className="font-medium">{s.campus}</p>
                           <p className="text-[var(--text-secondary)]">{s.batch}</p>
                         </td>
-                        <td className="px-5 py-4 text-xs">
-                          <div className="flex flex-wrap gap-2">
+                        <td className="px-4 sm:px-5 py-4 text-xs">
+                          <div className="flex flex-wrap gap-1.5">
                             <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 font-semibold">
                               P: {s.summary?.Present || 0}
                             </span>
                             <span className="px-2 py-0.5 rounded bg-rose-500/10 text-rose-600 font-semibold">
                               A: {s.summary?.Absent || 0}
                             </span>
-                            <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 font-semibold">
-                              L: {s.summary?.Late || 0}
-                            </span>
                             <span className="px-2 py-0.5 rounded bg-sky-500/10 text-sky-600 font-semibold">
-                              Lv: {s.summary?.Leave || 0}
+                              L: {s.summary?.Leave || 0}
+                            </span>
+                            <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 font-semibold">
+                              T: {s.summary?.Late || 0}
                             </span>
                           </div>
                         </td>
-                        <td className="px-5 py-4 text-right">
+                        <td className="px-4 sm:px-5 py-4 text-right">
                           <div className="inline-flex items-center gap-1">
                             <button
                               onClick={() => openSessionForMarking(s._id)}
                               className="btn-secondary py-1.5 px-3 text-xs flex items-center gap-1"
                             >
-                              <Edit size={13} /> Mark / Edit
+                              <Edit size={13} />
+                              <span className="hidden sm:inline">Mark / Edit</span>
                             </button>
                             <button
                               onClick={() => handleDeleteSession(s._id)}
@@ -633,11 +810,11 @@ const ManageAttendancePage = () => {
         ) : (
           /* Reports Tab */
           <div className="space-y-6">
-            <div className="card p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
+            <div className="card p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
               <div>
                 <label className="block text-xs font-semibold uppercase mb-1">Campus</label>
                 <select
-                  className="input-field py-2 text-sm"
+                  className="input-field py-2 text-xs sm:text-sm"
                   value={reportFilter.campus}
                   onChange={(e) => setReportFilter({ ...reportFilter, campus: e.target.value })}
                 >
@@ -652,7 +829,7 @@ const ManageAttendancePage = () => {
               <div>
                 <label className="block text-xs font-semibold uppercase mb-1">Batch</label>
                 <select
-                  className="input-field py-2 text-sm"
+                  className="input-field py-2 text-xs sm:text-sm"
                   value={reportFilter.batch}
                   onChange={(e) => setReportFilter({ ...reportFilter, batch: e.target.value })}
                 >
@@ -668,7 +845,7 @@ const ManageAttendancePage = () => {
                 <label className="block text-xs font-semibold uppercase mb-1">From Date</label>
                 <input
                   type="date"
-                  className="input-field py-2 text-sm"
+                  className="input-field py-2 text-xs sm:text-sm"
                   value={reportFilter.fromDate}
                   onChange={(e) => setReportFilter({ ...reportFilter, fromDate: e.target.value })}
                 />
@@ -677,7 +854,7 @@ const ManageAttendancePage = () => {
                 <label className="block text-xs font-semibold uppercase mb-1">To Date</label>
                 <input
                   type="date"
-                  className="input-field py-2 text-sm"
+                  className="input-field py-2 text-xs sm:text-sm"
                   value={reportFilter.toDate}
                   onChange={(e) => setReportFilter({ ...reportFilter, toDate: e.target.value })}
                 />
@@ -687,18 +864,18 @@ const ManageAttendancePage = () => {
                 <input
                   type="text"
                   placeholder="ID or Name"
-                  className="input-field py-2 text-sm"
+                  className="input-field py-2 text-xs sm:text-sm"
                   value={reportFilter.studentId}
                   onChange={(e) => setReportFilter({ ...reportFilter, studentId: e.target.value })}
                 />
               </div>
               <div className="flex gap-2">
-                <button onClick={fetchReport} className="btn-primary py-2 px-4 text-sm flex-1">
+                <button onClick={fetchReport} className="btn-primary py-2 px-4 text-xs sm:text-sm flex-1">
                   Filter
                 </button>
                 <button
                   onClick={handleExportReportExcel}
-                  className="btn-secondary py-2 px-3 text-sm"
+                  className="btn-secondary py-2 px-3 text-xs sm:text-sm"
                   title="Export Excel"
                 >
                   <Download size={16} />
@@ -711,39 +888,39 @@ const ManageAttendancePage = () => {
                 <table className="w-full text-left text-sm">
                   <thead className="bg-[var(--bg-muted)] text-[var(--text-secondary)] text-xs font-semibold uppercase border-b border-[var(--border)]">
                     <tr>
-                      <th className="px-5 py-3.5">Student</th>
-                      <th className="px-5 py-3.5">Campus / Batch</th>
-                      <th className="px-5 py-3.5">Lectures Held</th>
-                      <th className="px-5 py-3.5">Present / Late</th>
-                      <th className="px-5 py-3.5">Absent / Leave</th>
-                      <th className="px-5 py-3.5">Attendance %</th>
+                      <th className="px-4 sm:px-5 py-3.5">Student</th>
+                      <th className="px-4 sm:px-5 py-3.5">Campus / Batch</th>
+                      <th className="px-4 sm:px-5 py-3.5">Lectures Held</th>
+                      <th className="px-4 sm:px-5 py-3.5">Present / Late</th>
+                      <th className="px-4 sm:px-5 py-3.5">Absent / Leave</th>
+                      <th className="px-4 sm:px-5 py-3.5">Attendance %</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[var(--border)]">
                     {(reportData.students || []).map((st) => (
                       <tr key={st.studentId} className="hover:bg-[var(--bg-muted)]/40">
-                        <td className="px-5 py-3.5">
-                          <p className="font-semibold">{st.fullName}</p>
+                        <td className="px-4 sm:px-5 py-3.5">
+                          <p className="font-semibold text-xs sm:text-sm">{st.fullName}</p>
                           <p className="text-xs font-mono text-[var(--text-secondary)]">
                             {st.studentId}
                           </p>
                         </td>
-                        <td className="px-5 py-3.5 text-xs">
+                        <td className="px-4 sm:px-5 py-3.5 text-xs">
                           <p className="font-medium">{st.campus}</p>
                           <p className="text-[var(--text-secondary)]">{st.batch}</p>
                         </td>
-                        <td className="px-5 py-3.5 font-mono text-xs">{st.totalLectures}</td>
-                        <td className="px-5 py-3.5 text-xs">
+                        <td className="px-4 sm:px-5 py-3.5 font-mono text-xs">{st.totalLectures}</td>
+                        <td className="px-4 sm:px-5 py-3.5 text-xs">
                           <span className="text-emerald-600 font-semibold">{st.present} P</span> •{' '}
                           <span className="text-amber-600 font-semibold">{st.late} L</span>
                         </td>
-                        <td className="px-5 py-3.5 text-xs">
+                        <td className="px-4 sm:px-5 py-3.5 text-xs">
                           <span className="text-rose-600 font-semibold">{st.absent} A</span> •{' '}
                           <span className="text-sky-600 font-semibold">{st.leave} Lv</span>
                         </td>
-                        <td className="px-5 py-3.5">
+                        <td className="px-4 sm:px-5 py-3.5">
                           <div className="flex items-center gap-2">
-                            <div className="w-20 bg-[var(--bg-muted)] h-1.5 rounded-full overflow-hidden">
+                            <div className="w-16 sm:w-20 bg-[var(--bg-muted)] h-1.5 rounded-full overflow-hidden">
                               <div
                                 className={`h-full ${
                                   st.percentage >= 75

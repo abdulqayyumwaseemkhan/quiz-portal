@@ -404,11 +404,6 @@ const StudentNavbar = ({ student }) => {
               <div>
                 <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
                   Email Address
-                  {activeUser.email && (
-                    <span className="text-[11px] text-[var(--text-muted)] ml-2">
-                      (Current on record: <span className="font-mono">{activeUser.email}</span>)
-                    </span>
-                  )}
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={15} />
@@ -425,11 +420,6 @@ const StudentNavbar = ({ student }) => {
               <div>
                 <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
                   Phone / WhatsApp Contact
-                  {activeUser.contact && (
-                    <span className="text-[11px] text-[var(--text-muted)] ml-2">
-                      (Current on record: <span className="font-mono">{activeUser.contact}</span>)
-                    </span>
-                  )}
                 </label>
                 <div className="relative">
                   <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={15} />

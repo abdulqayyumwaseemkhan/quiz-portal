@@ -41,15 +41,26 @@ const submissionSchema = new mongoose.Schema(
     },
     submissionType: {
       type: String,
-      enum: ['file', 'ide', 'document', 'link'],
+      enum: ['file', 'ide', 'document', 'link', 'deployed', 'project'],
       default: 'file',
     },
     projectData: {
       type: mongoose.Schema.Types.Mixed,
     },
+    liveUrl: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    githubUrl: {
+      type: String,
+      default: '',
+      trim: true,
+    },
     driveLink: {
       type: String,
       default: '',
+      trim: true,
     },
     assignmentTitle: {
       type: String,
@@ -77,6 +88,10 @@ const submissionSchema = new mongoose.Schema(
       default: 100,
     },
     feedback: {
+      type: String,
+      default: '',
+    },
+    remarks: {
       type: String,
       default: '',
     },

@@ -139,7 +139,7 @@ const getSubmissionsForAssignment = asyncHandler(async (req, res) => {
 
 const gradeSubmission = asyncHandler(async (req, res) => {
   const { submissionId } = req.params;
-  const { marksObtained, maxMarks, feedback } = req.body;
+  const { marksObtained, maxMarks, feedback, remarks } = req.body;
 
   const submission = await Submission.findById(submissionId);
   if (!submission) {
@@ -154,17 +154,25 @@ const gradeSubmission = asyncHandler(async (req, res) => {
     throw new Error('Not authorized to grade this submission');
   }
 
-  submission.marksObtained = marksObtained !== '' && marksObtained !== null ? Number(marksObtained) : null;
+  submission.marksObtained = marksObtained !== '' && marksObtained !== null && marksObtained !== undefined
+    ? Number(marksObtained)
+    : null;
+
   if (maxMarks !== undefined) {
     submission.maxMarks = Number(maxMarks) || assignment.totalMarks || 100;
   } else if (!submission.maxMarks) {
     submission.maxMarks = assignment.totalMarks || 100;
   }
-  if (feedback !== undefined) {
-    submission.feedback = String(feedback).trim();
+
+  const commentText = feedback !== undefined ? String(feedback).trim() : remarks !== undefined ? String(remarks).trim() : null;
+  if (commentText !== null) {
+    submission.feedback = commentText;
+    submission.remarks = commentText;
   }
-  submission.status = submission.marksObtained !== null ? 'graded' : submission.isLate ? 'late' : 'submitted';
-  submission.gradedAt = submission.marksObtained !== null ? new Date() : null;
+
+  const isGraded = submission.marksObtained !== null;
+  submission.status = isGraded ? 'graded' : submission.isLate ? 'late' : 'submitted';
+  submission.gradedAt = isGraded ? new Date() : null;
 
   const updated = await submission.save();
   res.json(updated);
@@ -208,7 +216,7 @@ const getAssignmentsForStudent = asyncHandler(async (req, res) => {
 
 const submitAssignment = asyncHandler(async (req, res) => {
   const { id: assignmentId, studentId } = req.params;
-  const { driveLink, assignmentTitle, assignmentDetails } = req.body;
+  const { driveLink, liveUrl, githubUrl, assignmentTitle, assignmentDetails } = req.body;
 
   const assignment = await Assignment.findById(assignmentId).lean();
   if (!assignment) {
@@ -216,9 +224,13 @@ const submitAssignment = asyncHandler(async (req, res) => {
     throw new Error('Assignment not found');
   }
 
-  if (!req.file && !driveLink) {
+  const cleanDrive = (driveLink || '').trim();
+  const cleanLive = (liveUrl || '').trim();
+  const cleanGithub = (githubUrl || '').trim();
+
+  if (!req.file && !cleanDrive && !cleanLive && !cleanGithub) {
     res.status(400);
-    throw new Error('Please upload a file or provide a project/Drive link.');
+    throw new Error('Please upload a file or provide a live deployment link / GitHub link.');
   }
 
   const isLate = new Date() > new Date(assignment.dueDate);
@@ -256,6 +268,8 @@ const submitAssignment = asyncHandler(async (req, res) => {
   const subType =
     assignment.projectType === 'document'
       ? 'document'
+      : cleanLive
+      ? 'deployed'
       : req.file
       ? 'file'
       : 'link';
@@ -271,7 +285,9 @@ const submitAssignment = asyncHandler(async (req, res) => {
     filePublicId,
     originalFileName,
     fileSizeBytes,
-    driveLink: (driveLink || '').trim(),
+    liveUrl: cleanLive,
+    githubUrl: cleanGithub,
+    driveLink: cleanDrive || cleanLive,
     assignmentTitle: (assignmentTitle || '').trim(),
     assignmentDetails: (assignmentDetails || '').trim(),
     isLate,

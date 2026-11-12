@@ -9,6 +9,9 @@ import {
   BookOpen,
   Award,
   ExternalLink,
+  Globe,
+  Code2,
+  MessageSquare,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -20,8 +23,10 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [assignmentTitle, setAssignmentTitle] = useState('');
+  const [liveUrl, setLiveUrl] = useState('');
+  const [githubUrl, setGithubUrl] = useState('');
   const [driveLink, setDriveLink] = useState('');
+  const [assignmentTitle, setAssignmentTitle] = useState('');
 
   useEffect(() => {
     if (assignment.mySubmission) {
@@ -30,8 +35,12 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
   }, [assignment.mySubmission]);
 
   const handleUpload = async () => {
-    if (!file && !driveLink.trim()) {
-      toast.error('Please attach a file or provide a project/Drive link');
+    const cleanLive = liveUrl.trim();
+    const cleanGithub = githubUrl.trim();
+    const cleanDrive = driveLink.trim();
+
+    if (!file && !cleanLive && !cleanGithub && !cleanDrive) {
+      toast.error('Please enter a live project link, GitHub URL, or attach a file');
       return;
     }
 
@@ -41,7 +50,9 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
     const formData = new FormData();
     if (file) formData.append('file', file);
     if (assignmentTitle.trim()) formData.append('assignmentTitle', assignmentTitle.trim());
-    if (driveLink.trim()) formData.append('driveLink', driveLink.trim());
+    if (cleanLive) formData.append('liveUrl', cleanLive);
+    if (cleanGithub) formData.append('githubUrl', cleanGithub);
+    if (cleanDrive) formData.append('driveLink', cleanDrive);
 
     try {
       const { data } = await API.post(
@@ -58,8 +69,11 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
       );
       setStatus(data);
       setFile(null);
+      setLiveUrl('');
+      setGithubUrl('');
+      setDriveLink('');
       if (onSubmitted) onSubmitted(assignment._id, data);
-      toast.success('Assignment submitted');
+      toast.success('Assignment submitted successfully');
     } catch (error) {
       toast.error(error.response?.data?.message || 'Submission failed');
     } finally {
@@ -135,19 +149,49 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
         {status ? (
           <div className="space-y-3">
             {status.marksObtained !== null && status.marksObtained !== undefined && (
-              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs">
-                <p className="font-bold text-emerald-700 dark:text-emerald-400">
-                  Score: {status.marksObtained} / {status.maxMarks || assignment.totalMarks || 100}
-                </p>
-                {status.feedback && (
-                  <p className="text-[var(--text-secondary)] mt-1">
-                    <strong>Feedback:</strong> {status.feedback}
-                  </p>
+              <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-emerald-700 dark:text-emerald-400 text-sm">
+                    Score: {status.marksObtained} / {status.maxMarks || assignment.totalMarks || 100}
+                  </span>
+                  <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-500/15 px-2 py-0.5 rounded-full">
+                    {Math.round(((status.marksObtained) / (status.maxMarks || assignment.totalMarks || 100)) * 100)}%
+                  </span>
+                </div>
+                {(status.remarks || status.feedback) && (
+                  <div className="pt-2 border-t border-emerald-500/20">
+                    <p className="font-semibold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5 text-[11px] uppercase tracking-wider">
+                      <MessageSquare size={13} /> Instructor Remarks
+                    </p>
+                    <p className="text-[var(--text-secondary)] mt-1 whitespace-pre-line leading-relaxed text-xs">
+                      {status.remarks || status.feedback}
+                    </p>
+                  </div>
                 )}
               </div>
             )}
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col gap-2">
+              {status.liveUrl && (
+                <a
+                  href={status.liveUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn-primary w-full py-2 text-xs flex items-center justify-center gap-1.5"
+                >
+                  <Globe size={14} /> Open Live Project (Vercel) <ExternalLink size={12} />
+                </a>
+              )}
+              {status.githubUrl && (
+                <a
+                  href={status.githubUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn-secondary w-full py-2 text-xs flex items-center justify-center gap-1.5"
+                >
+                  <Code2 size={14} /> GitHub Repository <ExternalLink size={12} />
+                </a>
+              )}
               {status.submissionType === 'ide' && (
                 <button
                   onClick={() => setIdeAssignment({ assignment, status, readOnly: true })}
@@ -166,14 +210,14 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
                   <FileArchive size={15} /> Download Submitted File
                 </a>
               )}
-              {status.driveLink && (
+              {status.driveLink && status.driveLink !== status.liveUrl && (
                 <a
                   href={status.driveLink}
                   target="_blank"
                   rel="noreferrer"
                   className="btn-secondary w-full py-2 text-xs flex items-center justify-center gap-1.5"
                 >
-                  <ExternalLink size={15} /> View Submitted Link
+                  <ExternalLink size={15} /> View Attached Link
                 </a>
               )}
             </div>
@@ -190,20 +234,34 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
             {assignment.projectType === 'document' && (
               <input
                 type="text"
-                placeholder="Submission Title (Optional)"
+                placeholder="Submission Title"
                 className="input-field py-2 text-xs"
                 value={assignmentTitle}
                 onChange={(e) => setAssignmentTitle(e.target.value)}
               />
             )}
 
-            <input
-              type="url"
-              placeholder="GitHub / Google Drive / Live Link (Optional)"
-              className="input-field py-2 text-xs"
-              value={driveLink}
-              onChange={(e) => setDriveLink(e.target.value)}
-            />
+            <div className="relative">
+              <Globe className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={14} />
+              <input
+                type="url"
+                placeholder="Live Project / Vercel URL (e.g. https://my-app.vercel.app)"
+                className="input-field pl-8 py-2 text-xs"
+                value={liveUrl}
+                onChange={(e) => setLiveUrl(e.target.value)}
+              />
+            </div>
+
+            <div className="relative">
+              <Code2 className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={14} />
+              <input
+                type="url"
+                placeholder="GitHub Repository URL (e.g. https://github.com/...)"
+                className="input-field pl-8 py-2 text-xs"
+                value={githubUrl}
+                onChange={(e) => setGithubUrl(e.target.value)}
+              />
+            </div>
 
             <label className="flex items-center justify-center w-full py-2.5 px-3 bg-[var(--bg-muted)] border border-dashed border-[var(--border)] rounded-xl cursor-pointer hover:border-[var(--accent)] text-xs">
               <UploadCloud className="w-4 h-4 mr-2 text-[var(--text-secondary)]" />
@@ -211,8 +269,8 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
                 {file
                   ? file.name
                   : assignment.projectType === 'document'
-                  ? 'Upload PDF / DOC / ZIP (Max 4MB)'
-                  : 'Upload .ZIP File (Max 4MB)'}
+                  ? 'Upload Document / PDF / ZIP (Optional)'
+                  : 'Upload ZIP / Source Archive (Optional)'}
               </span>
               <input
                 type="file"
@@ -221,8 +279,8 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
                 onChange={(e) => {
                   const selected = e.target.files?.[0];
                   if (!selected) return;
-                  if (selected.size > 4 * 1024 * 1024) {
-                    toast.error('File exceeds 4MB limit. Use a Drive/GitHub link for larger files.');
+                  if (selected.size > 10 * 1024 * 1024) {
+                    toast.error('File exceeds 10MB limit. Use a Vercel/GitHub/Drive link for larger projects.');
                     return;
                   }
                   setFile(selected);
@@ -243,7 +301,7 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
             <button
               type="button"
               onClick={handleUpload}
-              disabled={uploading || (!file && !driveLink.trim())}
+              disabled={uploading || (!file && !liveUrl.trim() && !githubUrl.trim() && !driveLink.trim())}
               className="btn-primary w-full py-2.5 text-xs disabled:opacity-40"
             >
               {uploading ? `Uploading ${progress}%...` : isPastDue ? 'Submit Late' : 'Submit Assignment'}

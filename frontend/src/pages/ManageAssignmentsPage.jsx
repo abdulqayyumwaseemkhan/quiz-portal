@@ -200,9 +200,9 @@ const ManageAssignmentsPage = () => {
                   value={formData.projectType}
                   onChange={(e) => setFormData({ ...formData, projectType: e.target.value })}
                 >
-                  <option value="vanilla">Vanilla (HTML/CSS/JS + ZIP + Link)</option>
-                  <option value="react">React (Web IDE + ZIP + Link)</option>
-                  <option value="document">Document / Drive Video Link</option>
+                  <option value="react">React Project (Live Vercel / GitHub / ZIP)</option>
+                  <option value="vanilla">Web Project (HTML/CSS/JS / Live / ZIP)</option>
+                  <option value="document">Document / Drive / PDF Link</option>
                 </select>
               </div>
 
