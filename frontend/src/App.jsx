@@ -5,30 +5,50 @@ import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
-// Route-level code splitting
-const StudentLoginPage = lazy(() => import('./pages/StudentLoginPage'));
-const StudentDashboardPage = lazy(() => import('./pages/StudentDashboardPage'));
-const QuizListPage = lazy(() => import('./pages/QuizListPage'));
-const QuizAttemptPage = lazy(() => import('./pages/QuizAttemptPage'));
-const ResultPage = lazy(() => import('./pages/ResultPage'));
-const StudentAssignmentsPage = lazy(() => import('./pages/StudentAssignmentsPage'));
-const StudentNotesPage = lazy(() => import('./pages/StudentNotesPage'));
-const StudentLecturesPage = lazy(() => import('./pages/StudentLecturesPage'));
-const StudentAttendancePage = lazy(() => import('./pages/StudentAttendancePage'));
+// Route-level code splitting with auto-retry on new deployment chunk mismatch
+const lazyWithRetry = (componentImport) =>
+  lazy(async () => {
+    const pageHasAlreadyBeenForceRefreshed = JSON.parse(
+      window.sessionStorage.getItem('page_has_been_force_refreshed') || 'false'
+    );
 
-const AdminLoginPage = lazy(() => import('./pages/AdminLoginPage'));
-const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
-const CreateQuizPage = lazy(() => import('./pages/CreateQuizPage'));
-const EditQuizPage = lazy(() => import('./pages/EditQuizPage'));
-const ManageQuestionsPage = lazy(() => import('./pages/ManageQuestionsPage'));
-const ManageStudentsPage = lazy(() => import('./pages/ManageStudentsPage'));
-const AdminResultsPage = lazy(() => import('./pages/AdminResultsPage'));
-const ManageAssignmentsPage = lazy(() => import('./pages/ManageAssignmentsPage'));
-const AssignmentSubmissionsPage = lazy(() => import('./pages/AssignmentSubmissionsPage'));
-const ManageNotesPage = lazy(() => import('./pages/ManageNotesPage'));
-const ManageCampusesPage = lazy(() => import('./pages/ManageCampusesPage'));
-const ManageLecturesPage = lazy(() => import('./pages/ManageLecturesPage'));
-const ManageAttendancePage = lazy(() => import('./pages/ManageAttendancePage'));
+    try {
+      const component = await componentImport();
+      window.sessionStorage.setItem('page_has_been_force_refreshed', 'false');
+      return component;
+    } catch (error) {
+      if (!pageHasAlreadyBeenForceRefreshed) {
+        window.sessionStorage.setItem('page_has_been_force_refreshed', 'true');
+        window.location.reload();
+        return { default: () => null };
+      }
+      throw error;
+    }
+  });
+
+const StudentLoginPage = lazyWithRetry(() => import('./pages/StudentLoginPage'));
+const StudentDashboardPage = lazyWithRetry(() => import('./pages/StudentDashboardPage'));
+const QuizListPage = lazyWithRetry(() => import('./pages/QuizListPage'));
+const QuizAttemptPage = lazyWithRetry(() => import('./pages/QuizAttemptPage'));
+const ResultPage = lazyWithRetry(() => import('./pages/ResultPage'));
+const StudentAssignmentsPage = lazyWithRetry(() => import('./pages/StudentAssignmentsPage'));
+const StudentNotesPage = lazyWithRetry(() => import('./pages/StudentNotesPage'));
+const StudentLecturesPage = lazyWithRetry(() => import('./pages/StudentLecturesPage'));
+const StudentAttendancePage = lazyWithRetry(() => import('./pages/StudentAttendancePage'));
+
+const AdminLoginPage = lazyWithRetry(() => import('./pages/AdminLoginPage'));
+const AdminDashboard = lazyWithRetry(() => import('./pages/AdminDashboard'));
+const CreateQuizPage = lazyWithRetry(() => import('./pages/CreateQuizPage'));
+const EditQuizPage = lazyWithRetry(() => import('./pages/EditQuizPage'));
+const ManageQuestionsPage = lazyWithRetry(() => import('./pages/ManageQuestionsPage'));
+const ManageStudentsPage = lazyWithRetry(() => import('./pages/ManageStudentsPage'));
+const AdminResultsPage = lazyWithRetry(() => import('./pages/AdminResultsPage'));
+const ManageAssignmentsPage = lazyWithRetry(() => import('./pages/ManageAssignmentsPage'));
+const AssignmentSubmissionsPage = lazyWithRetry(() => import('./pages/AssignmentSubmissionsPage'));
+const ManageNotesPage = lazyWithRetry(() => import('./pages/ManageNotesPage'));
+const ManageCampusesPage = lazyWithRetry(() => import('./pages/ManageCampusesPage'));
+const ManageLecturesPage = lazyWithRetry(() => import('./pages/ManageLecturesPage'));
+const ManageAttendancePage = lazyWithRetry(() => import('./pages/ManageAttendancePage'));
 
 const PageSkeleton = () => (
   <div className="min-h-screen bg-[var(--bg-primary)] p-6">
