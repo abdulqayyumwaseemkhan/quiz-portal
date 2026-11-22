@@ -209,25 +209,25 @@ const AdminNavbar = () => {
   return (
     <>
       {/* Mobile Header */}
-      <div className="lg:hidden sticky top-0 z-40 flex items-center justify-between px-4 h-14 bg-[var(--bg-surface)] border-b border-[var(--border)]">
+      <div className="lg:hidden sticky top-0 z-40 flex items-center justify-between px-4 h-14 bg-[var(--bg-header)] border-b border-[var(--border)]">
         <div className="flex items-center gap-2.5">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
-            className="p-2 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-muted)]"
+            className="p-2 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
             aria-label="Open navigation"
           >
             <Menu size={20} />
           </button>
           <span className="font-bold text-base text-[var(--text-primary)] tracking-tight">
-            BanoQabil Admin
+            BanoQabil LMS
           </span>
         </div>
         <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={openSecurityModal}
-            className="p-2 rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-muted)]"
+            className="p-2 rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
             title="2FA & Security Key Settings"
           >
             <ShieldCheck size={17} />
@@ -235,7 +235,7 @@ const AdminNavbar = () => {
           <button
             type="button"
             onClick={toggleTheme}
-            className="p-2 rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-muted)]"
+            className="p-2 rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
             title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
           >
             {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
@@ -246,20 +246,23 @@ const AdminNavbar = () => {
       {/* Mobile Drawer Backdrop */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-50 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-50 bg-black/60 lg:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
       {/* Sidebar (Desktop fixed, Mobile drawer) */}
       <aside
-        className={`w-64 bg-[var(--bg-surface)] h-screen fixed left-0 top-0 flex flex-col z-50 border-r border-[var(--border)] transition-transform duration-200 ${
+        className={`w-64 bg-[var(--bg-sidebar)] h-screen fixed left-0 top-0 flex flex-col z-50 border-r border-[var(--border)] transition-transform duration-200 ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
         <div className="px-5 py-4 border-b border-[var(--border)] flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-bold text-[var(--text-primary)] tracking-tight">BanoQabil</h2>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-[var(--brand-blue)] inline-block" />
+              <h2 className="text-base font-bold text-[var(--text-primary)] tracking-tight">BanoQabil</h2>
+            </div>
             <p className="text-[11px] text-[var(--text-muted)] font-medium uppercase tracking-wider mt-0.5 truncate max-w-[180px]">
               {admin?.email || 'Admin Portal'}
             </p>
@@ -267,7 +270,7 @@ const AdminNavbar = () => {
           <button
             type="button"
             onClick={() => setMobileOpen(false)}
-            className="lg:hidden p-1.5 rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-muted)]"
+            className="lg:hidden p-1.5 rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-hover)]"
           >
             <X size={18} />
           </button>
@@ -284,13 +287,13 @@ const AdminNavbar = () => {
                 key={item.path}
                 to={item.path}
                 onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex items-center gap-3 px-3.5 py-2 rounded-lg text-xs font-semibold transition-colors ${
                   isActive
-                    ? 'bg-[var(--accent)] text-white font-semibold'
-                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-muted)] hover:text-[var(--text-primary)]'
+                    ? 'bg-[var(--brand-blue)] text-white shadow-sm'
+                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]'
                 }`}
               >
-                <Icon size={18} />
+                <Icon size={16} />
                 <span>{item.name}</span>
               </Link>
             );
@@ -301,22 +304,22 @@ const AdminNavbar = () => {
           <button
             type="button"
             onClick={openSecurityModal}
-            className="flex items-center gap-3 w-full px-3.5 py-2.5 rounded-lg text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-muted)] hover:text-[var(--text-primary)] transition-colors"
+            className="flex items-center gap-3 w-full px-3.5 py-2 rounded-lg text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors"
           >
-            <ShieldCheck size={18} />
+            <ShieldCheck size={16} />
             <span>2FA & Security Key</span>
           </button>
 
           <button
             type="button"
             onClick={toggleTheme}
-            className="flex items-center justify-between w-full px-3.5 py-2.5 rounded-lg text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-muted)] transition-colors"
+            className="flex items-center justify-between w-full px-3.5 py-2 rounded-lg text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors"
           >
             <span className="flex items-center gap-3">
-              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
               <span>{theme === 'dark' ? 'Light Theme' : 'Dark Theme'}</span>
             </span>
-            <span className="text-xs px-2 py-0.5 rounded bg-[var(--bg-muted)] text-[var(--text-muted)] uppercase">
+            <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--bg-muted)] text-[var(--text-muted)] uppercase font-mono font-bold">
               {theme}
             </span>
           </button>
@@ -324,9 +327,9 @@ const AdminNavbar = () => {
           <button
             type="button"
             onClick={handleLogout}
-            className="flex items-center gap-3 w-full px-3.5 py-2.5 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors font-medium text-sm"
+            className="flex items-center gap-3 w-full px-3.5 py-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors font-semibold text-xs"
           >
-            <LogOut size={18} />
+            <LogOut size={16} />
             <span>Sign Out</span>
           </button>
         </div>

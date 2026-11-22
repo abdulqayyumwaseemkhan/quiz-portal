@@ -19,17 +19,24 @@ export default {
           700: '#1d4ed8',
           800: '#1e40af',
           900: '#1e3a8a',
-          950: '#172554',
+          950: '#0f172a',
+        },
+        brand: {
+          blue: '#2563eb',
+          hover: '#1d4ed8',
+          light: '#eff6ff',
+          cyan: '#0891b2',
+          slate: '#0f172a',
         },
         light: {
           50: '#ffffff',
           100: '#f8fafc',
           200: '#f1f5f9',
-          300: '#e2e8f0',
+          300: '#e8edf5',
         }
       },
       fontFamily: {
-        sans: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        sans: ['"Inter"', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
     },

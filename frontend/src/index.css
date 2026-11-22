@@ -5,55 +5,98 @@
 @layer base {
   :root,
   [data-theme="light"] {
-    --bg-primary: #f8fafc;
-    --bg-surface: #ffffff;
-    --bg-muted: #f1f5f9;
-    --text-primary: #0f172a;
-    --text-secondary: #475569;
-    --text-muted: #94a3b8;
-    --border: #e2e8f0;
-    --accent: #4f46e5;
-    --accent-hover: #4338ca;
-    --accent-subtle: rgba(79, 70, 229, 0.08);
-    --accent-glow: rgba(79, 70, 229, 0.28);
-    --card-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 6px 16px -2px rgba(15, 23, 42, 0.06);
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    /* Primary Brand Palette */
+    --brand-blue: #2563EB;
+    --brand-hover: #1D4ED8;
+    --brand-light: #EFF6FF;
+    --brand-cyan: #0891B2;
+    --brand-slate: #0F172A;
+
+    /* Light Theme Surfaces & Text */
+    --bg-primary: #F5F7FB;
+    --bg-surface: #FFFFFF;
+    --bg-sidebar: #FFFFFF;
+    --bg-header: #FFFFFF;
+    --bg-muted: #F1F5F9;
+    --bg-hover: #F1F5F9;
+    --text-primary: #172033;
+    --text-secondary: #64748B;
+    --text-muted: #94A3B8;
+    --border: #E8EDF5;
+
+    /* Light Theme Status Colors */
+    --status-success: #16A34A;
+    --status-warning: #D97706;
+    --status-danger: #DC2626;
+    --status-info: #0284C7;
+
+    /* Compatibility & Accent Tokens */
+    --accent: #2563EB;
+    --accent-hover: #1D4ED8;
+    --accent-subtle: #EFF6FF;
+    --accent-glow: rgba(37, 99, 235, 0.18);
+    --card-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.03);
+    --card-shadow-hover: 0 4px 12px -2px rgba(15, 23, 42, 0.06);
+
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     color-scheme: light;
   }
 
   [data-theme="dark"] {
-    --bg-primary: #0a0e17;
-    --bg-surface: #111827;
-    --bg-muted: #1e293b;
-    --text-primary: #f8fafc;
-    --text-secondary: #94a3b8;
-    --text-muted: #64748b;
-    --border: #1e293b;
-    --accent: #6366f1;
-    --accent-hover: #818cf8;
-    --accent-subtle: rgba(99, 102, 241, 0.16);
-    --accent-glow: rgba(99, 102, 241, 0.35);
-    --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.6), 0 0 1px 1px rgba(255, 255, 255, 0.06);
+    /* Primary Brand Palette */
+    --brand-blue: #2563EB;
+    --brand-hover: #1D4ED8;
+    --brand-light: #1E293B;
+    --brand-cyan: #0891B2;
+    --brand-slate: #0F172A;
+
+    /* Dark Theme Surfaces & Text */
+    --bg-primary: #0B1220;
+    --bg-surface: #111C2E;
+    --bg-sidebar: #0E192A;
+    --bg-header: #111C2E;
+    --bg-muted: #1A2940;
+    --bg-hover: #1A2940;
+    --text-primary: #F1F5F9;
+    --text-secondary: #94A3B8;
+    --text-muted: #64748B;
+    --border: #263449;
+
+    /* Dark Theme Status Colors */
+    --status-success: #4ADE80;
+    --status-warning: #FBBF24;
+    --status-danger: #F87171;
+    --status-info: #38BDF8;
+
+    /* Compatibility & Accent Tokens */
+    --accent: #2563EB;
+    --accent-hover: #3B82F6;
+    --accent-subtle: rgba(37, 99, 235, 0.16);
+    --accent-glow: rgba(37, 99, 235, 0.32);
+    --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.35);
+    --card-shadow-hover: 0 4px 16px -2px rgba(0, 0, 0, 0.55);
+
     color-scheme: dark;
   }
 
   body {
     background-color: var(--bg-primary);
     color: var(--text-primary);
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     min-height: 100vh;
     margin: 0;
     display: block;
     line-height: 1.5;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.011em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     transition: background-color 0.15s ease, color 0.15s ease;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    letter-spacing: -0.025em;
+    letter-spacing: -0.022em;
     color: var(--text-primary);
+    font-weight: 700;
   }
 
   code, pre, .font-mono {
@@ -62,46 +105,46 @@
 }
 
 @layer components {
+  /* Minimal Enterprise Surface Glass / Panels */
   .glass {
     background-color: var(--bg-surface);
     border: 1px solid var(--border);
     box-shadow: var(--card-shadow);
   }
 
+  /* Enterprise SaaS Cards (12px radius, subtle border, minimal shadow) */
   .card {
     background-color: var(--bg-surface);
     border: 1px solid var(--border);
-    border-radius: 0.875rem;
-    padding: 1.5rem;
+    border-radius: 0.75rem; /* 12px */
+    padding: 1.25rem;
     box-shadow: var(--card-shadow);
-    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
 
   .card:hover {
-    box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.08);
+    box-shadow: var(--card-shadow-hover);
   }
 
-  [data-theme="dark"] .card:hover {
-    box-shadow: 0 8px 24px -2px rgba(0, 0, 0, 0.7);
-  }
-
+  /* Primary Button: Royal Blue */
   .btn-primary {
-    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+    background-color: var(--brand-blue);
     color: #ffffff;
     font-weight: 600;
     font-size: 0.875rem;
     line-height: 1.25rem;
-    padding: 0.6rem 1.15rem;
-    border-radius: 0.625rem;
-    box-shadow: 0 2px 8px -1px var(--accent-glow);
-    transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease, filter 0.15s ease;
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 0.55rem 1rem;
+    border-radius: 0.625rem; /* 10px */
+    border: 1px solid transparent;
+    transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
   }
 
   .btn-primary:hover:not(:disabled) {
-    filter: brightness(1.08);
-    box-shadow: 0 4px 14px -1px var(--accent-glow);
-    transform: translateY(-0.5px);
+    background-color: var(--brand-hover);
   }
 
   .btn-primary:active:not(:disabled) {
@@ -109,12 +152,12 @@
   }
 
   .btn-primary:disabled {
-    opacity: 0.55;
+    opacity: 0.5;
     cursor: not-allowed;
-    box-shadow: none;
     filter: none;
   }
 
+  /* Secondary Button: Neutral surface with subtle border */
   .btn-secondary {
     background-color: var(--bg-surface);
     color: var(--text-primary);
@@ -122,29 +165,67 @@
     font-weight: 600;
     font-size: 0.875rem;
     line-height: 1.25rem;
-    padding: 0.6rem 1.15rem;
-    border-radius: 0.625rem;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    padding: 0.55rem 1rem;
+    border-radius: 0.625rem; /* 10px */
     transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
   }
 
   .btn-secondary:hover:not(:disabled) {
-    background-color: var(--bg-muted);
-    border-color: var(--accent-subtle);
+    background-color: var(--bg-hover);
+    border-color: var(--border);
   }
 
   .btn-secondary:disabled {
-    opacity: 0.55;
+    opacity: 0.5;
     cursor: not-allowed;
   }
 
+  /* Danger Button */
+  .btn-danger {
+    background-color: var(--status-danger);
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 0.875rem;
+    padding: 0.55rem 1rem;
+    border-radius: 0.625rem;
+    border: 1px solid transparent;
+    transition: filter 0.15s ease;
+    cursor: pointer;
+  }
+
+  .btn-danger:hover:not(:disabled) {
+    filter: brightness(0.9);
+  }
+
+  /* Success Button */
+  .btn-success {
+    background-color: var(--status-success);
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 0.875rem;
+    padding: 0.55rem 1rem;
+    border-radius: 0.625rem;
+    border: 1px solid transparent;
+    transition: filter 0.15s ease;
+    cursor: pointer;
+  }
+
+  .btn-success:hover:not(:disabled) {
+    filter: brightness(0.9);
+  }
+
+  /* Consistent Form Input Heights, Subtle Borders, Blue Focus Ring */
   .input-field {
     width: 100%;
-    padding: 0.65rem 0.9rem;
+    padding: 0.55rem 0.85rem;
     border: 1px solid var(--border);
     background-color: var(--bg-surface);
     color: var(--text-primary);
-    border-radius: 0.625rem;
+    border-radius: 0.625rem; /* 10px */
     font-size: 0.875rem;
     line-height: 1.25rem;
     outline: none;
@@ -156,7 +237,84 @@
   }
 
   .input-field:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-subtle);
+    border-color: var(--brand-blue);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+  }
+
+  /* Structured Enterprise Table Container */
+  .table-container {
+    width: 100%;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    overflow: hidden;
+  }
+
+  /* Professional Status Badges */
+  .badge-success {
+    background-color: rgba(22, 163, 74, 0.12);
+    color: var(--status-success);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .badge-warning {
+    background-color: rgba(217, 119, 6, 0.12);
+    color: var(--status-warning);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .badge-danger {
+    background-color: rgba(220, 38, 38, 0.12);
+    color: var(--status-danger);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .badge-info {
+    background-color: rgba(2, 132, 199, 0.12);
+    color: var(--status-info);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  /* Subtle Custom Scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
   }
 }

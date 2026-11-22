@@ -180,11 +180,11 @@ const StudentNavbar = ({ student }) => {
 
   return (
     <>
-      <nav className="sticky top-0 z-40 bg-[var(--bg-surface)] border-b border-[var(--border)]">
+      <nav className="sticky top-0 z-40 bg-[var(--bg-header)] border-b border-[var(--border)]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-16">
             <Link to="/dashboard" className="flex items-center gap-2.5">
-              <div className="bg-[var(--accent)] p-2 rounded-lg text-white">
+              <div className="bg-[var(--brand-blue)] p-2 rounded-xl text-white shadow-sm">
                 <BookOpen size={18} />
               </div>
               <div>
@@ -192,7 +192,7 @@ const StudentNavbar = ({ student }) => {
                   BanoQabil
                 </span>
                 <span className="text-[11px] text-[var(--text-muted)] font-medium">
-                  Student Portal
+                  Student LMS
                 </span>
               </div>
             </Link>
@@ -206,10 +206,10 @@ const StudentNavbar = ({ student }) => {
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                       isActive
-                        ? 'bg-[var(--accent)] text-white'
-                        : 'text-[var(--text-secondary)] hover:bg-[var(--bg-muted)] hover:text-[var(--text-primary)]'
+                        ? 'bg-[var(--brand-blue)] text-white shadow-sm'
+                        : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]'
                     }`}
                   >
                     <Icon size={15} /> {item.name}
@@ -222,7 +222,7 @@ const StudentNavbar = ({ student }) => {
               <button
                 type="button"
                 onClick={toggleTheme}
-                className="p-2 rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-muted)] transition-colors"
+                className="p-2 rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors"
                 title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
               >
                 {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
@@ -231,7 +231,7 @@ const StudentNavbar = ({ student }) => {
               <button
                 type="button"
                 onClick={handleOpenProfileModal}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--bg-muted)] text-left transition-colors"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--bg-hover)] text-left transition-colors"
                 title="Account Details & Password Settings"
               >
                 <User size={15} className="text-[var(--text-muted)]" />
@@ -260,7 +260,7 @@ const StudentNavbar = ({ student }) => {
               <button
                 type="button"
                 onClick={toggleTheme}
-                className="p-2 rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-muted)]"
+                className="p-2 rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
                 aria-label="Toggle theme"
               >
                 {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
@@ -268,7 +268,7 @@ const StudentNavbar = ({ student }) => {
               <button
                 type="button"
                 onClick={handleOpenProfileModal}
-                className="p-2 rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-muted)]"
+                className="p-2 rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
                 aria-label="Account settings"
               >
                 <User size={17} />
@@ -276,7 +276,7 @@ const StudentNavbar = ({ student }) => {
               <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className="p-2 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-muted)]"
+                className="p-2 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
                 aria-label="Toggle menu"
               >
                 {isOpen ? <X size={20} /> : <Menu size={20} />}
@@ -298,8 +298,8 @@ const StudentNavbar = ({ student }) => {
                   onClick={() => setIsOpen(false)}
                   className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                     isActive
-                      ? 'bg-[var(--accent)] text-white font-semibold'
-                      : 'text-[var(--text-secondary)] hover:bg-[var(--bg-muted)]'
+                      ? 'bg-[var(--brand-blue)] text-white font-semibold'
+                      : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
                   }`}
                 >
                   <Icon size={17} /> {item.name}
