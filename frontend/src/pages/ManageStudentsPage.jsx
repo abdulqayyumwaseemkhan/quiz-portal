@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 import API from '../api';
 import Navbar from '../components/AdminNavbar';
 import { useLiveRefresh } from '../utils/liveSync';
+import { clientCache } from '../utils/clientCache';
 import {
   UserPlus,
   Trash2,
