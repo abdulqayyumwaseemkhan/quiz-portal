@@ -471,6 +471,40 @@ const uploadIdeImage = asyncHandler(async (req, res) => {
   }
 });
 
+const deleteSubmission = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const submission = await Submission.findById(id);
+  if (!submission) {
+    res.status(404);
+    throw new Error('Assignment submission not found');
+  }
+
+  // Extra Security Check: Ensure admin is authorized (superadmin or creator of this assignment)
+  const assignment = await Assignment.findById(submission.assignmentId);
+  if (assignment && req.admin.role !== 'superadmin') {
+    if (assignment.createdBy && assignment.createdBy.toString() !== req.admin._id.toString()) {
+      res.status(403);
+      throw new Error('Not authorized to delete submissions for assignments created by another admin');
+    }
+  }
+
+  // If there's an uploaded file in Cloudinary, clean it up
+  if (submission.filePublicId) {
+    try {
+      await cloudinary.uploader.destroy(submission.filePublicId, { resource_type: 'raw' });
+    } catch (cErr) {
+      console.warn('Cloudinary cleanup warning on deleteSubmission:', cErr?.message || cErr);
+    }
+  }
+
+  // Permanently delete the submission document from database
+  await Submission.deleteOne({ _id: submission._id });
+
+  res.json({
+    message: 'Assignment submission permanently deleted from database. Student can now re-submit.',
+  });
+});
+
 module.exports = {
   createAssignment,
   getAssignments,
@@ -483,4 +517,5 @@ module.exports = {
   submitIdeAssignment,
   uploadIdeImage,
   getMySubmissionStatus,
+  deleteSubmission,
 };

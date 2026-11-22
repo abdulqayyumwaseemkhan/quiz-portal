@@ -7,12 +7,14 @@ const {
   deleteAssignment,
   getSubmissionsForAssignment,
   gradeSubmission,
+  deleteSubmission,
 } = require('../controllers/assignmentController');
 const { protectAdmin } = require('../middleware/auth');
 
 router.post('/', protectAdmin, createAssignment);
 router.get('/', protectAdmin, getAssignments);
 router.put('/submissions/:submissionId/grade', protectAdmin, gradeSubmission);
+router.delete('/submissions/:id', protectAdmin, deleteSubmission);
 router.put('/:id', protectAdmin, updateAssignment);
 router.delete('/:id', protectAdmin, deleteAssignment);
 router.get('/:id/submissions', protectAdmin, getSubmissionsForAssignment);

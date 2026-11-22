@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import API from '../api';
 import Navbar from '../components/AdminNavbar';
-import { Search, Filter, Download, Users } from 'lucide-react';
+import { Search, Filter, Download, Users, Trash2, AlertTriangle, X } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { broadcastLiveUpdate } from '../utils/liveSync';
 
 const AdminResultsPage = () => {
   const [results, setResults] = useState([]);
@@ -11,6 +12,8 @@ const AdminResultsPage = () => {
   const [filter, setFilter] = useState({ quizId: '', studentId: '', campus: '', batch: '' });
   const [meta, setMeta] = useState({ campuses: [], batches: [] });
   const [loading, setLoading] = useState(true);
+  const [deletingResult, setDeletingResult] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -66,6 +69,28 @@ const AdminResultsPage = () => {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Quiz Results');
     XLSX.writeFile(wb, `quiz_results_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
+  const handleDeleteQuizResult = async () => {
+    if (!deletingResult) return;
+    setDeleting(true);
+    try {
+      await API.delete(`/admin/results/${deletingResult._id}`);
+      setResults((prev) => prev.filter((r) => r._id !== deletingResult._id));
+      toast.success(
+        `Deleted attempt for ${deletingResult.studentName}. Student can now re-attempt the quiz.`
+      );
+      broadcastLiveUpdate('QUIZ_RESULT_DELETED', {
+        resultId: deletingResult._id,
+        studentId: deletingResult.studentId,
+        quizId: deletingResult.quizId?._id || deletingResult.quizId,
+      });
+      setDeletingResult(null);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete quiz result');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -177,6 +202,7 @@ const AdminResultsPage = () => {
                   <th className="px-5 py-3.5">Score</th>
                   <th className="px-5 py-3.5">Percentage</th>
                   <th className="px-5 py-3.5">Submitted</th>
+                  <th className="px-5 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border)]">
@@ -215,6 +241,16 @@ const AdminResultsPage = () => {
                     <td className="px-5 py-3.5 text-xs text-[var(--text-secondary)]">
                       {res.submittedAt ? new Date(res.submittedAt).toLocaleString() : '—'}
                     </td>
+                    <td className="px-5 py-3.5 text-right">
+                      <button
+                        onClick={() => setDeletingResult(res)}
+                        className="py-1 px-2.5 rounded-lg text-rose-500 hover:bg-rose-500/10 hover:text-rose-600 transition-colors inline-flex items-center gap-1.5 text-xs font-semibold"
+                        title="Delete Quiz Attempt"
+                      >
+                        <Trash2 size={14} />
+                        <span>Delete</span>
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -227,6 +263,84 @@ const AdminResultsPage = () => {
             </div>
           )}
         </div>
+
+        {/* Delete Confirmation Modal with Safety Checks */}
+        {deletingResult && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+            <div className="card max-w-md w-full p-6 shadow-2xl border border-[var(--border)] bg-[var(--bg-surface)] relative">
+              <button
+                onClick={() => !deleting && setDeletingResult(null)}
+                className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                disabled={deleting}
+              >
+                <X size={18} />
+              </button>
+
+              <div className="flex items-start gap-3.5 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-rose-500/15 text-rose-600 flex items-center justify-center shrink-0">
+                  <AlertTriangle size={22} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-[var(--text-primary)]">
+                    Delete Quiz Attempt?
+                  </h3>
+                  <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+                    Permanent database deletion action
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-[var(--bg-muted)] border border-[var(--border)] mb-4 text-xs space-y-1.5">
+                <div className="flex justify-between">
+                  <span className="text-[var(--text-secondary)]">Student:</span>
+                  <span className="font-semibold text-[var(--text-primary)]">
+                    {deletingResult.studentName} ({deletingResult.studentId})
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[var(--text-secondary)]">Quiz:</span>
+                  <span className="font-medium text-[var(--text-primary)]">
+                    {deletingResult.quizId?.title || 'Quiz'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[var(--text-secondary)]">Attempt #:</span>
+                  <span className="font-mono">{deletingResult.attemptNo || 1}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[var(--text-secondary)]">Current Score:</span>
+                  <span className="font-bold text-rose-600">
+                    {deletingResult.score} / {deletingResult.totalPossibleMarks} ({deletingResult.percentage}%)
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-700 dark:text-amber-300 mb-5 leading-relaxed">
+                <strong>Extra Check & Effect:</strong> Deleting this attempt removes it completely from MongoDB. The student will immediately be able to take this quiz again from their portal.
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setDeletingResult(null)}
+                  disabled={deleting}
+                  className="btn-secondary py-2 px-4 text-xs font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteQuizResult}
+                  disabled={deleting}
+                  className="bg-rose-600 hover:bg-rose-700 text-white font-semibold py-2 px-4 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
+                >
+                  <Trash2 size={14} />
+                  <span>{deleting ? 'Deleting from DB...' : 'Yes, Delete & Allow Re-attempt'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

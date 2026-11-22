@@ -393,6 +393,39 @@ const getAllResults = asyncHandler(async (req, res) => {
   res.json(results);
 });
 
+const deleteQuizResult = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const result = await Result.findById(id);
+  if (!result) {
+    res.status(404);
+    throw new Error('Quiz result not found');
+  }
+
+  // Extra Security Check: Ensure admin is authorized (superadmin or creator of this quiz)
+  const quiz = await Quiz.findById(result.quizId);
+  if (quiz && req.admin.role !== 'superadmin') {
+    if (quiz.createdBy && quiz.createdBy.toString() !== req.admin._id.toString()) {
+      res.status(403);
+      throw new Error('Not authorized to delete results for quizzes created by another admin');
+    }
+  }
+
+  // Also clean up any lingering in_progress attempts for this student on this quiz
+  // so the student can cleanly attempt again
+  await Result.deleteMany({
+    studentId: result.studentId,
+    quizId: result.quizId,
+    status: 'in_progress',
+  });
+
+  // Permanently delete this result record from database
+  await Result.deleteOne({ _id: result._id });
+
+  res.json({
+    message: 'Quiz attempt successfully deleted from database. Student can now re-attempt the quiz.',
+  });
+});
+
 module.exports = {
   createQuiz,
   getQuizzes,
@@ -406,4 +439,5 @@ module.exports = {
   updateQuestion,
   deleteQuestion,
   getAllResults,
+  deleteQuizResult,
 };

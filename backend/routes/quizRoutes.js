@@ -12,8 +12,11 @@ const {
   getQuestionsByQuiz,
   updateQuestion,
   deleteQuestion,
+  deleteQuizResult,
 } = require('../controllers/quizController');
 const { protectAdmin } = require('../middleware/auth');
+
+router.delete('/results/:id', protectAdmin, deleteQuizResult);
 
 router.route('/')
   .get(protectAdmin, getQuizzes)

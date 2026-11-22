@@ -42,7 +42,7 @@ const QuizListPage = () => {
   }, [student, fetchQuizzes]);
 
   // Silently re-sync quizzes when admin publishes a quiz or user refocused window
-  useLiveRefresh(fetchQuizzes, 12000, ['QUIZ_PUBLISHED', 'QUIZ_SUBMITTED']);
+  useLiveRefresh(fetchQuizzes, 12000, ['QUIZ_PUBLISHED', 'QUIZ_SUBMITTED', 'QUIZ_RESULT_DELETED']);
 
   const filteredQuizzes = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();

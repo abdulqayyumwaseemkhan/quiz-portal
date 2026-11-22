@@ -451,7 +451,12 @@ const StudentAssignmentsPage = () => {
   }, [student, fetchAssignments]);
 
   // Live silent background sync: revalidates when admin grades/creates an assignment or when student re-focuses tab
-  useLiveRefresh(fetchAssignments, 8000, ['ASSIGNMENT_GRADED', 'ASSIGNMENT_CREATED', 'ASSIGNMENT_UPDATED']);
+  useLiveRefresh(fetchAssignments, 8000, [
+    'ASSIGNMENT_GRADED',
+    'ASSIGNMENT_CREATED',
+    'ASSIGNMENT_UPDATED',
+    'ASSIGNMENT_SUBMISSION_DELETED',
+  ]);
 
   const handleSubmittedUpdate = (assignmentId, subData) => {
     setAssignments((prev) =>

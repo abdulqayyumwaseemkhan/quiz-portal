@@ -27,6 +27,8 @@ import {
   Eye,
   Check,
   FolderArchive,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -66,6 +68,117 @@ const AssignmentSubmissionsPage = () => {
   // Grade state
   const [gradeForm, setGradeForm] = useState({ marksObtained: '', maxMarks: 100, feedback: '' });
   const [savingGrade, setSavingGrade] = useState(false);
+  const [deletingSub, setDeletingSub] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteSubmission = async () => {
+    if (!deletingSub) return;
+    setDeleting(true);
+    try {
+      await API.delete(`/assignments/submissions/${deletingSub._id}`);
+      setSubmissions((prev) => prev.filter((s) => s._id !== deletingSub._id));
+      toast.success(
+        `Deleted submission for ${deletingSub.studentName}. Student can now re-submit.`
+      );
+      broadcastLiveUpdate('ASSIGNMENT_SUBMISSION_DELETED', {
+        submissionId: deletingSub._id,
+        studentId: deletingSub.studentId,
+        assignmentId: id,
+      });
+      if (inspectingSub?._id === deletingSub._id) {
+        setInspectingSub(null);
+      }
+      setDeletingSub(null);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete submission');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const renderDeleteModal = () => {
+    if (!deletingSub) return null;
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+        <div className="card max-w-md w-full p-6 shadow-2xl border border-[var(--border)] bg-[var(--bg-surface)] relative">
+          <button
+            onClick={() => !deleting && setDeletingSub(null)}
+            className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+            disabled={deleting}
+          >
+            <X size={18} />
+          </button>
+
+          <div className="flex items-start gap-3.5 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-rose-500/15 text-rose-600 flex items-center justify-center shrink-0">
+              <AlertTriangle size={22} />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-[var(--text-primary)]">
+                Delete Assignment Submission?
+              </h3>
+              <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+                Permanent database deletion action
+              </p>
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-[var(--bg-muted)] border border-[var(--border)] mb-4 text-xs space-y-1.5">
+            <div className="flex justify-between">
+              <span className="text-[var(--text-secondary)]">Student:</span>
+              <span className="font-semibold text-[var(--text-primary)]">
+                {deletingSub.studentName} ({deletingSub.studentId})
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-[var(--text-secondary)]">Campus / Batch:</span>
+              <span>
+                {deletingSub.campus || '—'} ({deletingSub.batch || '—'})
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-[var(--text-secondary)]">Submission Type:</span>
+              <span className="font-medium text-[var(--text-primary)] capitalize">
+                {deletingSub.submissionType || (deletingSub.liveUrl ? 'Live URL / Vercel' : 'File Upload')}
+              </span>
+            </div>
+            {deletingSub.marksObtained !== null && deletingSub.marksObtained !== undefined && (
+              <div className="flex justify-between">
+                <span className="text-[var(--text-secondary)]">Graded Marks:</span>
+                <span className="font-bold text-rose-600">
+                  {deletingSub.marksObtained} / {deletingSub.assignmentTotalMarks || deletingSub.maxMarks || 20}
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-700 dark:text-amber-300 mb-5 leading-relaxed">
+            <strong>Extra Check & Effect:</strong> Deleting this submission removes all submitted code/files from MongoDB. The student's portal will immediately show unsubmitted status, allowing them to re-submit fresh work.
+          </div>
+
+          <div className="flex items-center justify-end gap-2.5">
+            <button
+              type="button"
+              onClick={() => setDeletingSub(null)}
+              disabled={deleting}
+              className="btn-secondary py-2 px-4 text-xs font-semibold"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleDeleteSubmission}
+              disabled={deleting}
+              className="bg-rose-600 hover:bg-rose-700 text-white font-semibold py-2 px-4 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
+            >
+              <Trash2 size={14} />
+              <span>{deleting ? 'Deleting from DB...' : 'Yes, Delete & Allow Re-submit'}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const handleExtractZipSubmission = async (fileUrl) => {
     if (!fileUrl) return;
@@ -689,11 +802,24 @@ const AssignmentSubmissionsPage = () => {
                   >
                     Save Grade Only
                   </button>
+
+                  <div className="pt-3 border-t border-[var(--border)]">
+                    <button
+                      type="button"
+                      onClick={() => setDeletingSub(inspectingSub)}
+                      className="w-full py-2 px-3 rounded-xl border border-rose-500/30 text-rose-500 hover:bg-rose-500/10 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                      title="Permanently remove submission from database"
+                    >
+                      <Trash2 size={13} />
+                      <span>Delete Submission & Allow Re-submit</span>
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>
           </aside>
         </div>
+        {renderDeleteModal()}
       </div>
     );
   }
@@ -874,13 +1000,22 @@ const AssignmentSubmissionsPage = () => {
                     </td>
 
                     <td className="px-5 py-4 text-right">
-                      <button
-                        onClick={() => openInspectStudio(sub)}
-                        className="btn-primary py-1.5 px-3.5 text-xs inline-flex items-center gap-1.5 shadow-sm"
-                      >
-                        <Eye size={13} />
-                        <span>Inspect & Grade</span>
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => openInspectStudio(sub)}
+                          className="btn-primary py-1.5 px-3.5 text-xs inline-flex items-center gap-1.5 shadow-sm"
+                        >
+                          <Eye size={13} />
+                          <span>Inspect & Grade</span>
+                        </button>
+                        <button
+                          onClick={() => setDeletingSub(sub)}
+                          className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-500/10 hover:text-rose-600 transition-colors inline-flex items-center"
+                          title="Delete Submission from Database"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -895,6 +1030,8 @@ const AssignmentSubmissionsPage = () => {
             </div>
           )}
         </div>
+
+        {renderDeleteModal()}
       </main>
     </div>
   );
