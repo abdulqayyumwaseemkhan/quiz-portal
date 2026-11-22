@@ -23,10 +23,14 @@ import {
   ArrowLeft,
   ExternalLink,
   Plus,
+  Download,
+  FolderArchive,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import JSZip from 'jszip';
 import API from '../../api';
 import { registerMonacoSnippets, setupAutoCloseTags } from './monacoSnippets';
+import { extractZipToProjectFiles } from '../../utils/zipAndRepoExtractor';
 
 const DEFAULT_FILES = {
   'index.html': {
@@ -116,8 +120,31 @@ export default function WebIDE({
 
   const iframeRef = useRef(null);
   const fileInputRef = useRef(null);
+  const zipInputRef = useRef(null);
   const ideContainerRef = useRef(null);
   const autoCloseCleanupRef = useRef(null);
+
+  // Sync files whenever initialProjectData prop changes (e.g. grading next student)
+  useEffect(() => {
+    if (initialProjectData) {
+      let parsed = initialProjectData;
+      if (typeof initialProjectData === 'string') {
+        try {
+          parsed = JSON.parse(initialProjectData);
+        } catch (e) {
+          console.error('Failed to parse initialProjectData', e);
+        }
+      }
+      if (parsed && typeof parsed === 'object') {
+        setFiles(parsed);
+        const firstFile = Object.keys(parsed).includes('index.html') ? 'index.html' : Object.keys(parsed)[0];
+        if (firstFile) {
+          setActiveFile(firstFile);
+          setPreviewFile(firstFile);
+        }
+      }
+    }
+  }, [initialProjectData]);
 
   useEffect(() => {
     if (!readOnly && studentId && assignmentId && files) {
@@ -504,6 +531,77 @@ ${combinedJsx}
     }
   };
 
+  const handleImportZipClick = () => {
+    if (readOnly) return;
+    zipInputRef.current?.click();
+  };
+
+  const handleZipFileChange = async (e) => {
+    if (readOnly) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const toastId = toast.loading('Extracting files from ZIP...');
+    try {
+      const extracted = await extractZipToProjectFiles(file);
+      const count = Object.keys(extracted).length;
+      if (count === 0) {
+        toast.error('No supported web files found in ZIP', { id: toastId });
+        return;
+      }
+      setFiles(extracted);
+      const first = Object.keys(extracted).includes('index.html') ? 'index.html' : Object.keys(extracted)[0];
+      if (first) {
+        setActiveFile(first);
+        setPreviewFile(first);
+      }
+      toast.success(`Imported ${count} file(s) from ZIP!`, { id: toastId });
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to parse or extract ZIP archive', { id: toastId });
+    } finally {
+      if (zipInputRef.current) zipInputRef.current.value = '';
+    }
+  };
+
+  const handleExportZip = async () => {
+    const toastId = toast.loading('Packaging project as ZIP...');
+    try {
+      const zip = new JSZip();
+      for (const file of Object.values(files)) {
+        if (file.isImage && file.url) {
+          if (file.url.startsWith('data:')) {
+            const base64Data = file.url.split(',')[1];
+            zip.file(file.name, base64Data, { base64: true });
+          } else {
+            try {
+              const res = await fetch(file.url);
+              const blob = await res.blob();
+              zip.file(file.name, blob);
+            } catch {
+              // remote fetch fail fallback
+            }
+          }
+        } else {
+          zip.file(file.name, file.content || '');
+        }
+      }
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `project_${Date.now()}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('Project downloaded as ZIP!', { id: toastId });
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to export project ZIP', { id: toastId });
+    }
+  };
+
   const handleSubmit = async () => {
     if (readOnly || !onSubmit) return;
     setIsSubmitting(true);
@@ -680,8 +778,24 @@ ${combinedJsx}
                   >
                     <Upload size={15} />
                   </button>
+                  <button
+                    type="button"
+                    onClick={handleImportZipClick}
+                    title="Import Project ZIP"
+                    className="hover:text-[#13315c] p-1 rounded hover:bg-gray-200 transition-colors"
+                  >
+                    <FolderArchive size={15} />
+                  </button>
                 </>
               )}
+              <button
+                type="button"
+                onClick={handleExportZip}
+                title="Download Project as .ZIP"
+                className="hover:text-[#13315c] p-1 rounded hover:bg-gray-200 transition-colors"
+              >
+                <Download size={15} />
+              </button>
               {/* Mobile Close Button */}
               <button
                 type="button"
@@ -993,6 +1107,15 @@ ${combinedJsx}
         onChange={handleImageFileChange}
         className="hidden"
         accept="image/*"
+      />
+
+      {/* Hidden file input for project ZIP import */}
+      <input
+        type="file"
+        ref={zipInputRef}
+        onChange={handleZipFileChange}
+        className="hidden"
+        accept=".zip"
       />
     </div>
   );

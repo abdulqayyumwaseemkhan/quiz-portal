@@ -19,6 +19,7 @@ import {
   Phone,
   Shield,
   RotateCcw,
+  Code2,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import api from '../api';
@@ -81,6 +82,7 @@ const StudentNavbar = ({ student }) => {
     { name: 'Lectures', path: '/student-lectures', icon: Video },
     { name: 'Quizzes', path: '/quizzes', icon: BookOpen },
     { name: 'Assignments', path: '/student-assignments', icon: FileArchive },
+    { name: 'Web IDE', path: '/practice-ide', icon: Code2 },
     { name: 'Attendance', path: '/student-attendance', icon: CalendarCheck },
     { name: 'Notes', path: '/student-notes', icon: FileText },
   ];

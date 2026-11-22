@@ -195,6 +195,7 @@ const AdminNavbar = () => {
 
   const navItems = [
     { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
+    ...(admin?.role === 'superadmin' ? [{ name: 'Teachers / Admins', path: '/admin/manage-teachers', icon: ShieldCheck }] : []),
     { name: 'Campuses & Batches', path: '/admin/manage-campuses', icon: MapPin },
     { name: 'Students', path: '/admin/manage-students', icon: Users },
     { name: 'Create Quiz', path: '/admin/create-quiz', icon: FileText },

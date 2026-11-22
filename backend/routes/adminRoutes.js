@@ -25,6 +25,10 @@ const {
   getCampuses,
   deleteCampus,
   getMasterStudentReport,
+  getTeachers,
+  addTeacher,
+  updateTeacher,
+  deleteTeacher,
 } = require('../controllers/adminController');
 const { getAllResults } = require('../controllers/quizController');
 const { protectAdmin } = require('../middleware/auth');
@@ -55,6 +59,12 @@ router.delete('/students/:id', protectAdmin, deleteStudent);
 
 // Results route
 router.get('/results', protectAdmin, getAllResults);
+
+// Teacher / Admin Management (Super Admin only)
+router.get('/teachers', protectAdmin, getTeachers);
+router.post('/teachers', protectAdmin, addTeacher);
+router.put('/teachers/:id', protectAdmin, updateTeacher);
+router.delete('/teachers/:id', protectAdmin, deleteTeacher);
 
 // Campus & Batch routes
 router.post('/campuses', protectAdmin, addCampus);

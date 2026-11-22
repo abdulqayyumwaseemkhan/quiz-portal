@@ -30,6 +30,7 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
   const [driveLink, setDriveLink] = useState('');
   const [assignmentTitle, setAssignmentTitle] = useState('');
   const [showEditForm, setShowEditForm] = useState(false);
+  const [expandedDesc, setExpandedDesc] = useState(false);
 
   useEffect(() => {
     setStatus(assignment.mySubmission || null);
@@ -155,9 +156,27 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
         </div>
 
         <h3 className="text-lg font-bold mb-1.5">{assignment.title}</h3>
-        <p className="text-xs text-[var(--text-secondary)] leading-relaxed mb-4 whitespace-pre-line">
-          {assignment.description || 'No additional instructions.'}
-        </p>
+        {(() => {
+          const fullDesc = assignment.description || 'No additional instructions.';
+          const isLongDesc = fullDesc.length > 130;
+          return (
+            <div>
+              <p className="text-xs text-[var(--text-secondary)] leading-relaxed whitespace-pre-line">
+                {expandedDesc || !isLongDesc ? fullDesc : `${fullDesc.slice(0, 130)}...`}
+              </p>
+              {isLongDesc && (
+                <button
+                  type="button"
+                  onClick={() => setExpandedDesc(!expandedDesc)}
+                  className="text-[11px] font-bold text-[var(--accent)] hover:underline mt-1 mb-3 inline-block cursor-pointer"
+                >
+                  {expandedDesc ? 'Show Less ↑' : 'Read More ↓'}
+                </button>
+              )}
+              {!isLongDesc && <div className="mb-4" />}
+            </div>
+          );
+        })()}
       </div>
 
       <div className="pt-4 border-t border-[var(--border)] space-y-3">

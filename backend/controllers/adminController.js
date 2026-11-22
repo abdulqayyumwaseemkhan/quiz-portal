@@ -995,6 +995,135 @@ const getMasterStudentReport = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Get all teachers/admins (Super Admin only)
+// @route   GET /api/admin/teachers
+const getTeachers = asyncHandler(async (req, res) => {
+  if (req.admin?.role !== 'superadmin') {
+    res.status(403);
+    throw new Error('Access denied. Super Admin role required.');
+  }
+
+  const teachers = await Admin.find()
+    .select('-password -totpSecret -totpPendingSecret -securityKeys')
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const teacherIds = teachers.map((t) => t._id);
+  const studentCounts = await Student.aggregate([
+    { $match: { addedBy: { $in: teacherIds } } },
+    { $group: { _id: '$addedBy', count: { $sum: 1 } } },
+  ]);
+  const countMap = new Map(studentCounts.map((sc) => [sc._id.toString(), sc.count]));
+
+  const enriched = teachers.map((t) => ({
+    ...t,
+    studentCount: countMap.get(t._id.toString()) || 0,
+  }));
+
+  res.json(enriched);
+});
+
+// @desc    Create a new teacher/admin account (Super Admin only)
+// @route   POST /api/admin/teachers
+const addTeacher = asyncHandler(async (req, res) => {
+  if (req.admin?.role !== 'superadmin') {
+    res.status(403);
+    throw new Error('Access denied. Super Admin role required.');
+  }
+
+  const { email, password, role = 'admin' } = req.body;
+  const cleanEmail = String(email || '').trim().toLowerCase();
+
+  if (!cleanEmail || !password) {
+    res.status(400);
+    throw new Error('Email and password are required');
+  }
+
+  if (password.length < 6) {
+    res.status(400);
+    throw new Error('Password must be at least 6 characters');
+  }
+
+  const existing = await Admin.findOne({ email: cleanEmail });
+  if (existing) {
+    res.status(400);
+    throw new Error('An account with this email already exists');
+  }
+
+  const newAdmin = await Admin.create({
+    email: cleanEmail,
+    password,
+    role: role === 'superadmin' ? 'superadmin' : 'admin',
+  });
+
+  res.status(201).json({
+    _id: newAdmin._id,
+    email: newAdmin.email,
+    role: newAdmin.role,
+    createdAt: newAdmin.createdAt,
+    studentCount: 0,
+  });
+});
+
+// @desc    Update teacher/admin password or role (Super Admin only)
+// @route   PUT /api/admin/teachers/:id
+const updateTeacher = asyncHandler(async (req, res) => {
+  if (req.admin?.role !== 'superadmin') {
+    res.status(403);
+    throw new Error('Access denied. Super Admin role required.');
+  }
+
+  const { id } = req.params;
+  const { password, role } = req.body;
+
+  const teacher = await Admin.findById(id);
+  if (!teacher) {
+    res.status(404);
+    throw new Error('Teacher account not found');
+  }
+
+  if (role) {
+    teacher.role = role === 'superadmin' ? 'superadmin' : 'admin';
+  }
+
+  if (password && password.trim().length >= 6) {
+    teacher.password = password.trim();
+  }
+
+  await teacher.save();
+
+  res.json({
+    _id: teacher._id,
+    email: teacher.email,
+    role: teacher.role,
+    message: 'Teacher account updated successfully',
+  });
+});
+
+// @desc    Delete teacher/admin account (Super Admin only)
+// @route   DELETE /api/admin/teachers/:id
+const deleteTeacher = asyncHandler(async (req, res) => {
+  if (req.admin?.role !== 'superadmin') {
+    res.status(403);
+    throw new Error('Access denied. Super Admin role required.');
+  }
+
+  const { id } = req.params;
+  if (id === req.admin._id.toString()) {
+    res.status(400);
+    throw new Error('You cannot delete your own super admin account');
+  }
+
+  const teacher = await Admin.findById(id);
+  if (!teacher) {
+    res.status(404);
+    throw new Error('Teacher account not found');
+  }
+
+  await Admin.deleteOne({ _id: id });
+  res.json({ message: 'Teacher account deleted successfully' });
+});
+
 module.exports = {
   loginAdmin,
   verifyAdmin2FA,
@@ -1020,4 +1149,8 @@ module.exports = {
   getCampuses,
   deleteCampus,
   getMasterStudentReport,
+  getTeachers,
+  addTeacher,
+  updateTeacher,
+  deleteTeacher,
 };

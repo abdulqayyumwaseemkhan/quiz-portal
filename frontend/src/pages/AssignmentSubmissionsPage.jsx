@@ -26,11 +26,16 @@ import {
   Search,
   Eye,
   Check,
+  FolderArchive,
 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import WebIDE from '../components/WebIDE/WebIDE';
 import { broadcastLiveUpdate, useLiveRefresh } from '../utils/liveSync';
+import {
+  extractRemoteZipToProjectFiles,
+  extractGitHubRepoToProjectFiles,
+} from '../utils/zipAndRepoExtractor';
 
 const formatBytes = (bytes, decimals = 1) => {
   if (!+bytes) return '0 B';
@@ -55,10 +60,44 @@ const AssignmentSubmissionsPage = () => {
   const [inspectingSub, setInspectingSub] = useState(null);
   const [previewDevice, setPreviewDevice] = useState('desktop'); // 'desktop' | 'tablet' | 'mobile'
   const [iframeKey, setIframeKey] = useState(0);
+  const [extractedProjectData, setExtractedProjectData] = useState(null);
+  const [extractingSource, setExtractingSource] = useState(false);
 
   // Grade state
   const [gradeForm, setGradeForm] = useState({ marksObtained: '', maxMarks: 100, feedback: '' });
   const [savingGrade, setSavingGrade] = useState(false);
+
+  const handleExtractZipSubmission = async (fileUrl) => {
+    if (!fileUrl) return;
+    setExtractingSource(true);
+    const toastId = toast.loading('Extracting ZIP submission into Web IDE...');
+    try {
+      const filesObj = await extractRemoteZipToProjectFiles(fileUrl);
+      setExtractedProjectData(filesObj);
+      toast.success(`Extracted ${Object.keys(filesObj).length} files! Loaded into Web IDE.`, { id: toastId });
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to extract ZIP. Ensure file is accessible.', { id: toastId });
+    } finally {
+      setExtractingSource(false);
+    }
+  };
+
+  const handleExtractGitHubSubmission = async (githubUrl) => {
+    if (!githubUrl) return;
+    setExtractingSource(true);
+    const toastId = toast.loading('Fetching code from GitHub...');
+    try {
+      const filesObj = await extractGitHubRepoToProjectFiles(githubUrl);
+      setExtractedProjectData(filesObj);
+      toast.success(`Loaded ${Object.keys(filesObj).length} files from GitHub!`, { id: toastId });
+    } catch (err) {
+      console.error(err);
+      toast.error(err.message || 'Could not fetch GitHub repository files.', { id: toastId });
+    } finally {
+      setExtractingSource(false);
+    }
+  };
 
   const fetchData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -112,6 +151,7 @@ const AssignmentSubmissionsPage = () => {
 
   const openInspectStudio = (sub) => {
     setInspectingSub(sub);
+    setExtractedProjectData(null);
     const resolvedMax = sub.assignmentTotalMarks || sub.maxMarks || 20;
     setGradeForm({
       marksObtained: sub.marksObtained ?? '',
@@ -413,9 +453,27 @@ const AssignmentSubmissionsPage = () => {
                   </a>
                 </div>
               </div>
-            ) : inspectingSub.submissionType === 'ide' && inspectingSub.projectData ? (
-              <div className="flex-1 min-h-0">
-                <WebIDE initialProjectData={inspectingSub.projectData} readOnly={true} />
+            ) : (inspectingSub.submissionType === 'ide' && inspectingSub.projectData) || extractedProjectData ? (
+              <div className="flex-1 min-h-0 flex flex-col">
+                {extractedProjectData && (
+                  <div className="px-4 py-1.5 bg-indigo-50 dark:bg-indigo-950/40 border-b border-indigo-200 dark:border-indigo-900 flex items-center justify-between text-xs text-indigo-700 dark:text-indigo-300">
+                    <span className="font-medium">Extracted archive loaded in Web IDE & Live Preview</span>
+                    <button
+                      type="button"
+                      onClick={() => setExtractedProjectData(null)}
+                      className="text-xs font-semibold hover:underline cursor-pointer"
+                    >
+                      Close Extracted Code
+                    </button>
+                  </div>
+                )}
+                <div className="flex-1 min-h-0">
+                  <WebIDE
+                    key={inspectingSub._id + (extractedProjectData ? '_extracted' : '')}
+                    initialProjectData={extractedProjectData || inspectingSub.projectData}
+                    readOnly={true}
+                  />
+                </div>
               </div>
             ) : activeGoogleDriveEmbed ? (
               <div className="flex-1 flex flex-col p-4 bg-slate-950">
@@ -439,19 +497,46 @@ const AssignmentSubmissionsPage = () => {
                 <p className="text-xs text-[var(--text-secondary)] max-w-sm mb-4">
                   {inspectingSub.fileSizeBytes
                     ? `File Size: ${formatBytes(inspectingSub.fileSizeBytes)}`
-                    : 'Download the source file to review the project locally.'}
+                    : 'Download the source file or extract directly to review in Web IDE.'}
                 </p>
-                <div className="flex flex-wrap gap-2 justify-center">
+                <div className="flex flex-wrap gap-2.5 justify-center">
                   {inspectingSub.fileUrl && (
                     <a
                       href={inspectingSub.fileUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="btn-primary py-2 px-4 text-xs flex items-center gap-2"
+                      className="btn-secondary py-2 px-4 text-xs flex items-center gap-2"
                     >
-                      <Download size={14} /> Download Submitted File
+                      <Download size={14} /> Download File
                     </a>
                   )}
+
+                  {inspectingSub.fileUrl &&
+                    (inspectingSub.fileUrl.toLowerCase().includes('.zip') ||
+                      inspectingSub.originalFileName?.toLowerCase().endsWith('.zip')) && (
+                      <button
+                        type="button"
+                        onClick={() => handleExtractZipSubmission(inspectingSub.fileUrl)}
+                        disabled={extractingSource}
+                        className="btn-primary py-2 px-4 text-xs flex items-center gap-2 shadow-sm cursor-pointer"
+                      >
+                        <FolderArchive size={14} />
+                        {extractingSource ? 'Extracting ZIP...' : 'Extract & Inspect in Web IDE'}
+                      </button>
+                    )}
+
+                  {inspectingSub.githubUrl && (
+                    <button
+                      type="button"
+                      onClick={() => handleExtractGitHubSubmission(inspectingSub.githubUrl)}
+                      disabled={extractingSource}
+                      className="btn-primary py-2 px-4 text-xs flex items-center gap-2 shadow-sm cursor-pointer"
+                    >
+                      <Code2 size={14} />
+                      {extractingSource ? 'Fetching GitHub...' : 'Extract GitHub Code into Web IDE'}
+                    </button>
+                  )}
+
                   {inspectingSub.githubUrl && (
                     <a
                       href={inspectingSub.githubUrl}
@@ -459,7 +544,7 @@ const AssignmentSubmissionsPage = () => {
                       rel="noreferrer"
                       className="btn-secondary py-2 px-4 text-xs flex items-center gap-2"
                     >
-                      <Code2 size={14} /> View GitHub Repo
+                      <ExternalLink size={14} /> View GitHub
                     </a>
                   )}
                 </div>

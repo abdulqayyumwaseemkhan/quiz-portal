@@ -32,6 +32,7 @@ const QuizListPage = lazyWithRetry(() => import('./pages/QuizListPage'));
 const QuizAttemptPage = lazyWithRetry(() => import('./pages/QuizAttemptPage'));
 const ResultPage = lazyWithRetry(() => import('./pages/ResultPage'));
 const StudentAssignmentsPage = lazyWithRetry(() => import('./pages/StudentAssignmentsPage'));
+const StudentPracticeIdePage = lazyWithRetry(() => import('./pages/StudentPracticeIdePage'));
 const StudentNotesPage = lazyWithRetry(() => import('./pages/StudentNotesPage'));
 const StudentLecturesPage = lazyWithRetry(() => import('./pages/StudentLecturesPage'));
 const StudentAttendancePage = lazyWithRetry(() => import('./pages/StudentAttendancePage'));
@@ -42,6 +43,7 @@ const CreateQuizPage = lazyWithRetry(() => import('./pages/CreateQuizPage'));
 const EditQuizPage = lazyWithRetry(() => import('./pages/EditQuizPage'));
 const ManageQuestionsPage = lazyWithRetry(() => import('./pages/ManageQuestionsPage'));
 const ManageStudentsPage = lazyWithRetry(() => import('./pages/ManageStudentsPage'));
+const ManageTeachersPage = lazyWithRetry(() => import('./pages/ManageTeachersPage'));
 const AdminResultsPage = lazyWithRetry(() => import('./pages/AdminResultsPage'));
 const ManageAssignmentsPage = lazyWithRetry(() => import('./pages/ManageAssignmentsPage'));
 const AssignmentSubmissionsPage = lazyWithRetry(() => import('./pages/AssignmentSubmissionsPage'));
@@ -81,6 +83,7 @@ function App() {
                 <Route path="/quiz/:quizId" element={<QuizAttemptPage />} />
                 <Route path="/result/:resultId" element={<ResultPage />} />
                 <Route path="/student-assignments" element={<StudentAssignmentsPage />} />
+                <Route path="/practice-ide" element={<StudentPracticeIdePage />} />
                 <Route path="/student-notes" element={<StudentNotesPage />} />
                 <Route path="/student-lectures" element={<StudentLecturesPage />} />
                 <Route path="/student-attendance" element={<StudentAttendancePage />} />
@@ -100,6 +103,14 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <ManageStudentsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/manage-teachers"
+                  element={
+                    <ProtectedRoute>
+                      <ManageTeachersPage />
                     </ProtectedRoute>
                   }
                 />
