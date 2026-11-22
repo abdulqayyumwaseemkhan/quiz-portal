@@ -32,18 +32,37 @@ const allowedOrigins = [
   'http://127.0.0.1:5173',
   'http://localhost:3000',
   'http://localhost:5000'
-].filter(Boolean).map(url => url.replace(/\/$/, ""));
+].filter(Boolean).map(url => url.replace(/\/$/, "").toLowerCase());
+
+function isOriginAllowed(origin) {
+  if (!origin) return true;
+  const norm = origin.replace(/\/$/, "").toLowerCase();
+  if (allowedOrigins.includes(norm)) return true;
+  if (norm.endsWith('.createxcore.com') || norm.endsWith('.vercel.app')) return true;
+  return false;
+}
+
+// Global preflight and CORS header injector
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (isOriginAllowed(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Api-Version');
+  }
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+  next();
+});
 
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-    const normalizedOrigin = origin.replace(/\/$/, "");
-    if (allowedOrigins.indexOf(normalizedOrigin) === -1) {
-      console.log('CORS blocked for origin:', origin);
-      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      return callback(new Error(msg), false);
+    if (isOriginAllowed(origin)) {
+      return callback(null, true);
     }
-    return callback(null, true);
+    return callback(null, false);
   },
   credentials: true
 }));
@@ -90,9 +109,9 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+if (!process.env.VERCEL) {
   app.listen(PORT, () => {
-    console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+    console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
   });
 }
 

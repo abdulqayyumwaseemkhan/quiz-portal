@@ -660,19 +660,6 @@ const getStudentResult = asyncHandler(async (req, res) => {
 
   res.json(result);
 });
-      quizId: {
-        _id: result.quizId?._id,
-        title: result.quizId?.title,
-        description: result.quizId?.description,
-        resultsReleased: false
-      },
-      submittedAt: result.submittedAt,
-      message: 'Results are pending release by admin. Check back later!'
-    });
-  }
-
-  res.json(result);
-});
 
 const checkAttemptStatus = asyncHandler(async (req, res) => {
   const { studentId, quizId } = req.params;
