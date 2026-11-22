@@ -21,9 +21,11 @@ import {
   MapPin,
   Upload,
   ArrowRight,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { exportMasterStudentReport } from '../utils/exportMasterStudentReport';
 
 const AdminDashboard = () => {
   const [quizzes, setQuizzes] = useState([]);
@@ -193,6 +195,14 @@ const AdminDashboard = () => {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              onClick={exportMasterStudentReport}
+              className="btn-secondary flex items-center justify-center gap-2 text-xs sm:text-sm py-2.5 px-4"
+              title="Download consolidated Excel sheet with student details, each quiz score, each assignment mark, and attendance stats"
+            >
+              <FileSpreadsheet size={16} className="text-emerald-500" /> Export Master Report
+            </button>
             <Link
               to="/admin/manage-students"
               className="btn-secondary flex items-center justify-center gap-2 text-xs sm:text-sm py-2.5 px-4"

@@ -24,6 +24,7 @@ const {
   updateCampus,
   getCampuses,
   deleteCampus,
+  getMasterStudentReport,
 } = require('../controllers/adminController');
 const { getAllResults } = require('../controllers/quizController');
 const { protectAdmin } = require('../middleware/auth');
@@ -41,6 +42,7 @@ router.post('/2fa/security-key/register', protectAdmin, registerSecurityKey);
 router.delete('/2fa/security-key/:keyId', protectAdmin, removeSecurityKey);
 
 // Student routes (Admin scoped)
+router.get('/reports/master-students', protectAdmin, getMasterStudentReport);
 router.post('/students', protectAdmin, addStudent);
 router.post('/students/bulk', protectAdmin, bulkAddStudents);
 router.post('/students/bulk-regenerate-passwords', protectAdmin, bulkRegeneratePasswords);

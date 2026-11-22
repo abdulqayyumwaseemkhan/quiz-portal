@@ -24,6 +24,7 @@ import {
   EyeOff,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { exportMasterStudentReport } from '../utils/exportMasterStudentReport';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -705,12 +706,19 @@ const ManageStudentsPage = () => {
             >
               <Upload size={16} /> Bulk Import
             </button>
-            <button onClick={handleExportStudentsExcel} className="btn-secondary flex items-center gap-2 text-xs sm:text-sm">
-              <Download size={16} /> Export
+            <button
+              onClick={exportMasterStudentReport}
+              className="btn-primary flex items-center gap-2 text-xs sm:text-sm shadow-sm"
+              title="Download All-in-One Master Report: Student details, Quizzes attempted & separate marks, Assignments & separate marks, Attendance present/absent/leave counts"
+            >
+              <FileSpreadsheet size={16} /> Complete Report (Excel)
+            </button>
+            <button onClick={handleExportStudentsExcel} className="btn-secondary flex items-center gap-2 text-xs sm:text-sm" title="Export basic students directory">
+              <Download size={16} /> Directory
             </button>
             <button
               onClick={() => setShowAdd(!showAdd)}
-              className="btn-primary flex items-center gap-2 text-xs sm:text-sm"
+              className="btn-secondary flex items-center gap-2 text-xs sm:text-sm"
             >
               <UserPlus size={16} /> {showAdd ? 'Close Form' : 'Add Student'}
             </button>

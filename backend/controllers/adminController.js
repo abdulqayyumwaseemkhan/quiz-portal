@@ -3,6 +3,11 @@ const { z } = require('zod');
 const Admin = require('../models/Admin');
 const Student = require('../models/Student');
 const Campus = require('../models/Campus');
+const Quiz = require('../models/Quiz');
+const Result = require('../models/Result');
+const Assignment = require('../models/Assignment');
+const Submission = require('../models/Submission');
+const AttendanceRecord = require('../models/AttendanceRecord');
 const jwt = require('jsonwebtoken');
 const {
   generateSecurePassword,
@@ -942,6 +947,54 @@ const deleteStudent = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Get complete consolidated student report data (Quizzes, Assignments, Attendance)
+// @route   GET /api/admin/reports/master-students
+const getMasterStudentReport = asyncHandler(async (req, res) => {
+  const scope = getAdminScope(req, 'addedBy');
+  const contentScope = getAdminScope(req, 'createdBy');
+
+  // 1. Fetch all students belonging to this admin
+  const students = await Student.find(scope).select('-passwordHash').sort({ studentId: 1 }).lean();
+  const studentIds = students.map((s) => s.studentId);
+
+  // 2. Fetch all quizzes created by this admin
+  const quizzes = await Quiz.find(contentScope).select('title totalMarks questions').sort({ createdAt: 1 }).lean();
+
+  // 3. Fetch all quiz results
+  const results = await Result.find({
+    studentId: { $in: studentIds },
+    status: 'submitted',
+  })
+    .select('studentId quizId score attemptNo createdAt')
+    .lean();
+
+  // 4. Fetch all assignments
+  const assignments = await Assignment.find(contentScope).select('title totalMarks projectType dueDate').sort({ createdAt: 1 }).lean();
+
+  // 5. Fetch all submissions
+  const submissions = await Submission.find({
+    studentId: { $in: studentIds },
+  })
+    .select('studentId assignmentId submissionType marksObtained maxMarks status remarks feedback liveUrl githubUrl submittedAt')
+    .lean();
+
+  // 6. Fetch all attendance records
+  const attendanceRecords = await AttendanceRecord.find({
+    studentId: { $in: studentIds },
+  })
+    .select('studentId status remarks createdAt')
+    .lean();
+
+  res.json({
+    students,
+    quizzes,
+    assignments,
+    results,
+    submissions,
+    attendanceRecords,
+  });
+});
+
 module.exports = {
   loginAdmin,
   verifyAdmin2FA,
@@ -966,4 +1019,5 @@ module.exports = {
   updateCampus,
   getCampuses,
   deleteCampus,
+  getMasterStudentReport,
 };
