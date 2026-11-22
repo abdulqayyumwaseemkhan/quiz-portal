@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import API from '../api';
 import Navbar from '../components/AdminNavbar';
@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { broadcastLiveUpdate } from '../utils/liveSync';
+import { clientCache } from '../utils/clientCache';
 
 const BUBBLE_OPTIONS = [
   {
@@ -60,10 +61,12 @@ const BUBBLE_OPTIONS = [
 ];
 
 const ManageAttendancePage = () => {
+  const cachedSessions = clientCache.get('admin_attendance_sessions');
+  const cachedMeta = clientCache.get('admin_attendance_meta');
   const [activeTab, setActiveTab] = useState('sessions'); // 'sessions' | 'reports'
-  const [meta, setMeta] = useState({ campuses: [], batches: [] });
-  const [sessions, setSessions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [meta, setMeta] = useState(cachedMeta || { campuses: [], batches: [] });
+  const [sessions, setSessions] = useState(cachedSessions || []);
+  const [loading, setLoading] = useState(!cachedSessions);
 
   // Create session form
   const [showCreate, setShowCreate] = useState(false);
@@ -91,17 +94,14 @@ const ManageAttendancePage = () => {
   const [reportData, setReportData] = useState({ totalSessions: 0, students: [] });
   const [loadingReport, setLoadingReport] = useState(false);
 
-  useEffect(() => {
-    fetchMeta();
-    fetchSessions();
-  }, []);
-
-  const fetchMeta = async () => {
+  const fetchMeta = useCallback(async () => {
     try {
       const { data } = await API.get('/admin/students/meta');
       const campuses = data.campuses || [];
       const batches = data.batches || [];
-      setMeta({ campuses, batches });
+      const metaObj = { campuses, batches };
+      setMeta(metaObj);
+      clientCache.set('admin_attendance_meta', metaObj);
       setSessionForm((prev) => ({
         ...prev,
         campus: prev.campus || campuses[0] || '',
@@ -110,19 +110,26 @@ const ManageAttendancePage = () => {
     } catch {
       // ignore
     }
-  };
+  }, []);
 
-  const fetchSessions = async () => {
-    setLoading(true);
+  const fetchSessions = useCallback(async (silent = false) => {
+    const hasCache = clientCache.has('admin_attendance_sessions');
+    if (!silent && !hasCache) setLoading(true);
     try {
       const { data } = await API.get('/attendance/sessions');
       setSessions(data);
+      clientCache.set('admin_attendance_sessions', data);
     } catch {
-      toast.error('Failed to load attendance sessions');
+      if (!silent) toast.error('Failed to load attendance sessions');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchMeta();
+    fetchSessions(clientCache.has('admin_attendance_sessions'));
+  }, [fetchMeta, fetchSessions]);
 
   const openSessionForMarking = async (sessionId) => {
     try {

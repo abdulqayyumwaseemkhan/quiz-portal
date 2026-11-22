@@ -14,17 +14,10 @@ import {
   Video,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { clientCache } from '../utils/clientCache';
+import { useLiveRefresh } from '../utils/liveSync';
 
 const StudentLecturesPage = () => {
-  const [lectures, setLectures] = useState([]);
-  const [activeLectureId, setActiveLectureId] = useState(null);
-  const [playerReady, setPlayerReady] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedModule, setSelectedModule] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-
   const student = useMemo(() => {
     try {
       return JSON.parse(localStorage.getItem('studentInfo'));
@@ -32,6 +25,18 @@ const StudentLecturesPage = () => {
       return null;
     }
   }, []);
+
+  const cacheKey = student?.studentId ? `student_lectures_${student.studentId}` : null;
+  const cached = cacheKey ? clientCache.get(cacheKey) : null;
+
+  const [lectures, setLectures] = useState(cached || []);
+  const [activeLectureId, setActiveLectureId] = useState(null);
+  const [playerReady, setPlayerReady] = useState(Boolean(cached && cached.length > 0));
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedModule, setSelectedModule] = useState('');
+  const [loading, setLoading] = useState(!cached);
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const lastWatchedKey = useMemo(
     () => (student ? `last_watched_lecture_${student.studentId}` : null),
@@ -44,30 +49,36 @@ const StudentLecturesPage = () => {
     }
   }, [student, navigate]);
 
-  useEffect(() => {
-    const fetchLectures = async () => {
-      try {
-        const { data } = await API.get(`/student/lectures/${student.studentId}`);
-        setLectures(data);
+  const fetchLectures = React.useCallback(async (silent = false) => {
+    const hasCache = cacheKey && clientCache.has(cacheKey);
+    if (!silent && !hasCache) setLoading(true);
+    try {
+      const { data } = await API.get(`/student/lectures/${student.studentId}`);
+      setLectures(data);
+      if (cacheKey) clientCache.set(cacheKey, data);
 
-        if (data.length > 0) {
-          const fromQuery = searchParams.get('id');
-          const fromStorage = lastWatchedKey ? localStorage.getItem(lastWatchedKey) : null;
-          const initial =
-            data.find((l) => l._id === fromQuery) ||
-            data.find((l) => l._id === fromStorage) ||
-            data[0];
-          setActiveLectureId(initial._id);
-          setPlayerReady(true);
-        }
-      } catch {
-        toast.error('Failed to load lectures');
-      } finally {
-        setLoading(false);
+      if (data.length > 0) {
+        const fromQuery = searchParams.get('id');
+        const fromStorage = lastWatchedKey ? localStorage.getItem(lastWatchedKey) : null;
+        const initial =
+          data.find((l) => l._id === fromQuery) ||
+          data.find((l) => l._id === fromStorage) ||
+          data[0];
+        setActiveLectureId(initial._id);
+        setPlayerReady(true);
       }
-    };
-    if (student) fetchLectures();
-  }, [student, lastWatchedKey, searchParams]);
+    } catch {
+      if (!silent) toast.error('Failed to load lectures');
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  }, [student, lastWatchedKey, searchParams, cacheKey]);
+
+  useEffect(() => {
+    if (student) fetchLectures(cacheKey && clientCache.has(cacheKey) ? true : false);
+  }, [student, fetchLectures, cacheKey]);
+
+  useLiveRefresh(() => fetchLectures(true), 15000, ['LECTURE_CREATED', 'LECTURE_UPDATED', 'LECTURE_DELETED']);
 
   const selectLecture = (lectureId) => {
     setActiveLectureId(lectureId);

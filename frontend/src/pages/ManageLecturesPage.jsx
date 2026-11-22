@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import API from '../api';
 import Navbar from '../components/AdminNavbar';
 import {
@@ -14,11 +14,14 @@ import {
   Lock,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { clientCache } from '../utils/clientCache';
 
 const ManageLecturesPage = () => {
-  const [lectures, setLectures] = useState([]);
-  const [meta, setMeta] = useState({ campuses: [], batches: [] });
-  const [loading, setLoading] = useState(true);
+  const cachedLectures = clientCache.get('admin_lectures_data');
+  const cachedMeta = clientCache.get('admin_lectures_meta');
+  const [lectures, setLectures] = useState(cachedLectures || []);
+  const [meta, setMeta] = useState(cachedMeta || { campuses: [], batches: [] });
+  const [loading, setLoading] = useState(!cachedLectures);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
 
@@ -35,31 +38,35 @@ const ManageLecturesPage = () => {
     isPublished: true,
   });
 
-  useEffect(() => {
-    fetchLectures();
-    fetchMeta();
-  }, []);
-
-  const fetchLectures = async () => {
-    setLoading(true);
+  const fetchLectures = useCallback(async (silent = false) => {
+    const hasCache = clientCache.has('admin_lectures_data');
+    if (!silent && !hasCache) setLoading(true);
     try {
       const { data } = await API.get('/lectures');
       setLectures(data);
+      clientCache.set('admin_lectures_data', data);
     } catch {
-      toast.error('Failed to load lectures');
+      if (!silent) toast.error('Failed to load lectures');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchMeta = async () => {
+  const fetchMeta = useCallback(async () => {
     try {
       const { data } = await API.get('/admin/students/meta');
-      setMeta({ campuses: data.campuses || [], batches: data.batches || [] });
+      const metaObj = { campuses: data.campuses || [], batches: data.batches || [] };
+      setMeta(metaObj);
+      clientCache.set('admin_lectures_meta', metaObj);
     } catch {
       // ignore
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchLectures(clientCache.has('admin_lectures_data'));
+    fetchMeta();
+  }, [fetchLectures, fetchMeta]);
 
   const resetForm = () => {
     setEditingId(null);

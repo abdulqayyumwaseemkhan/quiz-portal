@@ -5,6 +5,7 @@ import { Plus, Trash2, Edit, FileArchive, Eye, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { broadcastLiveUpdate, useLiveRefresh } from '../utils/liveSync';
+import { clientCache } from '../utils/clientCache';
 
 const CATEGORY_META = {
   coding: { label: '💻 Coding', color: 'text-indigo-600 bg-indigo-500/10' },
@@ -17,9 +18,11 @@ const CATEGORY_META = {
 };
 
 const ManageAssignmentsPage = () => {
-  const [assignments, setAssignments] = useState([]);
-  const [meta, setMeta] = useState({ campuses: [], batches: [] });
-  const [loading, setLoading] = useState(true);
+  const cachedAssignments = clientCache.get('admin_assignments_data');
+  const cachedMeta = clientCache.get('admin_assignments_meta');
+  const [assignments, setAssignments] = useState(cachedAssignments || []);
+  const [meta, setMeta] = useState(cachedMeta || { campuses: [], batches: [] });
+  const [loading, setLoading] = useState(!cachedAssignments);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
 
@@ -36,10 +39,12 @@ const ManageAssignmentsPage = () => {
   });
 
   const fetchAssignments = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
+    const hasCache = clientCache.has('admin_assignments_data');
+    if (!silent && !hasCache) setLoading(true);
     try {
       const { data } = await API.get('/assignments');
       setAssignments(data);
+      clientCache.set('admin_assignments_data', data);
     } catch {
       if (!silent) toast.error('Failed to load assignments');
     } finally {
@@ -48,7 +53,7 @@ const ManageAssignmentsPage = () => {
   }, []);
 
   useEffect(() => {
-    fetchAssignments(false);
+    fetchAssignments(clientCache.has('admin_assignments_data'));
     fetchMeta();
   }, [fetchAssignments]);
 
@@ -58,7 +63,9 @@ const ManageAssignmentsPage = () => {
   const fetchMeta = async () => {
     try {
       const { data } = await API.get('/admin/students/meta');
-      setMeta({ campuses: data.campuses || [], batches: data.batches || [] });
+      const metaObj = { campuses: data.campuses || [], batches: data.batches || [] };
+      setMeta(metaObj);
+      clientCache.set('admin_assignments_meta', metaObj);
     } catch {
       // ignore
     }

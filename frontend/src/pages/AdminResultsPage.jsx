@@ -19,7 +19,8 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { broadcastLiveUpdate } from '../utils/liveSync';
+import { broadcastLiveUpdate, useLiveRefresh } from '../utils/liveSync';
+import { clientCache } from '../utils/clientCache';
 
 function buildPreviewDocument(code, lang) {
   if (lang === 'react') {
@@ -86,11 +87,12 @@ function buildPreviewDocument(code, lang) {
 }
 
 const AdminResultsPage = () => {
-  const [results, setResults] = useState([]);
-  const [quizzes, setQuizzes] = useState([]);
+  const cached = clientCache.get('admin_results_page');
+  const [results, setResults] = useState(cached?.results || []);
+  const [quizzes, setQuizzes] = useState(cached?.quizzes || []);
   const [filter, setFilter] = useState({ quizId: '', studentId: '', campus: '', batch: '' });
-  const [meta, setMeta] = useState({ campuses: [], batches: [] });
-  const [loading, setLoading] = useState(true);
+  const [meta, setMeta] = useState(cached?.meta || { campuses: [], batches: [] });
+  const [loading, setLoading] = useState(!cached);
   const [deletingResult, setDeletingResult] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -101,25 +103,35 @@ const AdminResultsPage = () => {
   const [gradeAnswers, setGradeAnswers] = useState({});
   const [codeTabs, setCodeTabs] = useState({});
 
+  const fetchData = async (silent = false) => {
+    const hasCache = clientCache.has('admin_results_page');
+    if (!silent && !hasCache) setLoading(true);
+    try {
+      const [rRes, qRes, mRes] = await Promise.all([
+        API.get('/admin/results'),
+        API.get('/quizzes'),
+        API.get('/admin/students/meta'),
+      ]);
+      setResults(rRes.data);
+      setQuizzes(qRes.data);
+      setMeta(mRes.data);
+      clientCache.set('admin_results_page', {
+        results: rRes.data,
+        quizzes: qRes.data,
+        meta: mRes.data,
+      });
+    } catch {
+      if (!silent) toast.error('Failed to load results');
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [rRes, qRes, mRes] = await Promise.all([
-          API.get('/admin/results'),
-          API.get('/quizzes'),
-          API.get('/admin/students/meta'),
-        ]);
-        setResults(rRes.data);
-        setQuizzes(qRes.data);
-        setMeta(mRes.data);
-      } catch {
-        toast.error('Failed to load results');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
+    fetchData(clientCache.has('admin_results_page') ? true : false);
   }, []);
+
+  useLiveRefresh(() => fetchData(true), 15000, ['QUIZ_RESULT_DELETED', 'QUIZ_SUBMITTED', 'QUIZ_RESULT_GRADED']);
 
   const handleFilter = async () => {
     setLoading(true);

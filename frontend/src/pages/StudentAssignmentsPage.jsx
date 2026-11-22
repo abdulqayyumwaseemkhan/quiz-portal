@@ -24,6 +24,7 @@ import toast from 'react-hot-toast';
 import StudentNavbar from '../components/StudentNavbar';
 import WebIDE from '../components/WebIDE/WebIDE';
 import { broadcastLiveUpdate, useLiveRefresh } from '../utils/liveSync';
+import { clientCache } from '../utils/clientCache';
 
 const CATEGORY_CONFIG = {
   coding: { label: '💻 Coding & Web App', icon: Code2, color: 'text-indigo-600 bg-indigo-500/15' },
@@ -610,13 +611,6 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
 };
 
 const StudentAssignmentsPage = () => {
-  const [assignments, setAssignments] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState(''); // '' | 'pending' | 'submitted' | 'graded'
-  const [loading, setLoading] = useState(true);
-  const [ideAssignment, setIdeAssignment] = useState(null);
-  const navigate = useNavigate();
-
   const student = useMemo(() => {
     try {
       return JSON.parse(localStorage.getItem('studentInfo'));
@@ -625,6 +619,16 @@ const StudentAssignmentsPage = () => {
     }
   }, []);
 
+  const cacheKey = student?.studentId ? `student_assignments_${student.studentId}` : null;
+  const cached = cacheKey ? clientCache.get(cacheKey) : null;
+
+  const [assignments, setAssignments] = useState(cached || []);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState(''); // '' | 'pending' | 'submitted' | 'graded'
+  const [loading, setLoading] = useState(!cached);
+  const [ideAssignment, setIdeAssignment] = useState(null);
+  const navigate = useNavigate();
+
   useEffect(() => {
     if (!student) {
       navigate('/', { replace: true });
@@ -632,20 +636,22 @@ const StudentAssignmentsPage = () => {
   }, [student, navigate]);
 
   const fetchAssignments = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
+    const hasCache = cacheKey && clientCache.has(cacheKey);
+    if (!silent && !hasCache) setLoading(true);
     try {
       const { data } = await API.get(`/student/assignments/${student.studentId}`);
       setAssignments(data);
+      if (cacheKey) clientCache.set(cacheKey, data);
     } catch (error) {
       console.error(error);
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [student]);
+  }, [student, cacheKey]);
 
   useEffect(() => {
-    if (student) fetchAssignments(false);
-  }, [student, fetchAssignments]);
+    if (student) fetchAssignments(cacheKey && clientCache.has(cacheKey) ? true : false);
+  }, [student, fetchAssignments, cacheKey]);
 
   // Live silent background sync: revalidates when admin grades/creates an assignment or when student re-focuses tab
   useLiveRefresh(fetchAssignments, 8000, [

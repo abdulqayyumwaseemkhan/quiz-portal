@@ -13,27 +13,41 @@ import {
   Play,
 } from 'lucide-react';
 import { useLiveRefresh, subscribeLiveUpdate } from '../utils/liveSync';
+import { clientCache } from '../utils/clientCache';
 
 const StudentDashboardPage = () => {
-  const [student, setStudent] = useState(null);
-  const [dashboard, setDashboard] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const initialStudent = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('studentInfo') || 'null');
+    } catch {
+      return null;
+    }
+  })();
+
+  const [student, setStudent] = useState(initialStudent);
+  const cacheKey = initialStudent?.studentId ? `student_dashboard_${initialStudent.studentId}` : null;
+  const cached = cacheKey ? clientCache.get(cacheKey) : null;
+
+  const [dashboard, setDashboard] = useState(cached);
+  const [loading, setLoading] = useState(!cached);
   const navigate = useNavigate();
 
   const fetchDashboard = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
+    const hasCache = cacheKey && clientCache.has(cacheKey);
+    if (!silent && !hasCache) setLoading(true);
     try {
       const stored = JSON.parse(localStorage.getItem('studentInfo') || '{}');
       const sid = stored?.studentId;
       if (!sid) return;
       const { data } = await api.get(`/student/dashboard/${sid}`);
       setDashboard(data);
+      if (cacheKey) clientCache.set(cacheKey, data);
     } catch (error) {
       console.error('Failed to load student dashboard:', error);
     } finally {
       if (!silent) setLoading(false);
     }
-  }, []);
+  }, [cacheKey]);
 
   useEffect(() => {
     const raw = localStorage.getItem('studentInfo');
@@ -43,8 +57,8 @@ const StudentDashboardPage = () => {
     }
     const parsed = JSON.parse(raw);
     setStudent(parsed);
-    fetchDashboard(false);
-  }, [navigate, fetchDashboard]);
+    fetchDashboard(cacheKey && clientCache.has(cacheKey) ? true : false);
+  }, [navigate, fetchDashboard, cacheKey]);
 
   // Immediately reflect profile updates across dashboard
   useEffect(() => {

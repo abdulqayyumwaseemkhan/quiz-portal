@@ -26,62 +26,92 @@ import {
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { exportMasterStudentReport } from '../utils/exportMasterStudentReport';
+import { clientCache } from '../utils/clientCache';
+import { useLiveRefresh } from '../utils/liveSync';
 
 const AdminDashboard = () => {
-  const [quizzes, setQuizzes] = useState([]);
-  const [stats, setStats] = useState({
-    totalQuizzes: 0,
-    totalAttempts: 0,
-    totalStudents: 0,
-    totalLectures: 0,
-    totalAttendanceSessions: 0,
-    totalAssignments: 0,
-  });
-  const [studentsData, setStudentsData] = useState([]);
-  const [resultsData, setResultsData] = useState([]);
-  const [meta, setMeta] = useState({ campuses: [], batches: [] });
-  const [loading, setLoading] = useState(true);
+  const cached = clientCache.get('admin_dashboard');
+  const [quizzes, setQuizzes] = useState(cached?.quizzes || []);
+  const [stats, setStats] = useState(
+    cached?.stats || {
+      totalQuizzes: 0,
+      totalAttempts: 0,
+      totalStudents: 0,
+      totalLectures: 0,
+      totalAttendanceSessions: 0,
+      totalAssignments: 0,
+    }
+  );
+  const [studentsData, setStudentsData] = useState(cached?.studentsData || []);
+  const [resultsData, setResultsData] = useState(cached?.resultsData || []);
+  const [meta, setMeta] = useState(cached?.meta || { campuses: [], batches: [] });
+  const [loading, setLoading] = useState(!cached);
 
   // Duplicate quiz modal state
   const [duplicatingQuiz, setDuplicatingQuiz] = useState(null);
   const [dupForm, setDupForm] = useState({ title: '', campus: '', batch: '', isPublished: false });
 
+  const fetchData = async (silent = false) => {
+    const hasCache = clientCache.has('admin_dashboard');
+    if (!silent && !hasCache) setLoading(true);
+    try {
+      const [quizRes, resultRes, studentRes, metaRes, lectureRes, attendanceRes, assignmentRes] =
+        await Promise.all([
+          API.get('/quizzes'),
+          API.get('/admin/results'),
+          API.get('/admin/students'),
+          API.get('/admin/students/meta'),
+          API.get('/lectures').catch(() => ({ data: [] })),
+          API.get('/attendance/sessions').catch(() => ({ data: [] })),
+          API.get('/assignments').catch(() => ({ data: [] })),
+        ]);
+
+      const newStats = {
+        totalQuizzes: quizRes.data.length,
+        totalAttempts: resultRes.data.length,
+        totalStudents: studentRes.data.length,
+        totalLectures: (lectureRes.data || []).length,
+        totalAttendanceSessions: (attendanceRes.data || []).length,
+        totalAssignments: (assignmentRes.data || []).length,
+      };
+
+      const newMeta = {
+        campuses: metaRes.data.campuses || [],
+        batches: metaRes.data.batches || [],
+      };
+
+      setQuizzes(quizRes.data);
+      setResultsData(resultRes.data);
+      setStudentsData(studentRes.data);
+      setMeta(newMeta);
+      setStats(newStats);
+
+      clientCache.set('admin_dashboard', {
+        quizzes: quizRes.data,
+        resultsData: resultRes.data,
+        studentsData: studentRes.data,
+        meta: newMeta,
+        stats: newStats,
+      });
+    } catch {
+      if (!silent) toast.error('Failed to load dashboard data');
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [quizRes, resultRes, studentRes, metaRes, lectureRes, attendanceRes, assignmentRes] =
-          await Promise.all([
-            API.get('/quizzes'),
-            API.get('/admin/results'),
-            API.get('/admin/students'),
-            API.get('/admin/students/meta'),
-            API.get('/lectures').catch(() => ({ data: [] })),
-            API.get('/attendance/sessions').catch(() => ({ data: [] })),
-            API.get('/assignments').catch(() => ({ data: [] })),
-          ]);
-        setQuizzes(quizRes.data);
-        setResultsData(resultRes.data);
-        setStudentsData(studentRes.data);
-        setMeta({
-          campuses: metaRes.data.campuses || [],
-          batches: metaRes.data.batches || [],
-        });
-        setStats({
-          totalQuizzes: quizRes.data.length,
-          totalAttempts: resultRes.data.length,
-          totalStudents: studentRes.data.length,
-          totalLectures: (lectureRes.data || []).length,
-          totalAttendanceSessions: (attendanceRes.data || []).length,
-          totalAssignments: (assignmentRes.data || []).length,
-        });
-      } catch {
-        toast.error('Failed to load dashboard data');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
+    fetchData(!clientCache.has('admin_dashboard') ? false : true);
   }, []);
+
+  useLiveRefresh(() => fetchData(true), 15000, [
+    'QUIZ_CREATED',
+    'QUIZ_DELETED',
+    'QUIZ_SUBMITTED',
+    'QUIZ_RESULT_DELETED',
+    'STUDENT_CREATED',
+    'STUDENT_DELETED',
+  ]);
 
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this quiz and all its questions?')) return;

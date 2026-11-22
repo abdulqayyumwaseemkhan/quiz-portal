@@ -24,6 +24,7 @@ import {
 import { useTheme } from '../context/ThemeContext';
 import api from '../api';
 import { broadcastLiveUpdate, subscribeLiveUpdate } from '../utils/liveSync';
+import { clientCache } from '../utils/clientCache';
 
 const StudentNavbar = ({ student }) => {
   const navigate = useNavigate();
@@ -72,6 +73,7 @@ const StudentNavbar = ({ student }) => {
   }, []);
 
   const handleLogout = () => {
+    clientCache.clear();
     localStorage.removeItem('studentInfo');
     localStorage.removeItem('studentToken');
     navigate('/', { replace: true });

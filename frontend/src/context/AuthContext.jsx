@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
+import { clientCache } from '../utils/clientCache';
 
 const AuthContext = createContext();
 
@@ -20,6 +21,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    clientCache.clear();
     setAdmin(null);
     localStorage.removeItem('adminToken');
     localStorage.removeItem('adminData');

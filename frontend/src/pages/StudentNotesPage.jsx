@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import StudentNavbar from '../components/StudentNavbar';
+import { clientCache } from '../utils/clientCache';
+import { useLiveRefresh } from '../utils/liveSync';
 
 const getFileIcon = (fileType = '', category = '') => {
   if (category === 'slides' || fileType === 'pptx' || fileType === 'ppt') return <Presentation size={20} />;
@@ -33,12 +35,6 @@ const CATEGORIES = [
 ];
 
 const StudentNotesPage = () => {
-  const [notes, setNotes] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-
   const student = React.useMemo(() => {
     try {
       return JSON.parse(localStorage.getItem('studentInfo'));
@@ -47,25 +43,40 @@ const StudentNotesPage = () => {
     }
   }, []);
 
+  const cacheKey = student?.studentId ? `student_notes_${student.studentId}` : null;
+  const cached = cacheKey ? clientCache.get(cacheKey) : null;
+
+  const [notes, setNotes] = useState(cached || []);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [loading, setLoading] = useState(!cached);
+  const navigate = useNavigate();
+
   useEffect(() => {
     if (!student) {
       navigate('/', { replace: true });
     }
   }, [student, navigate]);
 
+  const fetchNotes = React.useCallback(async (silent = false) => {
+    const hasCache = cacheKey && clientCache.has(cacheKey);
+    if (!silent && !hasCache) setLoading(true);
+    try {
+      const { data } = await API.get(`/student/notes/${student.studentId}`);
+      setNotes(data);
+      if (cacheKey) clientCache.set(cacheKey, data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  }, [student, cacheKey]);
+
   useEffect(() => {
-    const fetchNotes = async () => {
-      try {
-        const { data } = await API.get(`/student/notes/${student.studentId}`);
-        setNotes(data);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (student) fetchNotes();
-  }, [student]);
+    if (student) fetchNotes(cacheKey && clientCache.has(cacheKey) ? true : false);
+  }, [student, fetchNotes, cacheKey]);
+
+  useLiveRefresh(() => fetchNotes(true), 12000, ['NOTE_CREATED', 'NOTE_UPDATED', 'NOTE_DELETED']);
 
   const filteredNotes = notes.filter((n) => {
     const q = searchTerm.trim().toLowerCase();

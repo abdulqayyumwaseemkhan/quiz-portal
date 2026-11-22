@@ -75,9 +75,11 @@ function autoMapColumns(headers) {
 }
 
 const ManageStudentsPage = () => {
-  const [students, setStudents] = useState([]);
-  const [meta, setMeta] = useState({ campuses: [], batches: [], existingStudentIds: [] });
-  const [loading, setLoading] = useState(true);
+  const cachedStudents = clientCache.get('admin_students_data');
+  const cachedMeta = clientCache.get('admin_students_meta');
+  const [students, setStudents] = useState(cachedStudents || []);
+  const [meta, setMeta] = useState(cachedMeta || { campuses: [], batches: [], existingStudentIds: [] });
+  const [loading, setLoading] = useState(!cachedStudents);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -136,10 +138,12 @@ const ManageStudentsPage = () => {
   const [emailProgress, setEmailProgress] = useState(null);
 
   const fetchStudents = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
+    const hasCache = clientCache.has('admin_students_data');
+    if (!silent && !hasCache) setLoading(true);
     try {
       const { data } = await API.get('/admin/students');
       setStudents(data);
+      clientCache.set('admin_students_data', data);
     } catch {
       if (!silent) toast.error('Failed to load students');
     } finally {
@@ -150,18 +154,20 @@ const ManageStudentsPage = () => {
   const fetchMeta = useCallback(async () => {
     try {
       const { data } = await API.get('/admin/students/meta');
-      setMeta({
+      const metaObj = {
         campuses: data.campuses || [],
         batches: data.batches || [],
         existingStudentIds: data.existingStudentIds || [],
-      });
+      };
+      setMeta(metaObj);
+      clientCache.set('admin_students_meta', metaObj);
     } catch (error) {
       console.error(error);
     }
   }, []);
 
   useEffect(() => {
-    fetchStudents(false);
+    fetchStudents(clientCache.has('admin_students_data') ? true : false);
     fetchMeta();
   }, [fetchStudents, fetchMeta]);
 

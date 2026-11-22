@@ -4,23 +4,9 @@ import API from '../api';
 import StudentNavbar from '../components/StudentNavbar';
 import { CalendarCheck, CheckCircle2, XCircle, Clock, Calendar } from 'lucide-react';
 import { useLiveRefresh } from '../utils/liveSync';
+import { clientCache } from '../utils/clientCache';
 
 const StudentAttendancePage = () => {
-  const [data, setData] = useState({
-    summary: {
-      totalLectures: 0,
-      attended: 0,
-      present: 0,
-      late: 0,
-      absent: 0,
-      leave: 0,
-      percentage: 0,
-    },
-    history: [],
-  });
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-
   const student = useMemo(() => {
     try {
       return JSON.parse(localStorage.getItem('studentInfo'));
@@ -29,6 +15,26 @@ const StudentAttendancePage = () => {
     }
   }, []);
 
+  const cacheKey = student?.studentId ? `student_attendance_${student.studentId}` : null;
+  const cached = cacheKey ? clientCache.get(cacheKey) : null;
+
+  const [data, setData] = useState(
+    cached || {
+      summary: {
+        totalLectures: 0,
+        attended: 0,
+        present: 0,
+        late: 0,
+        absent: 0,
+        leave: 0,
+        percentage: 0,
+      },
+      history: [],
+    }
+  );
+  const [loading, setLoading] = useState(!cached);
+  const navigate = useNavigate();
+
   useEffect(() => {
     if (!student) {
       navigate('/', { replace: true });
@@ -36,20 +42,22 @@ const StudentAttendancePage = () => {
   }, [student, navigate]);
 
   const fetchAttendance = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
+    const hasCache = cacheKey && clientCache.has(cacheKey);
+    if (!silent && !hasCache) setLoading(true);
     try {
       const res = await API.get(`/student/attendance/${student.studentId}`);
       setData(res.data);
+      if (cacheKey) clientCache.set(cacheKey, res.data);
     } catch (error) {
       console.error(error);
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [student]);
+  }, [student, cacheKey]);
 
   useEffect(() => {
-    if (student) fetchAttendance(false);
-  }, [student, fetchAttendance]);
+    if (student) fetchAttendance(cacheKey && clientCache.has(cacheKey) ? true : false);
+  }, [student, fetchAttendance, cacheKey]);
 
   // Silently revalidates when admin updates attendance or student focuses window
   useLiveRefresh(fetchAttendance, 10000, ['ATTENDANCE_UPDATED']);

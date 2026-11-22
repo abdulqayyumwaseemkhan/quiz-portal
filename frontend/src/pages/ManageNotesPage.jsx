@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import API from '../api';
 import Navbar from '../components/AdminNavbar';
 import {
@@ -16,6 +16,7 @@ import {
   X,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { clientCache } from '../utils/clientCache';
 
 const NOTE_CATEGORIES = [
   { value: 'handout', label: '📄 Handout & Notes', icon: FileText, color: 'text-blue-600 bg-blue-500/10' },
@@ -26,9 +27,11 @@ const NOTE_CATEGORIES = [
 ];
 
 const ManageNotesPage = () => {
-  const [notes, setNotes] = useState([]);
-  const [meta, setMeta] = useState({ campuses: [], batches: [] });
-  const [loading, setLoading] = useState(true);
+  const cachedNotes = clientCache.get('admin_notes_data');
+  const cachedMeta = clientCache.get('admin_notes_meta');
+  const [notes, setNotes] = useState(cachedNotes || []);
+  const [meta, setMeta] = useState(cachedMeta || { campuses: [], batches: [] });
+  const [loading, setLoading] = useState(!cachedNotes);
   const [showAdd, setShowAdd] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -46,31 +49,36 @@ const ManageNotesPage = () => {
   });
   const [file, setFile] = useState(null);
 
-  useEffect(() => {
-    fetchNotes();
-    fetchMeta();
-  }, []);
-
-  const fetchNotes = async () => {
+  const fetchNotes = useCallback(async (silent = false) => {
+    const hasCache = clientCache.has('admin_notes_data');
+    if (!silent && !hasCache) setLoading(true);
     try {
       const { data } = await API.get('/notes');
       setNotes(data);
+      clientCache.set('admin_notes_data', data);
     } catch (error) {
       console.error(error);
-      toast.error('Failed to load notes');
+      if (!silent) toast.error('Failed to load notes');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchMeta = async () => {
+  const fetchMeta = useCallback(async () => {
     try {
       const { data } = await API.get('/admin/students/meta');
-      setMeta(data);
+      const metaObj = { campuses: data.campuses || [], batches: data.batches || [] };
+      setMeta(metaObj);
+      clientCache.set('admin_notes_meta', metaObj);
     } catch (error) {
       console.error(error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchNotes(clientCache.has('admin_notes_data'));
+    fetchMeta();
+  }, [fetchNotes, fetchMeta]);
 
   const resetForm = () => {
     setEditingId(null);

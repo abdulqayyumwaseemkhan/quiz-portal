@@ -4,12 +4,9 @@ import { Clock, BookOpen, ChevronRight, Search, Calendar, AlertCircle } from 'lu
 import { Link, useNavigate } from 'react-router-dom';
 import StudentNavbar from '../components/StudentNavbar';
 import { useLiveRefresh } from '../utils/liveSync';
+import { clientCache } from '../utils/clientCache';
 
 const QuizListPage = () => {
-  const [quizzes, setQuizzes] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [loading, setLoading] = useState(true);
-
   const student = useMemo(() => {
     try {
       return JSON.parse(localStorage.getItem('studentInfo'));
@@ -19,6 +16,13 @@ const QuizListPage = () => {
   }, []);
   const navigate = useNavigate();
 
+  const cacheKey = student?.studentId ? `student_quizzes_${student.studentId}` : null;
+  const cached = cacheKey ? clientCache.get(cacheKey) : null;
+
+  const [quizzes, setQuizzes] = useState(cached || []);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(!cached);
+
   useEffect(() => {
     if (!student) {
       navigate('/', { replace: true });
@@ -26,20 +30,22 @@ const QuizListPage = () => {
   }, [student, navigate]);
 
   const fetchQuizzes = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
+    const hasCache = cacheKey && clientCache.has(cacheKey);
+    if (!silent && !hasCache) setLoading(true);
     try {
       const { data } = await API.get(`/student/quizzes/${student.studentId}`);
       setQuizzes(data);
+      if (cacheKey) clientCache.set(cacheKey, data);
     } catch (error) {
       console.error(error);
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [student]);
+  }, [student, cacheKey]);
 
   useEffect(() => {
-    if (student) fetchQuizzes(false);
-  }, [student, fetchQuizzes]);
+    if (student) fetchQuizzes(cacheKey && clientCache.has(cacheKey) ? true : false);
+  }, [student, fetchQuizzes, cacheKey]);
 
   // Silently re-sync quizzes when admin publishes a quiz or user refocused window
   useLiveRefresh(fetchQuizzes, 12000, ['QUIZ_PUBLISHED', 'QUIZ_SUBMITTED', 'QUIZ_RESULT_DELETED']);
