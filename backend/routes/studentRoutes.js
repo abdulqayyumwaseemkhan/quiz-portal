@@ -9,6 +9,7 @@ const {
   getAvailableQuizzes,
   getQuizForAttempt,
   autosaveQuizAttempt,
+  pauseQuizAttempt,
   submitQuiz,
   getStudentResult,
   checkAttemptStatus,
@@ -51,6 +52,7 @@ router.get('/dashboard/:studentId', protectStudent, getStudentDashboard);
 router.get('/quizzes/:studentId', protectStudent, getAvailableQuizzes);
 router.get('/quiz/:quizId/:studentId', protectStudent, getQuizForAttempt);
 router.put('/quiz/:quizId/autosave', protectStudent, autosaveQuizAttempt);
+router.put('/quiz/:quizId/pause', protectStudent, pauseQuizAttempt);
 router.post('/submit', protectStudent, submitQuiz);
 router.get('/result/:resultId', protectStudent, getStudentResult);
 router.get('/check-attempt/:quizId/:studentId', protectStudent, checkAttemptStatus);

@@ -9,6 +9,8 @@ const CreateQuizPage = () => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    quizType: 'quiz',
+    format: 'hybrid',
     duration: 30,
     totalMarks: 10,
     startDate: '',
@@ -94,6 +96,38 @@ const CreateQuizPage = () => {
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 required
               />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)] mb-1.5">
+                Assessment Type *
+              </label>
+              <select
+                className="input-field"
+                value={formData.quizType}
+                onChange={(e) => setFormData({ ...formData, quizType: e.target.value })}
+              >
+                <option value="quiz">Regular Quiz</option>
+                <option value="class_test">Class Test</option>
+                <option value="mid_term">Mid Term Examination</option>
+                <option value="final_term">Final Term Examination</option>
+                <option value="assessment">Practical / Assessment</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)] mb-1.5">
+                Quiz Format Scope *
+              </label>
+              <select
+                className="input-field"
+                value={formData.format}
+                onChange={(e) => setFormData({ ...formData, format: e.target.value })}
+              >
+                <option value="hybrid">Hybrid (MCQs + Q&A Theory + Live Code)</option>
+                <option value="mcq_only">Only MCQs</option>
+                <option value="qna_only">Only Q&A Theory & Code</option>
+              </select>
             </div>
 
             <div>

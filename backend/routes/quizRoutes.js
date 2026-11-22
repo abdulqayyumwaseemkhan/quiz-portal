@@ -12,10 +12,14 @@ const {
   getQuestionsByQuiz,
   updateQuestion,
   deleteQuestion,
+  getResultDetails,
+  gradeResultAnswers,
   deleteQuizResult,
 } = require('../controllers/quizController');
 const { protectAdmin } = require('../middleware/auth');
 
+router.get('/results/:id', protectAdmin, getResultDetails);
+router.put('/results/:id/grade', protectAdmin, gradeResultAnswers);
 router.delete('/results/:id', protectAdmin, deleteQuizResult);
 
 router.route('/')

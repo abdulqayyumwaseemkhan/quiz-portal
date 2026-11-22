@@ -34,6 +34,8 @@ const createQuiz = asyncHandler(async (req, res) => {
     attemptsAllowed,
     isPublished,
     resultsReleased,
+    quizType,
+    format,
   } = req.body;
 
   const quiz = await Quiz.create({
@@ -50,6 +52,8 @@ const createQuiz = asyncHandler(async (req, res) => {
     attemptsAllowed: Math.max(1, Number(attemptsAllowed) || 1),
     isPublished: isPublished !== undefined ? Boolean(isPublished) : true,
     resultsReleased: Boolean(resultsReleased),
+    quizType: quizType || 'quiz',
+    format: format || 'hybrid',
     createdBy: req.admin._id,
   });
 
@@ -126,6 +130,8 @@ const updateQuiz = asyncHandler(async (req, res) => {
   }
   if (req.body.hasOwnProperty('isPublished')) quiz.isPublished = Boolean(req.body.isPublished);
   if (req.body.hasOwnProperty('resultsReleased')) quiz.resultsReleased = Boolean(req.body.resultsReleased);
+  if (req.body.quizType !== undefined) quiz.quizType = req.body.quizType;
+  if (req.body.format !== undefined) quiz.format = req.body.format;
 
   const updatedQuiz = await quiz.save();
   cache.invalidate(`quiz:${quiz._id}`);
@@ -156,6 +162,8 @@ const duplicateQuiz = asyncHandler(async (req, res) => {
     attemptsAllowed: original.attemptsAllowed || 1,
     isPublished: isPublished !== undefined ? Boolean(isPublished) : false,
     resultsReleased: false,
+    quizType: original.quizType || 'quiz',
+    format: original.format || 'hybrid',
     createdBy: req.admin._id,
   });
 
@@ -164,9 +172,11 @@ const duplicateQuiz = asyncHandler(async (req, res) => {
     const clonedQuestions = originalQuestions.map((q) => ({
       quizId: duplicatedQuiz._id,
       questionText: q.questionText,
-      type: q.type,
+      type: q.type || 'mcq',
+      codeLanguage: q.codeLanguage || 'html_css',
+      starterCode: q.starterCode || '',
       options: q.options || [],
-      correctAnswer: q.correctAnswer,
+      correctAnswer: q.correctAnswer || '',
       marks: q.marks || 1,
       explanation: q.explanation || '',
     }));
@@ -204,16 +214,27 @@ const addQuestion = asyncHandler(async (req, res) => {
     throw new Error('Quiz not found');
   }
 
-  const { questionText, type = 'mcq', options = [], correctAnswer, marks = 1, explanation = '' } = req.body;
+  const {
+    questionText,
+    type = 'mcq',
+    codeLanguage = 'html_css',
+    starterCode = '',
+    options = [],
+    correctAnswer = '',
+    marks = 1,
+    explanation = '',
+  } = req.body;
   const cleanOptions = Array.isArray(options) ? options.map((o) => String(o || '').trim()).filter(Boolean) : [];
 
   const question = await Question.create({
     quizId: req.params.quizId,
     questionText: String(questionText || '').trim(),
     type,
+    codeLanguage: codeLanguage || 'html_css',
+    starterCode: String(starterCode || ''),
     options: type === 'mcq' ? cleanOptions : [],
     correctAnswer: String(correctAnswer || '').trim(),
-    marks: Number(marks) || 1,
+    marks: Math.max(0.5, Number(marks) || 1),
     explanation: String(explanation || '').trim(),
   });
 
@@ -328,11 +349,13 @@ const updateQuestion = asyncHandler(async (req, res) => {
 
   if (req.body.questionText !== undefined) question.questionText = String(req.body.questionText).trim();
   if (req.body.type !== undefined) question.type = req.body.type;
+  if (req.body.codeLanguage !== undefined) question.codeLanguage = req.body.codeLanguage;
+  if (req.body.starterCode !== undefined) question.starterCode = String(req.body.starterCode);
   if (Array.isArray(req.body.options)) {
     question.options = req.body.options.map((o) => String(o || '').trim()).filter(Boolean);
   }
   if (req.body.correctAnswer !== undefined) question.correctAnswer = String(req.body.correctAnswer).trim();
-  if (req.body.marks !== undefined) question.marks = Number(req.body.marks) || 1;
+  if (req.body.marks !== undefined) question.marks = Math.max(0.5, Number(req.body.marks) || 1);
   if (req.body.explanation !== undefined) question.explanation = String(req.body.explanation).trim();
 
   const updated = await question.save();
@@ -386,11 +409,96 @@ const getAllResults = asyncHandler(async (req, res) => {
 
   const results = await Result.find(matchQuery)
     .select('-answers -draftAnswers')
-    .populate('quizId', 'title campus batch')
+    .populate('quizId', 'title campus batch quizType format')
     .sort({ submittedAt: -1 })
     .lean();
 
   res.json(results);
+});
+
+const getResultDetails = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const result = await Result.findById(id)
+    .populate('quizId', 'title description duration totalMarks quizType format')
+    .populate('answers.questionId', 'questionText type codeLanguage starterCode options correctAnswer marks explanation')
+    .lean();
+
+  if (!result) {
+    res.status(404);
+    throw new Error('Result not found');
+  }
+
+  // Check admin authorization
+  const scope = getAdminScope(req, 'createdBy');
+  const quiz = await Quiz.findOne({ _id: result.quizId._id, ...scope }).lean();
+  if (!quiz && req.admin.role !== 'superadmin') {
+    res.status(403);
+    throw new Error('Not authorized to view this result');
+  }
+
+  res.json(result);
+});
+
+const gradeResultAnswers = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { gradedAnswers } = req.body; // array of { questionId, marksObtained, teacherRemarks }
+
+  const result = await Result.findById(id).populate('answers.questionId');
+  if (!result) {
+    res.status(404);
+    throw new Error('Result not found');
+  }
+
+  const scope = getAdminScope(req, 'createdBy');
+  const quiz = await Quiz.findOne({ _id: result.quizId, ...scope });
+  if (!quiz && req.admin.role !== 'superadmin') {
+    res.status(403);
+    throw new Error('Not authorized to grade this result');
+  }
+
+  const gradeMap = new Map();
+  if (Array.isArray(gradedAnswers)) {
+    gradedAnswers.forEach((ga) => {
+      gradeMap.set(String(ga.questionId), {
+        marksObtained: Number(ga.marksObtained) || 0,
+        teacherRemarks: String(ga.teacherRemarks || '').trim(),
+      });
+    });
+  }
+
+  let totalScore = 0;
+  result.answers.forEach((ans) => {
+    const qDoc = ans.questionId;
+    const qId = qDoc?._id?.toString() || ans.questionId?.toString();
+    const maxMarks = qDoc?.marks || 1;
+
+    if (gradeMap.has(qId)) {
+      const g = gradeMap.get(qId);
+      const marks = Math.min(maxMarks, Math.max(0, g.marksObtained));
+      ans.marksObtained = marks;
+      ans.teacherRemarks = g.teacherRemarks;
+      ans.manuallyGraded = true;
+      ans.isCorrect = marks === maxMarks;
+    }
+    totalScore += ans.marksObtained || 0;
+  });
+
+  result.score = Number(totalScore.toFixed(2));
+  result.percentage = result.totalPossibleMarks > 0
+    ? Number(((result.score / result.totalPossibleMarks) * 100).toFixed(2))
+    : 0;
+  result.gradingStatus = 'graded';
+  await result.save();
+
+  const populated = await Result.findById(id)
+    .populate('quizId', 'title description duration totalMarks quizType format')
+    .populate('answers.questionId', 'questionText type codeLanguage starterCode options correctAnswer marks explanation')
+    .lean();
+
+  res.json({
+    message: 'Result graded successfully',
+    result: populated,
+  });
 });
 
 const deleteQuizResult = asyncHandler(async (req, res) => {
@@ -439,5 +547,7 @@ module.exports = {
   updateQuestion,
   deleteQuestion,
   getAllResults,
+  getResultDetails,
+  gradeResultAnswers,
   deleteQuizResult,
 };

@@ -41,6 +41,23 @@ const resultSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  totalActiveSeconds: {
+    type: Number,
+    default: 0,
+  },
+  isPaused: {
+    type: Boolean,
+    default: false,
+  },
+  pausedAt: {
+    type: Date,
+    default: null,
+  },
+  gradingStatus: {
+    type: String,
+    enum: ['graded', 'pending_manual_grading'],
+    default: 'graded',
+  },
   draftAnswers: [{
     questionId: String,
     answer: String,
@@ -52,7 +69,18 @@ const resultSchema = new mongoose.Schema({
     },
     answer: String,
     isCorrect: Boolean,
-    marksObtained: Number,
+    marksObtained: {
+      type: Number,
+      default: 0,
+    },
+    teacherRemarks: {
+      type: String,
+      default: '',
+    },
+    manuallyGraded: {
+      type: Boolean,
+      default: false,
+    },
   }],
   score: {
     type: Number,

@@ -54,6 +54,7 @@ async function getCachedQuizAndQuestions(quizId) {
 function gradeAttemptAnswers(fullQuestions, userAnswers = []) {
   let score = 0;
   let totalPossibleMarks = 0;
+  let hasManualGradingQuestions = false;
   const answerMap = new Map(
     (Array.isArray(userAnswers) ? userAnswers : []).map((ua) => [String(ua.questionId), String(ua.answer ?? '')])
   );
@@ -64,25 +65,34 @@ function gradeAttemptAnswers(fullQuestions, userAnswers = []) {
     const userAnswerText = answerMap.get(q._id.toString()) || '';
 
     let isCorrect = false;
+    let marksObtained = 0;
+    let manuallyGraded = false;
+
     if (q.type === 'mcq') {
       isCorrect = userAnswerText === q.correctAnswer;
+      marksObtained = isCorrect ? marks : 0;
+      manuallyGraded = false;
+      if (isCorrect) score += marks;
     } else {
-      isCorrect = userAnswerText.trim().toLowerCase() === String(q.correctAnswer || '').trim().toLowerCase();
+      // Subjective / Short / Long / Coding question requires manual evaluation by teacher
+      hasManualGradingQuestions = true;
+      isCorrect = null; // null indicates pending instructor evaluation
+      marksObtained = 0;
+      manuallyGraded = false;
     }
-
-    const marksObtained = isCorrect ? marks : 0;
-    if (isCorrect) score += marks;
 
     return {
       questionId: q._id,
       answer: userAnswerText,
       isCorrect,
       marksObtained,
+      manuallyGraded,
     };
   });
 
   const percentage = totalPossibleMarks > 0 ? Number(((score / totalPossibleMarks) * 100).toFixed(2)) : 0;
-  return { score, totalPossibleMarks, percentage, processedAnswers };
+  const gradingStatus = hasManualGradingQuestions ? 'pending_manual_grading' : 'graded';
+  return { score, totalPossibleMarks, percentage, processedAnswers, gradingStatus };
 }
 
 // @desc    Student login with Student ID + password
@@ -349,10 +359,25 @@ const getQuizForAttempt = asyncHandler(async (req, res) => {
   const attemptsAllowed = Math.max(1, quiz.attemptsAllowed || 1);
   const durationSeconds = Math.max(60, (quiz.duration || 30) * 60);
 
-  // If there is an active in_progress attempt, check if server timer already expired
+  // If there is an active in_progress attempt, check active time & resume
   if (activeAttempt) {
-    const elapsedSeconds = Math.floor((Date.now() - new Date(activeAttempt.startedAt).getTime()) / 1000);
-    const remainingSeconds = durationSeconds - elapsedSeconds;
+    let currentActive = activeAttempt.totalActiveSeconds || 0;
+    if (!activeAttempt.isPaused) {
+      const lastTick = activeAttempt.lastSavedAt
+        ? new Date(activeAttempt.lastSavedAt).getTime()
+        : new Date(activeAttempt.startedAt).getTime();
+      // Cap at 30s so system shutdown/power off doesn't burn remaining time
+      const elapsedSinceLastTick = Math.max(0, Math.min(30, Math.floor((Date.now() - lastTick) / 1000)));
+      currentActive += elapsedSinceLastTick;
+      activeAttempt.totalActiveSeconds = currentActive;
+    }
+
+    // Mark as unpaused and fresh timestamp on resume
+    activeAttempt.isPaused = false;
+    activeAttempt.lastSavedAt = new Date();
+    await activeAttempt.save();
+
+    const remainingSeconds = durationSeconds - currentActive;
 
     if (remainingSeconds <= 0) {
       // Auto-submit expired attempt on the server
@@ -362,6 +387,7 @@ const getQuizForAttempt = asyncHandler(async (req, res) => {
       activeAttempt.score = graded.score;
       activeAttempt.totalPossibleMarks = graded.totalPossibleMarks;
       activeAttempt.percentage = graded.percentage;
+      activeAttempt.gradingStatus = graded.gradingStatus;
       activeAttempt.submittedAt = new Date();
       activeAttempt.draftAnswers = [];
       await activeAttempt.save();
@@ -388,11 +414,15 @@ const getQuizForAttempt = asyncHandler(async (req, res) => {
         status: 'in_progress',
         startedAt: new Date(),
         lastSavedAt: new Date(),
+        totalActiveSeconds: 0,
+        isPaused: false,
+        pausedAt: null,
         draftAnswers: [],
         answers: [],
         score: 0,
         totalPossibleMarks: quiz.totalMarks || 0,
         percentage: 0,
+        gradingStatus: 'graded',
       });
     } catch (err) {
       // Handle race condition if student double-clicked Start Quiz
@@ -401,15 +431,16 @@ const getQuizForAttempt = asyncHandler(async (req, res) => {
     }
   }
 
-  const elapsed = Math.floor((Date.now() - new Date(activeAttempt.startedAt).getTime()) / 1000);
-  const remainingSeconds = Math.max(1, durationSeconds - elapsed);
+  const remainingSeconds = Math.max(1, durationSeconds - (activeAttempt.totalActiveSeconds || 0));
 
   // Strip correctAnswer and explanation before sending to client!
   let sanitizedQuestions = fullQuestions.map((q) => ({
     _id: q._id,
     quizId: q.quizId,
     questionText: q.questionText,
-    type: q.type,
+    type: q.type || 'mcq',
+    codeLanguage: q.codeLanguage || 'html_css',
+    starterCode: q.starterCode || '',
     options: q.type === 'mcq' && Array.isArray(q.options)
       ? (quiz.shuffleOptions !== false ? shuffleArray(q.options) : [...q.options])
       : [],
@@ -428,16 +459,49 @@ const getQuizForAttempt = asyncHandler(async (req, res) => {
       attemptNo: activeAttempt.attemptNo,
       startedAt: activeAttempt.startedAt,
       remainingSeconds,
+      totalActiveSeconds: activeAttempt.totalActiveSeconds || 0,
+      isPaused: Boolean(activeAttempt.isPaused),
       draftAnswers: activeAttempt.draftAnswers || [],
     },
   });
+});
+
+// @desc    Pause active quiz attempt (network drop, offline, system shut down)
+// @route   PUT /api/student/quiz/:quizId/pause
+const pauseQuizAttempt = asyncHandler(async (req, res) => {
+  const { quizId } = req.params;
+  const { studentId, attemptId } = req.body;
+
+  const filter = attemptId
+    ? { _id: attemptId, studentId, quizId, status: 'in_progress' }
+    : { studentId, quizId, status: 'in_progress' };
+
+  const attempt = await Result.findOne(filter);
+  if (!attempt) {
+    return res.json({ paused: false, message: 'No active attempt to pause' });
+  }
+
+  const now = new Date();
+  if (!attempt.isPaused) {
+    const lastTick = attempt.lastSavedAt
+      ? new Date(attempt.lastSavedAt).getTime()
+      : new Date(attempt.startedAt).getTime();
+    const elapsedSinceLastTick = Math.max(0, Math.min(30, Math.floor((now.getTime() - lastTick) / 1000)));
+    attempt.totalActiveSeconds = (attempt.totalActiveSeconds || 0) + elapsedSinceLastTick;
+    attempt.isPaused = true;
+    attempt.pausedAt = now;
+    attempt.lastSavedAt = now;
+    await attempt.save();
+  }
+
+  res.json({ paused: true, totalActiveSeconds: attempt.totalActiveSeconds });
 });
 
 // @desc    Lightweight periodic autosave of student's in-progress answers
 // @route   PUT /api/student/quiz/:quizId/autosave
 const autosaveQuizAttempt = asyncHandler(async (req, res) => {
   const { quizId } = req.params;
-  const { studentId, attemptId, userAnswers } = req.body;
+  const { studentId, attemptId, userAnswers, activeSecondsIncrement } = req.body;
 
   if (!Array.isArray(userAnswers)) {
     res.status(400);
@@ -453,12 +517,23 @@ const autosaveQuizAttempt = asyncHandler(async (req, res) => {
     ? { _id: attemptId, studentId, quizId, status: 'in_progress' }
     : { studentId, quizId, status: 'in_progress' };
 
-  await Result.updateOne(filter, {
-    $set: {
-      draftAnswers: sanitizedDraft,
-      lastSavedAt: new Date(),
-    },
-  });
+  const attempt = await Result.findOne(filter);
+  if (attempt) {
+    const now = new Date();
+    const lastTick = attempt.lastSavedAt
+      ? new Date(attempt.lastSavedAt).getTime()
+      : new Date(attempt.startedAt).getTime();
+    const elapsedSinceLastTick = Math.max(0, Math.min(30, Math.floor((now.getTime() - lastTick) / 1000)));
+    const increment = Number(activeSecondsIncrement) > 0
+      ? Math.min(30, Number(activeSecondsIncrement))
+      : elapsedSinceLastTick;
+
+    attempt.draftAnswers = sanitizedDraft;
+    attempt.totalActiveSeconds = (attempt.totalActiveSeconds || 0) + increment;
+    attempt.lastSavedAt = now;
+    attempt.isPaused = false;
+    await attempt.save();
+  }
 
   res.json({ saved: true, savedAt: new Date() });
 });
@@ -498,7 +573,7 @@ const submitQuiz = asyncHandler(async (req, res) => {
       ? userAnswers
       : attempt?.draftAnswers || [];
 
-  const { score, totalPossibleMarks, percentage, processedAnswers } = gradeAttemptAnswers(
+  const { score, totalPossibleMarks, percentage, processedAnswers, gradingStatus } = gradeAttemptAnswers(
     fullQuestions,
     finalUserAnswers
   );
@@ -510,6 +585,8 @@ const submitQuiz = asyncHandler(async (req, res) => {
     attempt.score = score;
     attempt.totalPossibleMarks = totalPossibleMarks;
     attempt.percentage = percentage;
+    attempt.gradingStatus = gradingStatus;
+    attempt.isPaused = false;
     attempt.submittedAt = new Date();
     await attempt.save();
   } else {
@@ -528,6 +605,8 @@ const submitQuiz = asyncHandler(async (req, res) => {
         score,
         totalPossibleMarks,
         percentage,
+        gradingStatus,
+        isPaused: false,
         submittedAt: new Date(),
       });
     } catch (err) {
@@ -547,14 +626,15 @@ const submitQuiz = asyncHandler(async (req, res) => {
     quizId: attempt.quizId,
     attemptNo: attempt.attemptNo,
     submittedAt: attempt.submittedAt,
+    gradingStatus: attempt.gradingStatus,
   });
 });
 
 const getStudentResult = asyncHandler(async (req, res) => {
   const { resultId } = req.params;
   const result = await Result.findById(resultId)
-    .populate('quizId', 'title description resultsReleased')
-    .populate('answers.questionId', 'questionText type options correctAnswer explanation')
+    .populate('quizId', 'title description resultsReleased quizType format')
+    .populate('answers.questionId', 'questionText type codeLanguage starterCode options correctAnswer explanation marks')
     .lean();
   
   if (!result) {
@@ -568,6 +648,18 @@ const getStudentResult = asyncHandler(async (req, res) => {
       _id: result._id,
       studentName: result.studentName,
       studentId: result.studentId,
+      campus: result.campus,
+      batch: result.batch,
+      attemptNo: result.attemptNo,
+      submittedAt: result.submittedAt,
+      gradingStatus: result.gradingStatus,
+      quizId: result.quizId,
+      message: 'Result will be shown once instructor releases it.',
+    });
+  }
+
+  res.json(result);
+});
       quizId: {
         _id: result.quizId?._id,
         title: result.quizId?.title,
@@ -738,6 +830,7 @@ module.exports = {
   getAvailableQuizzes,
   getQuizForAttempt,
   autosaveQuizAttempt,
+  pauseQuizAttempt,
   submitQuiz,
   getStudentResult,
   checkAttemptStatus,

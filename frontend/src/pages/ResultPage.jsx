@@ -100,6 +100,12 @@ const ResultPage = () => {
             {result.studentName} ({result.studentId})
           </p>
 
+          {result.gradingStatus === 'pending_manual_grading' && (
+            <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-300 text-left">
+              <strong>Evaluation in Progress:</strong> This quiz contains questions (theory / coding) that require manual instructor grading. Your current score reflects auto-graded items; your final grade will update once your teacher reviews your submission.
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
             <div className="p-4 rounded-xl bg-[var(--bg-muted)] border border-[var(--border)]">
               <p className="text-xs font-semibold uppercase text-[var(--text-secondary)]">Score</p>
@@ -159,14 +165,33 @@ const ResultPage = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs p-3.5 rounded-xl bg-[var(--bg-muted)] border border-[var(--border)]">
                 <div>
                   <p className="text-[var(--text-secondary)] font-semibold uppercase mb-1">Your Answer</p>
-                  <p className={`font-bold ${item.isCorrect ? 'text-emerald-600' : 'text-rose-600'}`}>
-                    {item.answer || 'No Answer'}
-                  </p>
+                  {item.questionId?.type === 'code' ? (
+                    <pre className="font-mono text-xs p-2.5 rounded-lg bg-[#0b1220] text-slate-100 whitespace-pre-wrap overflow-x-auto max-h-48">
+                      {item.answer || '(No code submitted)'}
+                    </pre>
+                  ) : (
+                    <p className={`font-bold ${item.isCorrect ? 'text-emerald-600' : item.isCorrect === null ? 'text-amber-600' : 'text-rose-600'}`}>
+                      {item.answer || 'No Answer'}
+                    </p>
+                  )}
                 </div>
-                {!item.isCorrect && item.questionId?.correctAnswer && (
+                {!item.isCorrect && item.questionId?.correctAnswer && item.questionId?.type === 'mcq' && (
                   <div>
                     <p className="text-[var(--text-secondary)] font-semibold uppercase mb-1">Correct Answer</p>
                     <p className="font-bold text-emerald-600">{item.questionId.correctAnswer}</p>
+                  </div>
+                )}
+                {item.marksObtained !== undefined && (
+                  <div className="sm:col-span-2 pt-2 border-t border-[var(--border)] flex justify-between items-center text-xs">
+                    <span className="text-[var(--text-secondary)]">Marks Awarded:</span>
+                    <span className="font-mono font-bold text-[var(--text-primary)]">
+                      {item.marksObtained} / {item.questionId?.marks || 1}
+                    </span>
+                  </div>
+                )}
+                {item.teacherRemarks && (
+                  <div className="sm:col-span-2 p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-700 dark:text-blue-300">
+                    <strong>Teacher Remarks:</strong> {item.teacherRemarks}
                   </div>
                 )}
               </div>

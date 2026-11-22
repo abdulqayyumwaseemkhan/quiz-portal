@@ -14,16 +14,25 @@ const questionSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['mcq', 'short'],
+    enum: ['mcq', 'short', 'long', 'code'],
     required: true,
     default: 'mcq',
+  },
+  codeLanguage: {
+    type: String,
+    enum: ['html_css', 'react', 'javascript'],
+    default: 'html_css',
+  },
+  starterCode: {
+    type: String,
+    default: '',
   },
   options: [{
     type: String, // 4 or 5 options for MCQ
   }],
   correctAnswer: {
     type: String,
-    required: true,
+    default: '',
   },
   marks: {
     type: Number,

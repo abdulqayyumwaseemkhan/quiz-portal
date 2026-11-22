@@ -99,8 +99,21 @@ const QuizListPage = () => {
                 >
                   <div>
                     <div className="flex items-start justify-between mb-4">
-                      <div className="p-2.5 rounded-xl bg-[var(--accent-subtle)] text-[var(--accent)]">
-                        <BookOpen size={20} />
+                      <div className="flex items-center gap-2">
+                        <div className="p-2.5 rounded-xl bg-[var(--accent-subtle)] text-[var(--accent)]">
+                          <BookOpen size={20} />
+                        </div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[var(--bg-muted)] text-[var(--text-secondary)] border border-[var(--border)]">
+                          {quiz.quizType === 'class_test'
+                            ? 'Class Test'
+                            : quiz.quizType === 'mid_term'
+                            ? 'Mid Term Exam'
+                            : quiz.quizType === 'final_term'
+                            ? 'Final Term Exam'
+                            : quiz.quizType === 'assessment'
+                            ? 'Practical'
+                            : 'Quiz'}
+                        </span>
                       </div>
                       <div className="text-right">
                         <div className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--text-secondary)]">

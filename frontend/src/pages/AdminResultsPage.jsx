@@ -1,10 +1,89 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import API from '../api';
 import Navbar from '../components/AdminNavbar';
-import { Search, Filter, Download, Users, Trash2, AlertTriangle, X } from 'lucide-react';
+import {
+  Search,
+  Filter,
+  Download,
+  Users,
+  Trash2,
+  AlertTriangle,
+  X,
+  CheckCircle2,
+  Clock,
+  Eye,
+  FileCheck,
+  Code2,
+  Play,
+  RotateCcw,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import { broadcastLiveUpdate } from '../utils/liveSync';
+
+function buildPreviewDocument(code, lang) {
+  if (lang === 'react') {
+    return `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>body { font-family: sans-serif; padding: 12px; margin: 0; background: #fff; color: #111; }</style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="text/babel">
+      try {
+        ${code || ''}
+        if (typeof App !== 'undefined') {
+          ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+        }
+      } catch(e) {
+        document.getElementById('root').innerHTML = '<div style="color:red;font-family:monospace;padding:10px;">Runtime Error: ' + e.message + '</div>';
+      }
+    </script>
+  </body>
+</html>`;
+  }
+  if (lang === 'javascript') {
+    return `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>body { font-family: monospace; padding: 12px; margin: 0; background: #0f172a; color: #4ade80; white-space: pre-wrap; font-size: 13px; line-height: 1.5; }</style>
+  </head>
+  <body>
+    <div id="log"></div>
+    <script>
+      const logEl = document.getElementById('log');
+      const log = (...args) => { logEl.innerText += args.join(' ') + '\\n'; };
+      console.log = log;
+      console.error = (...args) => { logEl.innerHTML += '<span style="color:#f87171;">' + args.join(' ') + '</span>\\n'; };
+      try {
+        ${code || ''}
+      } catch(e) {
+        console.error('Error: ' + e.message);
+      }
+    </script>
+  </body>
+</html>`;
+  }
+  return `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>body { font-family: sans-serif; margin: 0; padding: 12px; box-sizing: border-box; }</style>
+  </head>
+  <body>
+    ${code || ''}
+  </body>
+</html>`;
+}
 
 const AdminResultsPage = () => {
   const [results, setResults] = useState([]);
@@ -14,6 +93,13 @@ const AdminResultsPage = () => {
   const [loading, setLoading] = useState(true);
   const [deletingResult, setDeletingResult] = useState(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Manual Grading Studio states
+  const [gradingResult, setGradingResult] = useState(null);
+  const [gradingLoading, setGradingLoading] = useState(false);
+  const [savingGrades, setSavingGrades] = useState(false);
+  const [gradeAnswers, setGradeAnswers] = useState({});
+  const [codeTabs, setCodeTabs] = useState({});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -62,6 +148,7 @@ const AdminResultsPage = () => {
       Score: r.score,
       'Total Marks': r.totalPossibleMarks,
       'Percentage (%)': r.percentage,
+      Status: r.gradingStatus === 'pending_manual_grading' ? 'Pending Review' : 'Graded',
       'Submitted At': r.submittedAt ? new Date(r.submittedAt).toLocaleString() : '',
     }));
 
@@ -69,6 +156,71 @@ const AdminResultsPage = () => {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Quiz Results');
     XLSX.writeFile(wb, `quiz_results_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
+  const handleOpenGrading = async (res) => {
+    setGradingLoading(true);
+    try {
+      const { data } = await API.get(`/admin/results/${res._id}`);
+      setGradingResult(data);
+      const initialMap = {};
+      const initialTabs = {};
+      (data.answers || []).forEach((a) => {
+        const qId = a.questionId?._id || a.questionId;
+        initialMap[qId] = {
+          marksObtained: a.marksObtained ?? (a.isCorrect ? (a.questionId?.marks || 1) : 0),
+          teacherRemarks: a.teacherRemarks || '',
+        };
+        initialTabs[qId] = 'code';
+      });
+      setGradeAnswers(initialMap);
+      setCodeTabs(initialTabs);
+    } catch {
+      toast.error('Failed to load quiz attempt details');
+    } finally {
+      setGradingLoading(false);
+    }
+  };
+
+  const handleSaveGrades = async () => {
+    if (!gradingResult) return;
+    setSavingGrades(true);
+    try {
+      const payload = Object.entries(gradeAnswers).map(([qId, val]) => ({
+        questionId: qId,
+        marksObtained: Number(val.marksObtained) || 0,
+        teacherRemarks: val.teacherRemarks || '',
+      }));
+
+      const { data } = await API.put(`/admin/results/${gradingResult._id}/grade`, {
+        gradedAnswers: payload,
+      });
+
+      setResults((prev) =>
+        prev.map((r) =>
+          r._id === gradingResult._id
+            ? {
+                ...r,
+                score: data.result.score,
+                percentage: data.result.percentage,
+                gradingStatus: 'graded',
+              }
+            : r
+        )
+      );
+
+      toast.success('Grades saved and published successfully!');
+      broadcastLiveUpdate('QUIZ_RESULT_GRADED', {
+        resultId: gradingResult._id,
+        score: data.result.score,
+        percentage: data.result.percentage,
+      });
+      setGradingResult(null);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to save grades');
+    } finally {
+      setSavingGrades(false);
+    }
   };
 
   const handleDeleteQuizResult = async () => {
@@ -92,6 +244,23 @@ const AdminResultsPage = () => {
       setDeleting(false);
     }
   };
+
+  const calculatedGradeSummary = useMemo(() => {
+    if (!gradingResult || !gradingResult.answers) return { score: 0, percentage: 0 };
+    let score = 0;
+    gradingResult.answers.forEach((ans) => {
+      const qId = ans.questionId?._id || ans.questionId;
+      const g = gradeAnswers[qId];
+      if (g) {
+        score += Number(g.marksObtained) || 0;
+      } else {
+        score += ans.marksObtained || 0;
+      }
+    });
+    const totalPossibleMarks = gradingResult.totalPossibleMarks || 1;
+    const percentage = Number(((score / totalPossibleMarks) * 100).toFixed(2));
+    return { score: Number(score.toFixed(2)), percentage };
+  }, [gradingResult, gradeAnswers]);
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
@@ -200,7 +369,7 @@ const AdminResultsPage = () => {
                   <th className="px-5 py-3.5">Quiz</th>
                   <th className="px-5 py-3.5">Attempt</th>
                   <th className="px-5 py-3.5">Score</th>
-                  <th className="px-5 py-3.5">Percentage</th>
+                  <th className="px-5 py-3.5">Status</th>
                   <th className="px-5 py-3.5">Submitted</th>
                   <th className="px-5 py-3.5 text-right">Actions</th>
                 </tr>
@@ -226,30 +395,42 @@ const AdminResultsPage = () => {
                       <span className={res.percentage >= 50 ? 'text-emerald-600' : 'text-rose-600'}>
                         {res.score} / {res.totalPossibleMarks}
                       </span>
+                      <span className="block text-[11px] font-normal text-[var(--text-muted)]">
+                        {res.percentage}%
+                      </span>
                     </td>
                     <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-2">
-                        <div className="w-20 bg-[var(--bg-muted)] h-1.5 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-[var(--accent)]"
-                            style={{ width: `${Math.min(100, Math.max(0, res.percentage))}%` }}
-                          />
-                        </div>
-                        <span className="text-xs font-bold">{res.percentage}%</span>
-                      </div>
+                      {res.gradingStatus === 'pending_manual_grading' ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-600 border border-amber-500/30">
+                          <Clock size={12} /> Needs Grading
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-600 border border-emerald-500/30">
+                          <CheckCircle2 size={12} /> Graded
+                        </span>
+                      )}
                     </td>
                     <td className="px-5 py-3.5 text-xs text-[var(--text-secondary)]">
                       {res.submittedAt ? new Date(res.submittedAt).toLocaleString() : '—'}
                     </td>
                     <td className="px-5 py-3.5 text-right">
-                      <button
-                        onClick={() => setDeletingResult(res)}
-                        className="py-1 px-2.5 rounded-lg text-rose-500 hover:bg-rose-500/10 hover:text-rose-600 transition-colors inline-flex items-center gap-1.5 text-xs font-semibold"
-                        title="Delete Quiz Attempt"
-                      >
-                        <Trash2 size={14} />
-                        <span>Delete</span>
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => handleOpenGrading(res)}
+                          className="py-1 px-2.5 rounded-lg text-blue-600 hover:bg-blue-500/10 transition-colors inline-flex items-center gap-1 text-xs font-semibold"
+                          title="Review & Grade Student Answers"
+                        >
+                          <FileCheck size={14} />
+                          <span>Review & Grade</span>
+                        </button>
+                        <button
+                          onClick={() => setDeletingResult(res)}
+                          className="py-1 px-2 rounded-lg text-rose-500 hover:bg-rose-500/10 hover:text-rose-600 transition-colors inline-flex items-center gap-1 text-xs font-semibold"
+                          title="Delete Quiz Attempt"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -337,6 +518,287 @@ const AdminResultsPage = () => {
                   <Trash2 size={14} />
                   <span>{deleting ? 'Deleting from DB...' : 'Yes, Delete & Allow Re-attempt'}</span>
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Manual Grading Studio Modal */}
+        {(gradingResult || gradingLoading) && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+            <div className="card max-w-4xl w-full max-h-[92vh] flex flex-col p-0 shadow-2xl border border-[var(--border)] bg-[var(--bg-surface)] overflow-hidden">
+              {/* Studio Header */}
+              <div className="p-5 border-b border-[var(--border)] flex items-center justify-between gap-4 bg-[var(--bg-muted)]/50">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-500/15 text-blue-600">
+                      Instructor Grading Studio
+                    </span>
+                    <span className="text-xs text-[var(--text-secondary)] font-mono">
+                      Attempt #{gradingResult?.attemptNo || 1}
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-bold text-[var(--text-primary)] mt-0.5">
+                    {gradingResult?.quizId?.title || 'Quiz Evaluation'}
+                  </h3>
+                  <p className="text-xs text-[var(--text-secondary)]">
+                    Student: <strong className="text-[var(--text-primary)]">{gradingResult?.studentName}</strong> ({gradingResult?.studentId}) • {gradingResult?.campus || 'Campus'} • {gradingResult?.batch || 'Batch'}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {gradingResult && (
+                    <div className="text-right hidden sm:block">
+                      <div className="text-xs text-[var(--text-secondary)]">Calculated Score</div>
+                      <div className="text-lg font-mono font-bold text-blue-600 dark:text-blue-400">
+                        {calculatedGradeSummary.score} / {gradingResult.totalPossibleMarks}{' '}
+                        <span className="text-xs text-[var(--text-secondary)] font-normal">
+                          ({calculatedGradeSummary.percentage}%)
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => !savingGrades && setGradingResult(null)}
+                    disabled={savingGrades}
+                    className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-muted)] transition-colors"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Studio Body */}
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+                {gradingLoading ? (
+                  <div className="py-20 text-center text-sm text-[var(--text-secondary)]">
+                    <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                    Loading student submission and questions...
+                  </div>
+                ) : (
+                  gradingResult?.answers?.map((ans, idx) => {
+                    const q = ans.questionId || {};
+                    const qId = q._id || ans.questionId;
+                    const maxMarks = q.marks || 1;
+                    const gradeVal = gradeAnswers[qId] || { marksObtained: 0, teacherRemarks: '' };
+                    const currentTab = codeTabs[qId] || 'code';
+
+                    return (
+                      <div
+                        key={idx}
+                        className="p-4 sm:p-5 rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] space-y-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3">
+                            <span className="w-7 h-7 rounded-lg bg-[var(--bg-muted)] font-bold text-xs flex items-center justify-center shrink-0">
+                              {idx + 1}
+                            </span>
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
+                                  q.type === 'code'
+                                    ? 'bg-emerald-500/15 text-emerald-600'
+                                    : q.type === 'long'
+                                    ? 'bg-purple-500/15 text-purple-600'
+                                    : q.type === 'short'
+                                    ? 'bg-amber-500/15 text-amber-600'
+                                    : 'bg-blue-500/15 text-blue-600'
+                                }`}>
+                                  {q.type === 'code'
+                                    ? `Code Challenge (${q.codeLanguage?.toUpperCase() || 'HTML/CSS'})`
+                                    : q.type === 'long'
+                                    ? 'Long Theory'
+                                    : q.type === 'short'
+                                    ? 'Short Q&A'
+                                    : 'MCQ'}
+                                </span>
+                                <span className="text-xs text-[var(--text-secondary)]">
+                                  Max: {maxMarks} {maxMarks === 1 ? 'Mark' : 'Marks'}
+                                </span>
+                              </div>
+                              <h4 className="text-sm sm:text-base font-semibold text-[var(--text-primary)]">
+                                {q.questionText}
+                              </h4>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* MCQ Response */}
+                        {q.type === 'mcq' && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                            <div className="p-3 rounded-xl bg-[var(--bg-muted)] border border-[var(--border)]">
+                              <span className="text-[var(--text-secondary)] font-semibold block mb-0.5 uppercase">
+                                Student Answer
+                              </span>
+                              <span className={ans.isCorrect ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>
+                                {ans.answer || '(No answer provided)'}
+                              </span>
+                            </div>
+                            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                              <span className="font-semibold block mb-0.5 uppercase">Correct Option</span>
+                              <span className="font-bold">{q.correctAnswer}</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Short / Long Written Response */}
+                        {(q.type === 'short' || q.type === 'long') && (
+                          <div className="space-y-3">
+                            {q.correctAnswer && (
+                              <div className="p-2.5 rounded-lg bg-[var(--bg-muted)] border border-[var(--border)] text-xs text-[var(--text-secondary)]">
+                                <strong className="text-[var(--text-primary)]">Grading Rubric / Model Answer:</strong> {q.correctAnswer}
+                              </div>
+                            )}
+                            <div className="p-3.5 rounded-xl bg-[var(--bg-muted)]/60 border border-[var(--border)]">
+                              <span className="text-[11px] font-semibold uppercase text-[var(--text-secondary)] block mb-1">
+                                Student's Written Response:
+                              </span>
+                              <div className="text-xs sm:text-sm text-[var(--text-primary)] whitespace-pre-wrap leading-relaxed">
+                                {ans.answer ? ans.answer : <em className="text-[var(--text-muted)]">No response submitted by student.</em>}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Code Response with Live Interactive Sandbox Preview */}
+                        {q.type === 'code' && (
+                          <div className="space-y-2.5">
+                            <div className="flex items-center justify-between border-b border-[var(--border)] pb-2">
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setCodeTabs((prev) => ({ ...prev, [qId]: 'code' }))}
+                                  className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                                    currentTab === 'code'
+                                      ? 'bg-[var(--accent)] text-white'
+                                      : 'bg-[var(--bg-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                                  }`}
+                                >
+                                  <Code2 size={13} />
+                                  <span>Submitted Code</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setCodeTabs((prev) => ({ ...prev, [qId]: 'preview' }))}
+                                  className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                                    currentTab === 'preview'
+                                      ? 'bg-emerald-600 text-white'
+                                      : 'bg-[var(--bg-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                                  }`}
+                                >
+                                  <Play size={13} />
+                                  <span>Live Output Preview</span>
+                                </button>
+                              </div>
+                              <span className="text-[11px] text-[var(--text-muted)] font-mono">
+                                {q.codeLanguage === 'react' ? 'React JSX' : q.codeLanguage === 'javascript' ? 'JavaScript' : 'HTML5 & CSS3'}
+                              </span>
+                            </div>
+
+                            {currentTab === 'code' ? (
+                              <div className="rounded-xl border border-[var(--border)] bg-[#0b1220] p-3 overflow-x-auto max-h-72">
+                                <pre className="font-mono text-xs text-slate-100 whitespace-pre-wrap leading-relaxed">
+                                  {ans.answer || '// Student did not submit any code.'}
+                                </pre>
+                              </div>
+                            ) : (
+                              <div className="rounded-xl border border-[var(--border)] bg-white overflow-hidden shadow-inner">
+                                <div className="p-1.5 bg-slate-100 border-b text-[10px] text-slate-500 font-mono flex items-center gap-2">
+                                  <div className="flex gap-1">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-rose-400" />
+                                    <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                                  </div>
+                                  <span>Live Evaluator Preview (Isolated Sandbox)</span>
+                                </div>
+                                <iframe
+                                  title={`Preview-${idx}`}
+                                  srcDoc={buildPreviewDocument(ans.answer, q.codeLanguage)}
+                                  sandbox="allow-scripts"
+                                  className="w-full h-64 border-0"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Grading Controls (For Subjective and Code questions, and editable for MCQ if override is needed) */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-[var(--border)]/60 items-center">
+                          <div>
+                            <label className="block text-[11px] font-semibold uppercase text-[var(--text-secondary)] mb-1">
+                              Marks Awarded (Max {maxMarks})
+                            </label>
+                            <input
+                              type="number"
+                              min={0}
+                              max={maxMarks}
+                              step="0.5"
+                              value={gradeVal.marksObtained}
+                              onChange={(e) => {
+                                const val = Math.min(maxMarks, Math.max(0, Number(e.target.value) || 0));
+                                setGradeAnswers((prev) => ({
+                                  ...prev,
+                                  [qId]: { ...gradeVal, marksObtained: val },
+                                }));
+                              }}
+                              className="input-field text-sm font-bold font-mono py-1.5"
+                            />
+                          </div>
+                          <div className="sm:col-span-2">
+                            <label className="block text-[11px] font-semibold uppercase text-[var(--text-secondary)] mb-1">
+                              Teacher Feedback / Remarks (Optional)
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g. Excellent solution; clean state handling."
+                              value={gradeVal.teacherRemarks}
+                              onChange={(e) => {
+                                setGradeAnswers((prev) => ({
+                                  ...prev,
+                                  [qId]: { ...gradeVal, teacherRemarks: e.target.value },
+                                }));
+                              }}
+                              className="input-field text-xs py-1.5"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Studio Footer */}
+              <div className="p-4 border-t border-[var(--border)] bg-[var(--bg-muted)] flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-[var(--text-secondary)]">Total Marks:</span>
+                  <span className="text-base font-bold font-mono text-[var(--text-primary)]">
+                    {calculatedGradeSummary.score} / {gradingResult?.totalPossibleMarks || 0}
+                  </span>
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[var(--accent-subtle)] text-[var(--accent)]">
+                    {calculatedGradeSummary.percentage}%
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setGradingResult(null)}
+                    disabled={savingGrades}
+                    className="btn-secondary py-2 px-4 text-xs font-semibold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveGrades}
+                    disabled={savingGrades || gradingLoading}
+                    className="btn-primary py-2 px-5 text-xs font-semibold flex items-center gap-2"
+                  >
+                    <CheckCircle2 size={15} />
+                    <span>{savingGrades ? 'Publishing Grades...' : 'Save & Publish Grades'}</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>

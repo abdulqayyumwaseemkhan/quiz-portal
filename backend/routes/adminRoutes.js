@@ -30,7 +30,7 @@ const {
   updateTeacher,
   deleteTeacher,
 } = require('../controllers/adminController');
-const { getAllResults, deleteQuizResult } = require('../controllers/quizController');
+const { getAllResults, getResultDetails, gradeResultAnswers, deleteQuizResult } = require('../controllers/quizController');
 const { protectAdmin } = require('../middleware/auth');
 
 router.post('/login', loginAdmin);
@@ -59,6 +59,8 @@ router.delete('/students/:id', protectAdmin, deleteStudent);
 
 // Results route
 router.get('/results', protectAdmin, getAllResults);
+router.get('/results/:id', protectAdmin, getResultDetails);
+router.put('/results/:id/grade', protectAdmin, gradeResultAnswers);
 router.delete('/results/:id', protectAdmin, deleteQuizResult);
 
 // Teacher / Admin Management (Super Admin only)

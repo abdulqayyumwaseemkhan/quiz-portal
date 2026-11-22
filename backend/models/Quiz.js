@@ -62,6 +62,16 @@ const quizSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  quizType: {
+    type: String,
+    enum: ['quiz', 'class_test', 'mid_term', 'final_term', 'assessment'],
+    default: 'quiz',
+  },
+  format: {
+    type: String,
+    enum: ['mcq_only', 'qna_only', 'hybrid'],
+    default: 'hybrid',
+  },
 }, { timestamps: true });
 
 quizSchema.index({ createdBy: 1, isPublished: 1, campus: 1, batch: 1 });

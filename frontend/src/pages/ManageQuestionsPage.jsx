@@ -79,6 +79,8 @@ const ManageQuestionsPage = () => {
   const [newQuestion, setNewQuestion] = useState({
     questionText: '',
     type: 'mcq',
+    codeLanguage: 'html_css',
+    starterCode: '',
     options: ['', '', '', '', ''],
     correctAnswer: '',
     marks: 1,
@@ -123,7 +125,7 @@ const ManageQuestionsPage = () => {
       const payload = {
         ...newQuestion,
         options: newQuestion.type === 'mcq' ? trimmedOptions : [],
-        correctAnswer: newQuestion.correctAnswer.trim(),
+        correctAnswer: (newQuestion.correctAnswer || '').trim(),
       };
       const { data } = await API.post(`/quizzes/${quizId}/questions`, payload);
       setQuestions([...questions, data]);
@@ -131,6 +133,8 @@ const ManageQuestionsPage = () => {
       setNewQuestion({
         questionText: '',
         type: 'mcq',
+        codeLanguage: 'html_css',
+        starterCode: '',
         options: ['', '', '', '', ''],
         correctAnswer: '',
         marks: 1,
@@ -146,13 +150,19 @@ const ManageQuestionsPage = () => {
     e.preventDefault();
     if (!editingQuestion) return;
     const trimmedOptions = (editingQuestion.options || []).map((o) => o.trim()).filter(Boolean);
-    if (editingQuestion.type === 'mcq' && !trimmedOptions.includes(editingQuestion.correctAnswer.trim())) {
-      return toast.error('Please select a valid correct option');
+    if (editingQuestion.type === 'mcq') {
+      if (trimmedOptions.length < 2) {
+        return toast.error('Please enter at least 2 options');
+      }
+      if (!trimmedOptions.includes(editingQuestion.correctAnswer?.trim())) {
+        return toast.error('Please select a valid correct option');
+      }
     }
     try {
       const { data } = await API.put(`/quizzes/questions/${editingQuestion._id}`, {
         ...editingQuestion,
         options: editingQuestion.type === 'mcq' ? trimmedOptions : [],
+        correctAnswer: (editingQuestion.correctAnswer || '').trim(),
       });
       setQuestions(questions.map((q) => (q._id === data._id ? data : q)));
       setEditingQuestion(null);
@@ -368,11 +378,18 @@ const ManageQuestionsPage = () => {
                   className="input-field"
                   value={newQuestion.type}
                   onChange={(e) =>
-                    setNewQuestion({ ...newQuestion, type: e.target.value, correctAnswer: '' })
+                    setNewQuestion({
+                      ...newQuestion,
+                      type: e.target.value,
+                      correctAnswer: '',
+                      codeLanguage: e.target.value === 'code' ? 'html_css' : newQuestion.codeLanguage,
+                    })
                   }
                 >
                   <option value="mcq">Multiple Choice (MCQ)</option>
-                  <option value="short">Short Answer</option>
+                  <option value="short">Short Question / Answer</option>
+                  <option value="long">Long Question / Detailed Theory</option>
+                  <option value="code">Live Coding Challenge</option>
                 </select>
               </div>
               <div>
@@ -397,6 +414,34 @@ const ManageQuestionsPage = () => {
                   onChange={(e) => setNewQuestion({ ...newQuestion, explanation: e.target.value })}
                 />
               </div>
+
+              {newQuestion.type === 'code' && (
+                <>
+                  <div className="sm:col-span-3">
+                    <label className="block text-xs font-semibold uppercase mb-1">Coding Language Environment</label>
+                    <select
+                      className="input-field"
+                      value={newQuestion.codeLanguage}
+                      onChange={(e) => setNewQuestion({ ...newQuestion, codeLanguage: e.target.value })}
+                    >
+                      <option value="html_css">HTML5 & CSS3 (Web Interface)</option>
+                      <option value="react">React (JSX Components & State)</option>
+                      <option value="javascript">JavaScript (Logic & Functions)</option>
+                    </select>
+                  </div>
+                  <div className="sm:col-span-3">
+                    <label className="block text-xs font-semibold uppercase mb-1">
+                      Starter Code / Boilerplate (Optional)
+                    </label>
+                    <textarea
+                      placeholder="// Starter template for students to build upon...&#10;function solution() {&#10;&#10;}"
+                      className="input-field font-mono text-xs min-h-[110px]"
+                      value={newQuestion.starterCode}
+                      onChange={(e) => setNewQuestion({ ...newQuestion, starterCode: e.target.value })}
+                    />
+                  </div>
+                </>
+              )}
             </div>
 
             {newQuestion.type === 'mcq' ? (
@@ -434,15 +479,20 @@ const ManageQuestionsPage = () => {
                   ))}
                 </div>
               </div>
+            ) : newQuestion.type === 'code' ? (
+              <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-700 dark:text-blue-300">
+                <strong>Live Code Evaluation:</strong> Students will write their code in an integrated IDE with a Live Preview panel during the quiz. You will inspect their code and live preview in the Grading Studio.
+              </div>
             ) : (
               <div>
-                <label className="block text-xs font-semibold uppercase mb-1">Correct Answer *</label>
-                <input
-                  type="text"
-                  className="input-field"
+                <label className="block text-xs font-semibold uppercase mb-1">
+                  Model Answer / Rubric (Optional - for teacher grading reference)
+                </label>
+                <textarea
+                  className="input-field min-h-[70px]"
+                  placeholder="Key concepts or expected answer to help you evaluate student submissions..."
                   value={newQuestion.correctAnswer}
                   onChange={(e) => setNewQuestion({ ...newQuestion, correctAnswer: e.target.value })}
-                  required
                 />
               </div>
             )}
@@ -469,8 +519,22 @@ const ManageQuestionsPage = () => {
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[11px] font-semibold uppercase px-2 py-0.5 rounded bg-[var(--bg-muted)]">
-                        {q.type}
+                      <span className={`text-[11px] font-semibold uppercase px-2 py-0.5 rounded ${
+                        q.type === 'code'
+                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                          : q.type === 'long'
+                          ? 'bg-purple-500/15 text-purple-600 dark:text-purple-400'
+                          : q.type === 'short'
+                          ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                          : 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
+                      }`}>
+                        {q.type === 'code'
+                          ? `Code (${q.codeLanguage === 'react' ? 'React' : q.codeLanguage === 'javascript' ? 'JS' : 'HTML/CSS'})`
+                          : q.type === 'long'
+                          ? 'Long Theory'
+                          : q.type === 'short'
+                          ? 'Short Q&A'
+                          : 'MCQ'}
                       </span>
                       <span className="text-xs text-[var(--text-secondary)]">{q.marks} Marks</span>
                     </div>
@@ -500,9 +564,24 @@ const ManageQuestionsPage = () => {
                       </div>
                     )}
 
-                    {q.type === 'short' && (
-                      <div className="mt-3 p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                        Correct Answer: {q.correctAnswer}
+                    {q.type === 'code' && (
+                      <div className="mt-3 p-3 rounded-xl bg-[var(--bg-muted)] border border-[var(--border)] text-xs font-mono">
+                        <div className="text-[10px] uppercase font-bold text-[var(--text-secondary)] mb-1">
+                          Environment: {q.codeLanguage === 'react' ? 'React JSX' : q.codeLanguage === 'javascript' ? 'JavaScript' : 'HTML5 & CSS3'}
+                        </div>
+                        {q.starterCode ? (
+                          <pre className="whitespace-pre-wrap text-[var(--text-secondary)] overflow-x-auto max-h-24">
+                            {q.starterCode}
+                          </pre>
+                        ) : (
+                          <span className="text-[var(--text-muted)] italic">No starter template provided</span>
+                        )}
+                      </div>
+                    )}
+
+                    {(q.type === 'short' || q.type === 'long') && q.correctAnswer && (
+                      <div className="mt-3 p-2.5 rounded-lg bg-[var(--bg-muted)] border border-[var(--border)] text-xs text-[var(--text-secondary)]">
+                        <strong>Grading Rubric / Model Key:</strong> {q.correctAnswer}
                       </div>
                     )}
 
@@ -570,7 +649,26 @@ const ManageQuestionsPage = () => {
                   required
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold uppercase mb-1">Type</label>
+                  <select
+                    className="input-field"
+                    value={editingQuestion.type}
+                    onChange={(e) =>
+                      setEditingQuestion({
+                        ...editingQuestion,
+                        type: e.target.value,
+                        codeLanguage: e.target.value === 'code' ? (editingQuestion.codeLanguage || 'html_css') : editingQuestion.codeLanguage,
+                      })
+                    }
+                  >
+                    <option value="mcq">Multiple Choice (MCQ)</option>
+                    <option value="short">Short Question / Answer</option>
+                    <option value="long">Long Question / Detailed Theory</option>
+                    <option value="code">Live Coding Challenge</option>
+                  </select>
+                </div>
                 <div>
                   <label className="block text-xs font-semibold uppercase mb-1">Marks</label>
                   <input
@@ -597,6 +695,34 @@ const ManageQuestionsPage = () => {
                   />
                 </div>
               </div>
+
+              {editingQuestion.type === 'code' && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase mb-1">Coding Language Environment</label>
+                    <select
+                      className="input-field"
+                      value={editingQuestion.codeLanguage || 'html_css'}
+                      onChange={(e) => setEditingQuestion({ ...editingQuestion, codeLanguage: e.target.value })}
+                    >
+                      <option value="html_css">HTML5 & CSS3 (Web Interface)</option>
+                      <option value="react">React (JSX Components & State)</option>
+                      <option value="javascript">JavaScript (Logic & Functions)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase mb-1">
+                      Starter Code / Boilerplate (Optional)
+                    </label>
+                    <textarea
+                      className="input-field font-mono text-xs min-h-[110px]"
+                      value={editingQuestion.starterCode || ''}
+                      onChange={(e) => setEditingQuestion({ ...editingQuestion, starterCode: e.target.value })}
+                    />
+                  </div>
+                </div>
+              )}
+
               {editingQuestion.type === 'mcq' && (
                 <div className="space-y-2.5">
                   <label className="block text-xs font-semibold uppercase">Options (Select Correct)</label>
@@ -626,6 +752,19 @@ const ManageQuestionsPage = () => {
                       />
                     </div>
                   ))}
+                </div>
+              )}
+
+              {(editingQuestion.type === 'short' || editingQuestion.type === 'long') && (
+                <div>
+                  <label className="block text-xs font-semibold uppercase mb-1">
+                    Model Answer / Rubric (Optional - for grading reference)
+                  </label>
+                  <textarea
+                    className="input-field min-h-[70px]"
+                    value={editingQuestion.correctAnswer || ''}
+                    onChange={(e) => setEditingQuestion({ ...editingQuestion, correctAnswer: e.target.value })}
+                  />
                 </div>
               )}
               <div className="flex justify-end gap-2 pt-2">
