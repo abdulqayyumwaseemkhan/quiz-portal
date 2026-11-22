@@ -29,30 +29,71 @@ const getExtension = (filename) => {
 };
 
 const createNote = asyncHandler(async (req, res) => {
-  const { lectureNumber, lectureTitle, description, campus, batch } = req.body;
+  const { lectureNumber, lectureTitle, description, campus, batch, category, externalUrl } = req.body;
   
-  if (!req.file) {
-    res.status(400);
-    throw new Error('No file uploaded or invalid file type');
-  }
+  let fileUrl = '';
+  let filePublicId = '';
+  let originalFileName = '';
+  let fileType = 'pdf';
 
-  const uploadResult = await uploadToCloudinary(req.file.buffer, 'quiz-portal/notes', req.file.originalname);
-  const fileType = getExtension(req.file.originalname);
+  if (req.file) {
+    const uploadResult = await uploadToCloudinary(req.file.buffer, 'quiz-portal/notes', req.file.originalname);
+    fileUrl = uploadResult.secure_url;
+    filePublicId = uploadResult.public_id;
+    originalFileName = req.file.originalname;
+    fileType = getExtension(req.file.originalname);
+  } else if (externalUrl && String(externalUrl).trim()) {
+    fileUrl = String(externalUrl).trim();
+    filePublicId = '';
+    originalFileName = lectureTitle || 'Resource Link';
+    fileType = 'link';
+  } else {
+    res.status(400);
+    throw new Error('Please provide either a resource file to upload or an external resource URL');
+  }
 
   const note = await Note.create({
     lectureNumber: Number(lectureNumber),
-    lectureTitle,
-    description,
-    fileUrl: uploadResult.secure_url,
-    filePublicId: uploadResult.public_id,
-    originalFileName: req.file.originalname,
+    lectureTitle: (lectureTitle || '').trim(),
+    description: description || '',
+    fileUrl,
+    filePublicId,
+    originalFileName,
     fileType,
+    category: category || (fileType === 'link' ? 'link' : 'handout'),
+    externalUrl: externalUrl || '',
     campus: campus || '',
     batch: batch || '',
     uploadedBy: req.admin._id,
   });
 
   res.status(201).json(note);
+});
+
+const updateNote = asyncHandler(async (req, res) => {
+  const note = await Note.findOne({ _id: req.params.id, uploadedBy: req.admin._id });
+  if (!note) {
+    res.status(404);
+    throw new Error('Note not found or unauthorized');
+  }
+
+  const { lectureNumber, lectureTitle, description, campus, batch, category, externalUrl } = req.body;
+
+  if (lectureNumber !== undefined) note.lectureNumber = Number(lectureNumber);
+  if (lectureTitle !== undefined) note.lectureTitle = String(lectureTitle).trim();
+  if (description !== undefined) note.description = description;
+  if (campus !== undefined) note.campus = campus;
+  if (batch !== undefined) note.batch = batch;
+  if (category !== undefined) note.category = category;
+  if (externalUrl !== undefined && externalUrl.trim()) {
+    note.externalUrl = externalUrl.trim();
+    if (!note.filePublicId) {
+      note.fileUrl = externalUrl.trim();
+    }
+  }
+
+  const updated = await note.save();
+  res.json(updated);
 });
 
 const getNotes = asyncHandler(async (req, res) => {
@@ -103,5 +144,6 @@ module.exports = {
   createNote,
   getNotes,
   deleteNote,
+  updateNote,
   getNotesForStudent,
 };

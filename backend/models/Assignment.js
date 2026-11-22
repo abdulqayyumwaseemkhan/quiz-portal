@@ -43,6 +43,11 @@ const assignmentSchema = new mongoose.Schema(
       enum: ['vanilla', 'react', 'document'],
       default: 'vanilla',
     },
+    category: {
+      type: String,
+      enum: ['coding', 'research', 'spreadsheet', 'presentation', 'graphic', 'video', 'general'],
+      default: 'coding',
+    },
   },
   { timestamps: true }
 );

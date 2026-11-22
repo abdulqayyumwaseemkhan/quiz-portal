@@ -20,15 +20,25 @@ const noteSchema = new mongoose.Schema(
     },
     filePublicId: {
       type: String,
-      required: true,
+      default: '',
     },
     originalFileName: {
       type: String,
-      required: true,
+      default: '',
     },
     fileType: {
       type: String,
-      required: true,
+      default: 'pdf',
+    },
+    category: {
+      type: String,
+      enum: ['handout', 'slides', 'code', 'link', 'cheatsheet', 'other'],
+      default: 'handout',
+    },
+    externalUrl: {
+      type: String,
+      default: '',
+      trim: true,
     },
     campus: {
       type: String,

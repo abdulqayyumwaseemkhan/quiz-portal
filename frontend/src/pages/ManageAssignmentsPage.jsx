@@ -6,6 +6,16 @@ import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { broadcastLiveUpdate, useLiveRefresh } from '../utils/liveSync';
 
+const CATEGORY_META = {
+  coding: { label: '💻 Coding', color: 'text-indigo-600 bg-indigo-500/10' },
+  research: { label: '📝 Research', color: 'text-blue-600 bg-blue-500/10' },
+  spreadsheet: { label: '📊 Spreadsheet', color: 'text-emerald-600 bg-emerald-500/10' },
+  presentation: { label: '📽️ Slides', color: 'text-amber-600 bg-amber-500/10' },
+  graphic: { label: '🎨 Graphic / UI', color: 'text-fuchsia-600 bg-fuchsia-500/10' },
+  video: { label: '🎬 Video', color: 'text-rose-600 bg-rose-500/10' },
+  general: { label: '📄 General', color: 'text-gray-600 bg-gray-500/10' },
+};
+
 const ManageAssignmentsPage = () => {
   const [assignments, setAssignments] = useState([]);
   const [meta, setMeta] = useState({ campuses: [], batches: [] });
@@ -22,6 +32,7 @@ const ManageAssignmentsPage = () => {
     campus: '',
     batch: '',
     projectType: 'vanilla',
+    category: 'coding',
   });
 
   const fetchAssignments = useCallback(async (silent = false) => {
@@ -64,6 +75,7 @@ const ManageAssignmentsPage = () => {
       campus: '',
       batch: '',
       projectType: 'vanilla',
+      category: 'coding',
     });
   };
 
@@ -84,6 +96,7 @@ const ManageAssignmentsPage = () => {
       campus: a.campus || '',
       batch: a.batch || '',
       projectType: a.projectType || 'vanilla',
+      category: a.category || 'coding',
     });
     setShowForm(true);
   };
@@ -201,7 +214,23 @@ const ManageAssignmentsPage = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase mb-1">Submission Mode</label>
+                <label className="block text-xs font-semibold uppercase mb-1">Category & Nature</label>
+                <select
+                  className="input-field"
+                  value={formData.category || 'coding'}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                >
+                  <option value="coding">💻 Coding & Web App (IDE / Vercel / GitHub / ZIP)</option>
+                  <option value="research">📝 Research & Writing (Google Docs / Papers / PDF)</option>
+                  <option value="spreadsheet">📊 Spreadsheet & Data (Google Sheets / Excel / CSV)</option>
+                  <option value="presentation">📽️ Presentation & Slides (Google Slides / PPT)</option>
+                  <option value="graphic">🎨 Graphic & UI Design (Image Upload / Figma / Artwork)</option>
+                  <option value="video">🎬 Video & Media (YouTube / Loom / Drive Video)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase mb-1">Code / Tech Mode</label>
                 <select
                   className="input-field"
                   value={formData.projectType}
@@ -209,7 +238,7 @@ const ManageAssignmentsPage = () => {
                 >
                   <option value="react">React Project (Live Vercel / GitHub / ZIP)</option>
                   <option value="vanilla">Web Project (HTML/CSS/JS / Live / ZIP)</option>
-                  <option value="document">Document / Drive / PDF Link</option>
+                  <option value="document">General Document / Media</option>
                 </select>
               </div>
 
@@ -310,12 +339,20 @@ const ManageAssignmentsPage = () => {
                           {assignment.description || 'No description'}
                         </p>
                         <div className="flex items-center gap-2 mt-1">
+                          <span
+                            className={`text-[11px] font-semibold px-2 py-0.5 rounded ${
+                              CATEGORY_META[assignment.category]?.color ||
+                              CATEGORY_META.coding.color
+                            }`}
+                          >
+                            {CATEGORY_META[assignment.category]?.label || '💻 Coding'}
+                          </span>
                           <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-[var(--bg-muted)] uppercase">
                             {assignment.projectType === 'react'
                               ? 'React'
                               : assignment.projectType === 'document'
-                              ? 'Document / Video'
-                              : 'Vanilla Web'}
+                              ? 'Doc / Media'
+                              : 'Vanilla'}
                           </span>
                           <span className="text-xs text-[var(--text-muted)]">
                             {assignment.totalMarks || 100} Marks

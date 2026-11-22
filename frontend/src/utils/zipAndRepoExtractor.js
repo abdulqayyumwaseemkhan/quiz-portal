@@ -15,6 +15,30 @@ const TEXT_EXTENSIONS = {
 
 const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif', 'ico']);
 
+// In-memory cache to prevent re-fetching and extracting files repeatedly
+// Zero hits to Cloudinary / DB when navigating between students
+const extractionCache = new Map();
+
+export function getCachedExtraction(key) {
+  if (!key) return null;
+  return extractionCache.get(key) || null;
+}
+
+export function hasCachedExtraction(key) {
+  if (!key) return false;
+  return extractionCache.has(key);
+}
+
+export function setCachedExtraction(key, data) {
+  if (key && data) {
+    extractionCache.set(key, data);
+  }
+}
+
+export function clearExtractionCache() {
+  extractionCache.clear();
+}
+
 /**
  * Parses a ZIP file (Blob, File, or ArrayBuffer) and converts it to WebIDE files object
  */
@@ -88,22 +112,34 @@ export async function extractZipToProjectFiles(zipData) {
 
 /**
  * Extracts a remote ZIP URL (e.g. Cloudinary stored zip from student submission)
+ * Uses intelligent in-memory caching to eliminate redundant Cloudinary / network requests
  */
-export async function extractRemoteZipToProjectFiles(zipUrl) {
+export async function extractRemoteZipToProjectFiles(zipUrl, forceRefresh = false) {
+  if (!zipUrl) return {};
+  if (!forceRefresh && extractionCache.has(zipUrl)) {
+    return extractionCache.get(zipUrl);
+  }
+
   const response = await axios.get(zipUrl, {
     responseType: 'arraybuffer',
   });
-  return extractZipToProjectFiles(response.data);
+  const filesObj = await extractZipToProjectFiles(response.data);
+  extractionCache.set(zipUrl, filesObj);
+  return filesObj;
 }
 
 /**
  * Extracts project files from a public GitHub repository link
- * Accepts:
- *   https://github.com/owner/repo
- *   https://github.com/owner/repo/tree/branch
+ * Uses in-memory caching to avoid hitting GitHub API / rate-limits repeatedly
  */
-export async function extractGitHubRepoToProjectFiles(githubUrl) {
-  const match = githubUrl.trim().match(/github\.com\/([^/]+)\/([^/]+)(?:\/tree\/([^/]+))?/);
+export async function extractGitHubRepoToProjectFiles(githubUrl, forceRefresh = false) {
+  const cleanUrl = (githubUrl || '').trim();
+  if (!cleanUrl) return {};
+  if (!forceRefresh && extractionCache.has(cleanUrl)) {
+    return extractionCache.get(cleanUrl);
+  }
+
+  const match = cleanUrl.match(/github\.com\/([^/]+)\/([^/]+)(?:\/tree\/([^/]+))?/);
   if (!match) {
     throw new Error('Invalid GitHub repository URL format');
   }
@@ -120,7 +156,9 @@ export async function extractGitHubRepoToProjectFiles(githubUrl) {
       responseType: 'arraybuffer',
       timeout: 10000,
     });
-    return await extractZipToProjectFiles(response.data);
+    const files = await extractZipToProjectFiles(response.data);
+    extractionCache.set(cleanUrl, files);
+    return files;
   } catch (err) {
     console.warn('GitHub zipball fetch failed, falling back to raw file probes:', err.message);
   }
@@ -156,5 +194,6 @@ export async function extractGitHubRepoToProjectFiles(githubUrl) {
     throw new Error('Could not automatically fetch repository source files. Please ensure the repository is public.');
   }
 
+  extractionCache.set(cleanUrl, filesObj);
   return filesObj;
 }

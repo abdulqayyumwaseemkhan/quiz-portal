@@ -29,6 +29,12 @@ import {
   FolderArchive,
   Trash2,
   AlertTriangle,
+  Video,
+  Image as ImageIcon,
+  ZoomIn,
+  ZoomOut,
+  FileSpreadsheet,
+  FileText,
 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -37,6 +43,8 @@ import { broadcastLiveUpdate, useLiveRefresh } from '../utils/liveSync';
 import {
   extractRemoteZipToProjectFiles,
   extractGitHubRepoToProjectFiles,
+  hasCachedExtraction,
+  getCachedExtraction,
 } from '../utils/zipAndRepoExtractor';
 
 const formatBytes = (bytes, decimals = 1) => {
@@ -49,6 +57,78 @@ const formatBytes = (bytes, decimals = 1) => {
 };
 
 const SCORE_PRESETS = [100, 95, 90, 85, 80, 75, 50, 0];
+
+const FEEDBACK_PRESETS = [
+  '🌟 Outstanding execution & depth of work!',
+  '✅ Clean, well structured & meets all requirements.',
+  '🎨 Excellent design & visual presentation.',
+  '💡 Good progress, but needs minor improvements.',
+  '⚠️ Late submission - minor mark deduction applied.',
+  '❌ Incomplete deliverables. Please review guidelines.',
+];
+
+function getVideoEmbedUrl(url) {
+  if (!url) return null;
+  const clean = String(url).trim();
+
+  // YouTube
+  const ytMatch = clean.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([\w-]{11})/i);
+  if (ytMatch) {
+    return { type: 'youtube', embedUrl: `https://www.youtube-nocookie.com/embed/${ytMatch[1]}?rel=0`, rawUrl: clean };
+  }
+
+  // Loom
+  const loomMatch = clean.match(/loom\.com\/(?:share|embed)\/([\w-]+)/i);
+  if (loomMatch) {
+    return { type: 'loom', embedUrl: `https://www.loom.com/embed/${loomMatch[1]}`, rawUrl: clean };
+  }
+
+  // Vimeo
+  const vimeoMatch = clean.match(/vimeo\.com\/(\d+)/i);
+  if (vimeoMatch) {
+    return { type: 'vimeo', embedUrl: `https://player.vimeo.com/video/${vimeoMatch[1]}`, rawUrl: clean };
+  }
+
+  // Google Drive video
+  const driveMatch = clean.match(/drive\.google\.com\/file\/d\/([\w-]+)/i);
+  if (driveMatch) {
+    return { type: 'drive', embedUrl: `https://drive.google.com/file/d/${driveMatch[1]}/preview`, rawUrl: clean };
+  }
+
+  // Direct MP4 / WebM
+  if (/\.(mp4|webm|ogg)($|\?)/i.test(clean)) {
+    return { type: 'direct', embedUrl: clean, rawUrl: clean };
+  }
+
+  return null;
+}
+
+function getGoogleOfficeEmbedUrl(url) {
+  if (!url) return null;
+  const clean = String(url).trim();
+
+  if (clean.includes('docs.google.com/document/d/')) {
+    const docId = clean.split('/document/d/')[1]?.split('/')[0];
+    if (docId) return { type: 'Google Docs', embedUrl: `https://docs.google.com/document/d/${docId}/preview` };
+  }
+
+  if (clean.includes('docs.google.com/spreadsheets/d/')) {
+    const sheetId = clean.split('/spreadsheets/d/')[1]?.split('/')[0];
+    if (sheetId) return { type: 'Google Sheets', embedUrl: `https://docs.google.com/spreadsheets/d/${sheetId}/preview?rm=minimal` };
+  }
+
+  if (clean.includes('docs.google.com/presentation/d/')) {
+    const slideId = clean.split('/presentation/d/')[1]?.split('/')[0];
+    if (slideId) return { type: 'Google Slides', embedUrl: `https://docs.google.com/presentation/d/${slideId}/preview` };
+  }
+
+  return null;
+}
+
+function isImageUrl(url, fileName) {
+  const target = `${fileName || ''} ${url || ''}`.toLowerCase();
+  return /\.(png|jpe?g|webp|svg|gif|bmp)($|\?)/i.test(target);
+}
 
 const AssignmentSubmissionsPage = () => {
   const { id } = useParams();
@@ -64,6 +144,7 @@ const AssignmentSubmissionsPage = () => {
   const [iframeKey, setIframeKey] = useState(0);
   const [extractedProjectData, setExtractedProjectData] = useState(null);
   const [extractingSource, setExtractingSource] = useState(false);
+  const [imageZoom, setImageZoom] = useState(1);
 
   // Grade state
   const [gradeForm, setGradeForm] = useState({ marksObtained: '', maxMarks: 100, feedback: '' });
@@ -264,7 +345,15 @@ const AssignmentSubmissionsPage = () => {
 
   const openInspectStudio = (sub) => {
     setInspectingSub(sub);
-    setExtractedProjectData(null);
+    setImageZoom(1);
+    // Instant cache restore if this submission's zip/repo was previously extracted (0ms, 0 Cloudinary requests)
+    if (sub.fileUrl && hasCachedExtraction(sub.fileUrl)) {
+      setExtractedProjectData(getCachedExtraction(sub.fileUrl));
+    } else if (sub.githubUrl && hasCachedExtraction(sub.githubUrl)) {
+      setExtractedProjectData(getCachedExtraction(sub.githubUrl));
+    } else {
+      setExtractedProjectData(null);
+    }
     const resolvedMax = sub.assignmentTotalMarks || sub.maxMarks || 20;
     setGradeForm({
       marksObtained: sub.marksObtained ?? '',
@@ -340,17 +429,24 @@ const AssignmentSubmissionsPage = () => {
     XLSX.writeFile(wb, `assignment_submissions_${id.slice(-6)}.xlsx`);
   };
 
-  // Determine active preview URL
-  const activeLiveUrl = inspectingSub?.liveUrl || (
-    inspectingSub?.driveLink && !inspectingSub?.driveLink.includes('drive.google.com')
-      ? inspectingSub.driveLink
-      : ''
-  );
+  // Determine active media & preview targets
+  const candidateUrl = inspectingSub?.liveUrl || inspectingSub?.driveLink || '';
+  const videoEmbed = getVideoEmbedUrl(candidateUrl || inspectingSub?.fileUrl);
+  const officeEmbed = getGoogleOfficeEmbedUrl(candidateUrl);
+  const isDirectImage = isImageUrl(inspectingSub?.fileUrl, inspectingSub?.originalFileName);
+
+  const activeLiveUrl = (!videoEmbed && !officeEmbed && !isDirectImage) ? (
+    inspectingSub?.liveUrl || (
+      inspectingSub?.driveLink && !inspectingSub?.driveLink.includes('drive.google.com')
+        ? inspectingSub.driveLink
+        : ''
+    )
+  ) : '';
 
   let activeGoogleDriveEmbed = null;
-  if (inspectingSub?.driveLink && inspectingSub.driveLink.includes('drive.google.com/file/d/')) {
-    const fileId = inspectingSub.driveLink.split('/file/d/')[1].split('/')[0];
-    activeGoogleDriveEmbed = `https://drive.google.com/file/d/${fileId}/preview`;
+  if (!videoEmbed && !officeEmbed && inspectingSub?.driveLink && inspectingSub.driveLink.includes('drive.google.com/file/d/')) {
+    const fileId = inspectingSub.driveLink.split('/file/d/')[1]?.split('/')[0];
+    if (fileId) activeGoogleDriveEmbed = `https://drive.google.com/file/d/${fileId}/preview`;
   }
 
   // --- Fullscreen Live Review & Grading Studio ---
@@ -496,7 +592,113 @@ const AssignmentSubmissionsPage = () => {
         <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
           {/* Live Preview Screen (Left Pane) */}
           <div className="flex-1 bg-[var(--bg-primary)] flex flex-col min-h-0 overflow-hidden border-b lg:border-b-0 lg:border-r border-[var(--border)]">
-            {activeLiveUrl ? (
+            {videoEmbed ? (
+              <div className="flex-1 flex flex-col bg-black min-h-0">
+                <div className="px-4 py-2 bg-[var(--bg-surface)] border-b border-[var(--border)] flex items-center justify-between text-xs shrink-0">
+                  <span className="font-semibold text-rose-500 flex items-center gap-1.5">
+                    <Video size={14} /> Video Demonstration Review ({videoEmbed.type.toUpperCase()})
+                  </span>
+                  <a
+                    href={videoEmbed.rawUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn-secondary py-1 px-2.5 text-xs flex items-center gap-1"
+                  >
+                    Open in New Tab <ExternalLink size={11} />
+                  </a>
+                </div>
+                <div className="flex-1 flex items-center justify-center p-3 sm:p-6 overflow-auto">
+                  {videoEmbed.type === 'direct' ? (
+                    <video src={videoEmbed.embedUrl} controls className="max-h-full max-w-full rounded-xl shadow-2xl" />
+                  ) : (
+                    <div className="w-full h-full max-w-5xl max-h-[82vh] aspect-video">
+                      <iframe
+                        src={videoEmbed.embedUrl}
+                        title="Student Video Review"
+                        className="w-full h-full rounded-xl shadow-2xl border border-[var(--border)] bg-black"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : isDirectImage ? (
+              <div className="flex-1 flex flex-col bg-[#121214] min-h-0 select-none">
+                <div className="px-4 py-2 bg-[var(--bg-surface)] border-b border-[var(--border)] flex items-center justify-between text-xs shrink-0">
+                  <span className="font-semibold text-fuchsia-500 flex items-center gap-1.5">
+                    <ImageIcon size={14} /> Graphic Artwork / Image Inspection
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setImageZoom((z) => Math.max(0.5, z - 0.25))}
+                      className="p-1.5 rounded bg-[var(--bg-muted)] hover:bg-[var(--border)]"
+                      title="Zoom Out"
+                    >
+                      <ZoomOut size={13} />
+                    </button>
+                    <span className="font-mono text-xs w-12 text-center">{Math.round(imageZoom * 100)}%</span>
+                    <button
+                      type="button"
+                      onClick={() => setImageZoom((z) => Math.min(3, z + 0.25))}
+                      className="p-1.5 rounded bg-[var(--bg-muted)] hover:bg-[var(--border)]"
+                      title="Zoom In"
+                    >
+                      <ZoomIn size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setImageZoom(1)}
+                      className="py-1 px-2 rounded bg-[var(--bg-muted)] hover:bg-[var(--border)] text-[11px] font-semibold"
+                    >
+                      Fit 100%
+                    </button>
+                    <a
+                      href={inspectingSub.fileUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      download
+                      className="btn-secondary py-1 px-2.5 text-xs flex items-center gap-1 ml-1"
+                    >
+                      <Download size={12} /> Download
+                    </a>
+                  </div>
+                </div>
+                <div className="flex-1 flex items-center justify-center p-4 overflow-auto">
+                  <img
+                    src={inspectingSub.fileUrl}
+                    alt="Submitted Artwork"
+                    style={{ transform: `scale(${imageZoom})`, transformOrigin: 'center center' }}
+                    className="max-h-full max-w-full object-contain rounded-lg shadow-2xl transition-transform duration-150"
+                  />
+                </div>
+              </div>
+            ) : officeEmbed ? (
+              <div className="flex-1 flex flex-col bg-[#121214] min-h-0">
+                <div className="px-4 py-2 bg-[var(--bg-surface)] border-b border-[var(--border)] flex items-center justify-between text-xs shrink-0">
+                  <span className="font-semibold text-blue-500 flex items-center gap-1.5">
+                    <FileText size={14} /> Google Office Document Review ({officeEmbed.type})
+                  </span>
+                  <a
+                    href={candidateUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn-secondary py-1 px-2.5 text-xs flex items-center gap-1"
+                  >
+                    Open Document in New Tab <ExternalLink size={11} />
+                  </a>
+                </div>
+                <div className="flex-1 p-2 sm:p-4">
+                  <iframe
+                    src={officeEmbed.embedUrl}
+                    title="Office Document Preview"
+                    className="w-full h-full rounded-xl border border-[var(--border)] bg-white shadow-xl"
+                    allow="autoplay"
+                  />
+                </div>
+              </div>
+            ) : activeLiveUrl ? (
               <div className="flex-1 flex flex-col min-h-0 bg-[#0c0c0e]">
                 {/* Browser Address Bar Mockup */}
                 <div className="flex items-center gap-2 px-4 py-2 bg-[var(--bg-surface)] border-b border-[var(--border)] text-xs text-[var(--text-secondary)] shrink-0">
@@ -773,13 +975,38 @@ const AssignmentSubmissionsPage = () => {
                     <MessageSquare size={13} /> Remarks / Feedback
                   </label>
                   <textarea
-                    rows={4}
+                    rows={3}
                     placeholder="Write constructive remarks or comments for the student..."
                     className="input-field text-xs leading-relaxed"
                     value={gradeForm.feedback}
                     onChange={(e) => setGradeForm({ ...gradeForm, feedback: e.target.value })}
                   />
-                  <p className="text-[11px] text-[var(--text-muted)] mt-1">
+
+                  {/* One-Click Quick Feedback Presets */}
+                  <div className="mt-2 space-y-1">
+                    <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] tracking-wider block">
+                      Rapid Feedback Suggestions:
+                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {FEEDBACK_PRESETS.map((chip, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            setGradeForm((prev) => ({
+                              ...prev,
+                              feedback: prev.feedback ? `${prev.feedback}\n${chip}` : chip,
+                            }));
+                          }}
+                          className="text-[10px] py-1 px-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors text-left"
+                        >
+                          {chip}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-[var(--text-muted)] mt-1.5">
                     Student will see these remarks in their portal under assignment score.
                   </p>
                 </div>
@@ -958,11 +1185,23 @@ const AssignmentSubmissionsPage = () => {
 
                     <td className="px-5 py-4 text-xs">
                       <div className="flex flex-col gap-1">
-                        {sub.liveUrl && (
+                        {getVideoEmbedUrl(sub.liveUrl || sub.driveLink || sub.fileUrl) ? (
+                          <span className="inline-flex items-center gap-1 font-semibold text-rose-600">
+                            <Video size={13} /> Video Submission
+                          </span>
+                        ) : getGoogleOfficeEmbedUrl(sub.liveUrl || sub.driveLink) ? (
+                          <span className="inline-flex items-center gap-1 font-semibold text-blue-600">
+                            <FileText size={13} /> Google Office Doc
+                          </span>
+                        ) : isImageUrl(sub.fileUrl, sub.originalFileName) ? (
+                          <span className="inline-flex items-center gap-1 font-semibold text-fuchsia-600">
+                            <ImageIcon size={13} /> Graphic / Artwork Image
+                          </span>
+                        ) : sub.liveUrl ? (
                           <span className="inline-flex items-center gap-1 font-semibold text-emerald-600">
                             <Globe size={13} /> Live Deployment (Vercel)
                           </span>
-                        )}
+                        ) : null}
                         {sub.githubUrl && (
                           <span className="inline-flex items-center gap-1 text-[var(--text-secondary)]">
                             <Code2 size={13} /> GitHub Repo

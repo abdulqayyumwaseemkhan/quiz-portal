@@ -39,6 +39,7 @@ const createAssignment = asyncHandler(async (req, res) => {
     campus,
     batch,
     projectType,
+    category,
   } = req.body;
 
   const assignment = await Assignment.create({
@@ -50,6 +51,7 @@ const createAssignment = asyncHandler(async (req, res) => {
     campus: (campus || '').trim(),
     batch: (batch || '').trim(),
     projectType: projectType || 'vanilla',
+    category: category || 'coding',
     createdBy: req.admin._id,
   });
   res.status(201).json(assignment);
