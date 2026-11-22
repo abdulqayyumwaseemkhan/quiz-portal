@@ -1,10 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Editor from '@monaco-editor/react';
 import {
   Play,
   Save,
   Upload,
-  FolderPlus,
   FilePlus,
   X,
   Image as ImageIcon,
@@ -22,9 +21,12 @@ import {
   Folder,
   RotateCcw,
   ArrowLeft,
+  ExternalLink,
+  Plus,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import API from '../../api';
+import { registerMonacoSnippets, setupAutoCloseTags } from './monacoSnippets';
 
 const DEFAULT_FILES = {
   'index.html': {
@@ -84,7 +86,7 @@ export default function WebIDE({
       try {
         initialData = JSON.parse(initialProjectData);
       } catch (e) {
-        console.error("Failed to parse initialProjectData", e);
+        console.error('Failed to parse initialProjectData', e);
       }
     } else {
       initialData = initialProjectData;
@@ -95,7 +97,7 @@ export default function WebIDE({
       try {
         initialData = JSON.parse(draft);
       } catch (e) {
-        console.error("Failed to parse draft", e);
+        console.error('Failed to parse draft', e);
       }
     }
   }
@@ -110,8 +112,12 @@ export default function WebIDE({
   const [previewMode, setPreviewMode] = useState('default'); // 'hidden', 'default', 'full'
   const [deviceWidth, setDeviceWidth] = useState('100%'); // '100%', '768px', '375px'
   const [mobileTab, setMobileTab] = useState('code'); // 'code' | 'preview' | 'files'
+  const [lastBlobUrl, setLastBlobUrl] = useState('');
+
   const iframeRef = useRef(null);
   const fileInputRef = useRef(null);
+  const ideContainerRef = useRef(null);
+  const autoCloseCleanupRef = useRef(null);
 
   useEffect(() => {
     if (!readOnly && studentId && assignmentId && files) {
@@ -130,9 +136,7 @@ export default function WebIDE({
     }));
   };
 
-  const runCode = () => {
-    if (!iframeRef.current) return;
-    
+  const runCode = useCallback(() => {
     let currentPreview = previewFile;
     if (!files[currentPreview] || isReactProject) {
       currentPreview = 'index.html';
@@ -154,10 +158,10 @@ export default function WebIDE({
         });
       </script>
     `;
-    
+
     // Create map of image URLs for replacement
     const imageUrls = {};
-    Object.values(files).forEach(file => {
+    Object.values(files).forEach((file) => {
       if (file.isImage && file.url) {
         imageUrls[file.name] = file.url;
       }
@@ -165,7 +169,7 @@ export default function WebIDE({
 
     const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-    Object.keys(imageUrls).forEach(imgName => {
+    Object.keys(imageUrls).forEach((imgName) => {
       const regex = new RegExp(escapeRegExp(imgName), 'g');
       html = html.replace(regex, imageUrls[imgName]);
       css = css.replace(regex, imageUrls[imgName]);
@@ -179,26 +183,26 @@ export default function WebIDE({
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { createRoot } from "react-dom/client";
 `;
-      Object.values(files).forEach(file => {
+      Object.values(files).forEach((file) => {
         if (file.name.endsWith('.js') || file.name.endsWith('.jsx')) {
           let content = file.content;
-          
-          Object.keys(imageUrls).forEach(imgName => {
+
+          Object.keys(imageUrls).forEach((imgName) => {
             const regex = new RegExp(escapeRegExp(imgName), 'g');
             content = content.replace(regex, imageUrls[imgName]);
           });
-          
+
           // Strip local relative imports (e.g. import App from './App' or import './styles.css')
           content = content.replace(/import\s+.*?\s+from\s+['"][./].*?['"];?/g, '');
           content = content.replace(/import\s+['"][./].*?['"];?/g, '');
-          
+
           // Strip ALL react and react-dom imports from student code to prevent duplicate identifier errors
           content = content.replace(/import\s+.*?\s+from\s+['"]react(-dom.*)?['"];?/g, '');
 
           // Strip export default and export const (everything becomes local to the single module)
           content = content.replace(/export\s+default\s+/g, '');
           content = content.replace(/export\s+(const|let|var|function|class)/g, '$1');
-          
+
           combinedJsx += `\n/* --- ${file.name} --- */\n` + content;
         }
       });
@@ -238,8 +242,8 @@ ${combinedJsx}
       `;
     } else {
       let js = files['script.js']?.content || '';
-      
-      Object.keys(imageUrls).forEach(imgName => {
+
+      Object.keys(imageUrls).forEach((imgName) => {
         const regex = new RegExp(escapeRegExp(imgName), 'g');
         js = js.replace(regex, imageUrls[imgName]);
       });
@@ -260,17 +264,20 @@ ${combinedJsx}
 
     const blob = new Blob([combinedHtml], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
-    
-    iframeRef.current.src = url;
-  };
+    setLastBlobUrl(url);
 
-  // Run code on initial load if we have data (especially for readOnly admin mode)
+    if (iframeRef.current) {
+      iframeRef.current.src = url;
+    }
+  }, [files, previewFile, isReactProject]);
+
+  // Run code on initial load if we have data
   useEffect(() => {
     if (initialProjectData) {
-      setTimeout(runCode, 500); // Wait for iframe to be ready
+      const timer = setTimeout(runCode, 500);
+      return () => clearTimeout(timer);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialProjectData]);
+  }, [initialProjectData, runCode]);
 
   useEffect(() => {
     const handleMessage = (e) => {
@@ -293,17 +300,30 @@ ${combinedJsx}
       runCode();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [previewFile]);
+  }, [previewFile, runCode]);
+
+  const handleOpenInNewTab = () => {
+    if (lastBlobUrl) {
+      window.open(lastBlobUrl, '_blank');
+    } else {
+      runCode();
+      setTimeout(() => {
+        if (iframeRef.current?.src) {
+          window.open(iframeRef.current.src, '_blank');
+        }
+      }, 300);
+    }
+  };
 
   const handleCreateFile = () => {
     if (readOnly) return;
-    const name = prompt('Enter file name (e.g., custom.js):');
+    const name = prompt('Enter file name (e.g., custom.js, page.html):');
     if (!name) return;
     if (files[name]) {
       toast.error('File already exists');
       return;
     }
-    
+
     let language = 'javascript';
     if (name.endsWith('.html')) language = 'html';
     else if (name.endsWith('.css')) language = 'css';
@@ -314,6 +334,7 @@ ${combinedJsx}
       [name]: { name, language, content: '' },
     }));
     setActiveFile(name);
+    setMobileTab('code');
   };
 
   const handleRenameFile = (e, oldName) => {
@@ -336,12 +357,12 @@ ${combinedJsx}
     setFiles((prev) => {
       const newFiles = { ...prev };
       const fileObj = { ...newFiles[oldName], name: newName };
-      
+
       if (!fileObj.isImage) {
-         if (newName.endsWith('.html')) fileObj.language = 'html';
-         else if (newName.endsWith('.css')) fileObj.language = 'css';
-         else if (newName.endsWith('.jsx')) fileObj.language = 'javascriptreact';
-         else fileObj.language = 'javascript';
+        if (newName.endsWith('.html')) fileObj.language = 'html';
+        else if (newName.endsWith('.css')) fileObj.language = 'css';
+        else if (newName.endsWith('.jsx')) fileObj.language = 'javascriptreact';
+        else fileObj.language = 'javascript';
       }
 
       newFiles[newName] = fileObj;
@@ -357,7 +378,7 @@ ${combinedJsx}
   const handleDeleteFile = (e, name) => {
     e.stopPropagation();
     if (readOnly) return;
-    
+
     if (name === 'index.html') {
       toast.error('Cannot delete the main index.html file');
       return;
@@ -393,7 +414,7 @@ ${combinedJsx}
           const canvas = document.createElement('canvas');
           let width = img.width;
           let height = img.height;
-          
+
           const MAX_DIMENSION = 2048;
           if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
             if (width > height) {
@@ -404,16 +425,16 @@ ${combinedJsx}
               height = MAX_DIMENSION;
             }
           }
-          
+
           canvas.width = width;
           canvas.height = height;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
-          
+
           canvas.toBlob(
             (blob) => {
               if (blob) {
-                const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
+                const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, '') + '.webp', {
                   type: 'image/webp',
                   lastModified: Date.now(),
                 });
@@ -434,7 +455,7 @@ ${combinedJsx}
 
   const handleImageFileChange = async (e) => {
     if (readOnly) return;
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
@@ -442,7 +463,7 @@ ${combinedJsx}
       return;
     }
 
-    const imageCount = Object.values(files).filter(f => f.isImage).length;
+    const imageCount = Object.values(files).filter((f) => f.isImage).length;
     if (imageCount >= 30) {
       toast.error('Maximum of 30 images allowed per workspace');
       return;
@@ -451,7 +472,7 @@ ${combinedJsx}
     const toastId = toast.loading('Compressing image...');
     try {
       const compressedFile = await compressImage(file);
-      
+
       if (compressedFile.size > 2 * 1024 * 1024) {
         toast.error('Image is still larger than 2MB after compression. Please use a smaller image.', { id: toastId });
         return;
@@ -463,24 +484,23 @@ ${combinedJsx}
 
       const res = await API.post('/student/ide/upload-image', formData, {
         headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+          'Content-Type': 'multipart/form-data',
+        },
       });
 
       const url = res.data.url;
       const fileName = compressedFile.name;
-      
-      setFiles((prev) => {
-        const newFiles = {
-          ...prev,
-          [fileName]: { name: fileName, isImage: true, url },
-        };
-        return newFiles;
-      });
+
+      setFiles((prev) => ({
+        ...prev,
+        [fileName]: { name: fileName, isImage: true, url },
+      }));
       toast.success('Image uploaded!', { id: toastId });
     } catch (err) {
       console.error(err);
       toast.error('Failed to process or upload image', { id: toastId });
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -497,16 +517,42 @@ ${combinedJsx}
     }
   };
 
+  const handleEditorBeforeMount = (monaco) => {
+    registerMonacoSnippets(monaco);
+  };
+
+  const handleEditorMount = (editor, monaco) => {
+    registerMonacoSnippets(monaco);
+    if (autoCloseCleanupRef.current) {
+      autoCloseCleanupRef.current();
+    }
+    if (!readOnly) {
+      autoCloseCleanupRef.current = setupAutoCloseTags(editor, monaco);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (autoCloseCleanupRef.current) {
+        autoCloseCleanupRef.current();
+      }
+    };
+  }, []);
+
+  const isFullPreview = previewMode === 'full';
+
   return (
-    <div className="flex flex-col h-full w-full bg-[#eef4ed] text-[#13315c]">
+    <div ref={ideContainerRef} className="flex flex-col h-full w-full bg-[#f4f7f6] text-[#13315c] relative overflow-hidden select-none">
       {/* Top Bar */}
-      <div className="flex flex-wrap items-center justify-between px-3 sm:px-6 py-2 sm:py-3 bg-white border-b border-[#8da9c4]/30 shadow-sm z-10 gap-2 shrink-0">
-        <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
-          <span className="font-black text-[#13315c] tracking-tight hidden lg:inline">
+      <div className="flex items-center justify-between px-3 sm:px-5 py-2 bg-white border-b border-[#8da9c4]/30 shadow-xs z-20 gap-2 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <span className="font-extrabold text-[#13315c] tracking-tight hidden lg:inline text-sm">
             Web IDE Workspace
           </span>
 
-          <button 
+          {/* Run Code Button */}
+          <button
+            type="button"
             onClick={() => {
               if (activeFile.endsWith('.html') && activeFile !== previewFile) {
                 setPreviewFile(activeFile);
@@ -517,16 +563,19 @@ ${combinedJsx}
                 setMobileTab('preview');
               }
             }}
-            className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-[#13315c] text-white hover:bg-opacity-90 rounded-lg text-xs sm:text-sm font-bold transition-all shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#13315c] text-white hover:bg-opacity-90 active:scale-95 rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer"
+            title="Compile & Run"
           >
-            <Play size={15} />
-            <span>Run Code</span>
+            <Play size={13} className="fill-white" />
+            <span className="hidden sm:inline">Run Code</span>
+            <span className="sm:hidden">Run</span>
           </button>
 
           {/* Desktop Preview Toggle */}
           <button
+            type="button"
             onClick={() => setPreviewMode(previewMode === 'hidden' ? 'default' : 'hidden')}
-            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg text-xs sm:text-sm font-bold transition-all shadow-sm"
+            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer"
           >
             {previewMode === 'hidden' ? 'Show Result' : 'Hide Result'}
           </button>
@@ -538,11 +587,11 @@ ${combinedJsx}
               onClick={() => setMobileTab('code')}
               className={`px-2.5 py-1 rounded-md font-semibold transition-colors flex items-center gap-1 ${
                 mobileTab === 'code'
-                  ? 'bg-white text-[#13315c] shadow-sm'
+                  ? 'bg-white text-[#13315c] shadow-xs'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              <Code size={13} />
+              <Code size={12} />
               <span>Code</span>
             </button>
             <button
@@ -553,11 +602,11 @@ ${combinedJsx}
               }}
               className={`px-2.5 py-1 rounded-md font-semibold transition-colors flex items-center gap-1 ${
                 mobileTab === 'preview'
-                  ? 'bg-white text-[#13315c] shadow-sm'
+                  ? 'bg-white text-[#13315c] shadow-xs'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              <Eye size={13} />
+              <Eye size={12} />
               <span>Result</span>
             </button>
             <button
@@ -565,67 +614,89 @@ ${combinedJsx}
               onClick={() => setMobileTab('files')}
               className={`px-2.5 py-1 rounded-md font-semibold transition-colors flex items-center gap-1 ${
                 mobileTab === 'files'
-                  ? 'bg-white text-[#13315c] shadow-sm'
+                  ? 'bg-white text-[#13315c] shadow-xs'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              <Folder size={13} />
+              <Folder size={12} />
               <span>Files</span>
             </button>
           </div>
         </div>
 
-        {!readOnly && (
-          <button 
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-green-600 text-white hover:bg-green-700 rounded-lg text-xs sm:text-sm font-bold transition-all shadow-sm disabled:opacity-50"
-          >
-            <Save size={15} />
-            <span>{isSubmitting ? 'Saving...' : 'Submit Workspace'}</span>
-          </button>
-        )}
+        {/* Right side: Submit or ReadOnly status */}
+        <div className="flex items-center gap-2">
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-lg text-xs font-bold transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+              title="Save & Submit Workspace"
+            >
+              <Save size={13} />
+              <span>{isSubmitting ? 'Saving...' : 'Submit Workspace'}</span>
+            </button>
+          )}
+
+          {readOnly && (
+            <span className="text-[11px] font-semibold text-gray-500 bg-gray-100 border border-gray-200 px-2.5 py-1 rounded-lg">
+              Read-Only
+            </span>
+          )}
+        </div>
       </div>
 
+      {/* Main Workspace Split */}
       <div className="flex flex-1 overflow-hidden relative">
         {/* Sidebar / Explorer */}
         <div
           className={`${
             mobileTab === 'files'
-              ? 'flex w-full absolute inset-0 z-20 md:static md:w-56 lg:w-64'
-              : 'hidden md:flex md:w-56 lg:w-64'
-          } bg-gray-50 border-r border-[#8da9c4]/30 flex-col shrink-0 ${
-            previewMode === 'full' ? 'md:hidden' : ''
-          }`}
+              ? 'flex w-full absolute inset-0 z-30 md:static md:w-52 lg:w-60'
+              : 'hidden md:flex md:w-52 lg:w-60'
+          } ${isFullPreview ? 'md:hidden' : ''} bg-gray-50 border-r border-[#8da9c4]/30 flex-col shrink-0`}
         >
-          <div className="px-4 py-3 text-xs font-bold text-gray-500 tracking-widest uppercase flex justify-between items-center border-b border-[#8da9c4]/20">
+          <div className="px-3 sm:px-4 py-2.5 text-[11px] font-bold text-gray-500 tracking-wider uppercase flex justify-between items-center border-b border-[#8da9c4]/20 bg-gray-100/60">
             <span className="flex items-center gap-1.5">
-              <Folder size={14} /> Explorer
+              <Folder size={13} /> Explorer
             </span>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               {!readOnly && (
                 <>
-                  <button onClick={handleCreateFile} title="New File" className="hover:text-[#13315c] p-1 rounded hover:bg-gray-200 transition-colors">
-                    <FilePlus size={16} />
+                  <button
+                    type="button"
+                    onClick={handleCreateFile}
+                    title="New File"
+                    className="hover:text-[#13315c] p-1 rounded hover:bg-gray-200 transition-colors"
+                  >
+                    <FilePlus size={15} />
                   </button>
-                  <button onClick={handleImageUploadClick} title="Upload Image" className="hover:text-[#13315c] p-1 rounded hover:bg-gray-200 transition-colors">
-                    <Upload size={16} />
+                  <button
+                    type="button"
+                    onClick={handleImageUploadClick}
+                    title="Upload Image (WebP)"
+                    className="hover:text-[#13315c] p-1 rounded hover:bg-gray-200 transition-colors"
+                  >
+                    <Upload size={15} />
                   </button>
                 </>
               )}
               {/* Mobile Close Button */}
               <button
+                type="button"
                 onClick={() => setMobileTab('code')}
                 className="md:hidden p-1 text-gray-500 hover:text-gray-900 rounded"
                 title="Back to Code"
               >
-                <X size={16} />
+                <X size={15} />
               </button>
             </div>
           </div>
+
           <div className="flex-1 overflow-y-auto py-2">
             {Object.values(files).map((file) => (
-              <div 
+              <div
                 key={file.name}
                 onClick={() => {
                   setActiveFile(file.name);
@@ -633,31 +704,37 @@ ${combinedJsx}
                     setMobileTab('code');
                   }
                 }}
-                className={`group flex items-center justify-between px-4 py-2.5 cursor-pointer text-sm font-medium transition-colors ${
+                className={`group flex items-center justify-between px-3 sm:px-4 py-2 cursor-pointer text-xs font-medium transition-colors ${
                   activeFile === file.name
-                    ? 'bg-[#eef4ed] text-[#13315c] border-r-2 border-[#13315c] font-semibold'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-[#13315c]'
+                    ? 'bg-blue-50 text-blue-900 border-r-3 border-blue-600 font-bold'
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                 }`}
               >
                 <div className="flex items-center flex-1 min-w-0">
-                  {file.isImage ? <ImageIcon size={16} className="mr-3 flex-shrink-0 text-purple-500" /> : <FileCode size={16} className="mr-3 flex-shrink-0 text-blue-500" />}
+                  {file.isImage ? (
+                    <ImageIcon size={14} className="mr-2.5 shrink-0 text-purple-500" />
+                  ) : (
+                    <FileCode size={14} className="mr-2.5 shrink-0 text-blue-500" />
+                  )}
                   <span className="truncate">{file.name}</span>
                 </div>
                 {!readOnly && file.name !== 'index.html' && (
-                  <div className="flex items-center opacity-80 md:opacity-0 group-hover:opacity-100 transition-opacity gap-1">
-                    <button 
-                      onClick={(e) => handleRenameFile(e, file.name)} 
+                  <div className="flex items-center opacity-70 md:opacity-0 group-hover:opacity-100 transition-opacity gap-1">
+                    <button
+                      type="button"
+                      onClick={(e) => handleRenameFile(e, file.name)}
                       title="Rename File"
-                      className="text-gray-400 hover:text-blue-500 transition-all p-1 rounded-md hover:bg-white/50"
+                      className="text-gray-400 hover:text-blue-600 p-1 rounded hover:bg-white"
                     >
-                      <Edit2 size={14} />
+                      <Edit2 size={13} />
                     </button>
-                    <button 
-                      onClick={(e) => handleDeleteFile(e, file.name)} 
+                    <button
+                      type="button"
+                      onClick={(e) => handleDeleteFile(e, file.name)}
                       title="Delete File"
-                      className="text-gray-400 hover:text-red-500 transition-all p-1 rounded-md hover:bg-white/50"
+                      className="text-gray-400 hover:text-rose-600 p-1 rounded hover:bg-white"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={13} />
                     </button>
                   </div>
                 )}
@@ -670,7 +747,7 @@ ${combinedJsx}
         <div
           className={`${
             mobileTab === 'code' ? 'flex flex-1' : 'hidden md:flex md:flex-1'
-          } flex-col min-w-0 bg-white ${previewMode === 'full' ? 'md:hidden' : ''}`}
+          } ${isFullPreview ? 'md:hidden' : ''} flex-col min-w-0 bg-white`}
         >
           {/* Horizontal File Tabs Strip */}
           <div className="flex items-center border-b border-gray-200 bg-[#f8fafc] overflow-x-auto no-scrollbar shrink-0 px-2 pt-1 gap-1">
@@ -679,33 +756,53 @@ ${combinedJsx}
                 key={f.name}
                 type="button"
                 onClick={() => setActiveFile(f.name)}
-                className={`px-3 py-1.5 rounded-t-lg text-xs font-semibold flex items-center gap-1.5 border-t border-x transition-colors whitespace-nowrap ${
+                className={`px-3 py-1.5 rounded-t-lg text-xs font-semibold flex items-center gap-1.5 border-t border-x transition-colors whitespace-nowrap cursor-pointer ${
                   activeFile === f.name
-                    ? 'bg-white text-[#13315c] border-gray-300 -mb-px font-bold shadow-sm'
+                    ? 'bg-white text-[#13315c] border-gray-300 -mb-px font-bold shadow-xs'
                     : 'bg-transparent text-gray-500 border-transparent hover:text-gray-900 hover:bg-gray-200/50'
                 }`}
               >
-                {f.isImage ? <ImageIcon size={13} className="text-purple-500" /> : <FileCode size={13} className="text-blue-500" />}
+                {f.isImage ? (
+                  <ImageIcon size={12} className="text-purple-500" />
+                ) : (
+                  <FileCode size={12} className="text-blue-500" />
+                )}
                 <span>{f.name}</span>
               </button>
             ))}
+
+            {!readOnly && (
+              <button
+                type="button"
+                onClick={handleCreateFile}
+                className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-md transition-colors"
+                title="Add New File"
+              >
+                <Plus size={14} />
+              </button>
+            )}
           </div>
 
           {files[activeFile] && files[activeFile].isImage ? (
             <div className="flex-1 flex flex-col items-center justify-center p-6 bg-gray-50 relative overflow-y-auto">
               <button
+                type="button"
                 onClick={() => {
                   navigator.clipboard.writeText(files[activeFile].url);
                   toast.success('Link copied to clipboard!');
                 }}
-                className="absolute top-4 right-4 flex items-center space-x-2 px-3 py-1.5 bg-white border border-[#8da9c4]/30 text-[#13315c] hover:bg-gray-100 rounded-lg text-xs sm:text-sm font-bold transition-all shadow-sm"
+                className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#8da9c4]/30 text-[#13315c] hover:bg-gray-100 rounded-lg text-xs font-bold transition-all shadow-xs"
                 title="Copy Image Link"
               >
-                <Copy size={15} />
+                <Copy size={13} />
                 <span>Copy Link</span>
               </button>
-              <img src={files[activeFile].url} alt={files[activeFile].name} className="max-w-full max-h-[60vh] object-contain mb-4 border border-[#8da9c4]/30 rounded-xl bg-white shadow-sm" />
-              <div className="bg-white border border-[#8da9c4]/30 px-3 py-2 rounded-lg text-xs font-mono text-[#13315c] select-all w-full max-w-xl overflow-x-auto whitespace-nowrap shadow-sm">
+              <img
+                src={files[activeFile].url}
+                alt={files[activeFile].name}
+                className="max-w-full max-h-[60vh] object-contain mb-4 border border-[#8da9c4]/30 rounded-xl bg-white shadow-xs"
+              />
+              <div className="bg-white border border-[#8da9c4]/30 px-3 py-2 rounded-lg text-xs font-mono text-[#13315c] select-all w-full max-w-xl overflow-x-auto whitespace-nowrap shadow-xs">
                 {files[activeFile].url}
               </div>
               <p className="text-xs text-gray-500 mt-2 font-medium">Use this URL inside your img src in HTML or React.</p>
@@ -719,6 +816,8 @@ ${combinedJsx}
                 language={files[activeFile]?.language || 'javascript'}
                 value={files[activeFile]?.content || ''}
                 onChange={handleEditorChange}
+                beforeMount={handleEditorBeforeMount}
+                onMount={handleEditorMount}
                 options={{
                   readOnly: readOnly,
                   minimap: { enabled: false },
@@ -729,10 +828,14 @@ ${combinedJsx}
                   autoClosingQuotes: 'always',
                   autoIndent: 'full',
                   formatOnPaste: true,
-                  quickSuggestions: true,
-                  suggestOnTriggerCharacters: true,
-                  snippetSuggestions: "inline",
-                  wordBasedSuggestions: true,
+                  tabCompletion: 'on',
+                  quickSuggestions: { other: true, comments: false, strings: true },
+                  suggest: {
+                    snippetsPreventQuickSuggestions: false,
+                    showSnippets: true,
+                  },
+                  snippetSuggestions: 'top',
+                  wordBasedSuggestions: 'matchingDocuments',
                   parameterHints: { enabled: true },
                   automaticLayout: true,
                   lineNumbersMinChars: 3,
@@ -747,63 +850,148 @@ ${combinedJsx}
         <div
           className={`${
             mobileTab === 'preview'
-              ? 'flex w-full absolute inset-0 z-30 md:static md:w-1/3 lg:w-2/5'
+              ? 'flex w-full absolute inset-0 z-30 md:static'
               : previewMode === 'hidden'
               ? 'hidden'
-              : 'hidden md:flex md:w-1/3 lg:w-2/5'
-          } ${previewMode === 'full' ? 'md:w-full' : ''} bg-white border-l border-[#8da9c4]/30 flex-col shrink-0`}
+              : 'hidden md:flex'
+          } ${
+            isFullPreview ? 'w-full md:w-full lg:w-full flex-1' : 'md:w-1/2 lg:w-2/5'
+          } bg-white border-l border-[#8da9c4]/30 flex-col shrink-0`}
         >
-          <div className="px-3 py-2 bg-[#f3f4f6] border-b border-gray-200 text-xs font-semibold text-gray-600 flex justify-between items-center">
+          {/* Preview Header */}
+          <div className="px-3 py-2 bg-[#f3f4f6] border-b border-gray-200 text-xs font-semibold text-gray-600 flex justify-between items-center gap-2 shrink-0">
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setMobileTab('code')}
-                className="md:hidden flex items-center gap-1 text-[#13315c] font-bold py-1 px-2.5 bg-white rounded border border-gray-300 shadow-sm"
+                className="md:hidden flex items-center gap-1 text-[#13315c] font-bold py-1 px-2.5 bg-white rounded border border-gray-300 shadow-xs active:scale-95"
               >
                 <ArrowLeft size={13} />
                 <span>Code</span>
               </button>
-              <span className="font-bold">Live Output</span>
+              <span className="font-bold text-[#13315c]">Live Output</span>
             </div>
 
-            <div className="flex space-x-1.5 items-center">
+            <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
               <button
+                type="button"
                 onClick={runCode}
                 title="Refresh Output"
-                className="p-1 rounded text-gray-500 hover:text-[#13315c] hover:bg-gray-200"
+                className="p-1.5 rounded text-gray-500 hover:text-[#13315c] hover:bg-gray-200 transition-colors"
               >
                 <RotateCcw size={14} />
               </button>
-              <button onClick={() => setDeviceWidth('375px')} title="Mobile View" className={`hover:text-[#13315c] transition-colors p-1 rounded ${deviceWidth === '375px' ? 'text-blue-600 bg-blue-100' : 'text-gray-400'}`}><Smartphone size={14} /></button>
-              <button onClick={() => setDeviceWidth('768px')} title="Tablet View" className={`hover:text-[#13315c] transition-colors p-1 rounded ${deviceWidth === '768px' ? 'text-blue-600 bg-blue-100' : 'text-gray-400'}`}><Tablet size={14} /></button>
-              <button onClick={() => setDeviceWidth('100%')} title="Desktop View" className={`hover:text-[#13315c] transition-colors p-1 rounded ${deviceWidth === '100%' ? 'text-blue-600 bg-blue-100' : 'text-gray-400'}`}><Monitor size={14} /></button>
-              <div className="w-px h-4 bg-gray-300 mx-1 hidden md:block"></div>
-              {previewMode === 'full' ? (
-                <button onClick={() => setPreviewMode('default')} title="Restore View" className="hidden md:inline-block text-gray-400 hover:text-[#13315c] p-1"><Minimize2 size={14} /></button>
+
+              <button
+                type="button"
+                onClick={handleOpenInNewTab}
+                title="Open Live Preview in New Tab"
+                className="p-1.5 rounded text-gray-500 hover:text-blue-600 hover:bg-gray-200 transition-colors"
+              >
+                <ExternalLink size={14} />
+              </button>
+
+              {/* Device simulation buttons */}
+              <button
+                type="button"
+                onClick={() => setDeviceWidth('375px')}
+                title="Mobile View (375px)"
+                className={`p-1.5 rounded transition-colors ${
+                  deviceWidth === '375px' ? 'text-blue-600 bg-blue-100 font-bold' : 'text-gray-400 hover:text-gray-700'
+                }`}
+              >
+                <Smartphone size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setDeviceWidth('768px')}
+                title="Tablet View (768px)"
+                className={`p-1.5 rounded transition-colors ${
+                  deviceWidth === '768px' ? 'text-blue-600 bg-blue-100 font-bold' : 'text-gray-400 hover:text-gray-700'
+                }`}
+              >
+                <Tablet size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setDeviceWidth('100%')}
+                title="Desktop View (100%)"
+                className={`p-1.5 rounded transition-colors ${
+                  deviceWidth === '100%' ? 'text-blue-600 bg-blue-100 font-bold' : 'text-gray-400 hover:text-gray-700'
+                }`}
+              >
+                <Monitor size={14} />
+              </button>
+
+              <div className="w-px h-4 bg-gray-300 mx-0.5"></div>
+
+              {/* Fullscreen Toggle for both Desktop and Mobile */}
+              {isFullPreview ? (
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode('default')}
+                  title="Restore Split View"
+                  className="p-1.5 rounded text-blue-600 bg-blue-100 hover:bg-blue-200 transition-colors"
+                >
+                  <Minimize2 size={14} />
+                </button>
               ) : (
-                <button onClick={() => setPreviewMode('full')} title="Full Screen Preview" className="hidden md:inline-block text-gray-400 hover:text-[#13315c] p-1"><Maximize2 size={14} /></button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode('full')}
+                  title="Full Screen Preview"
+                  className="p-1.5 rounded text-gray-500 hover:text-[#13315c] hover:bg-gray-200 transition-colors"
+                >
+                  <Maximize2 size={14} />
+                </button>
+              )}
+
+              {/* Quick Submit button on mobile inside Preview tab */}
+              {!readOnly && (
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                  className="md:hidden ml-1 flex items-center gap-1 px-2.5 py-1 bg-emerald-600 text-white rounded text-[11px] font-bold shadow-xs disabled:opacity-50"
+                  title="Submit Workspace"
+                >
+                  <Save size={12} />
+                  <span>{isSubmitting ? '...' : 'Submit'}</span>
+                </button>
               )}
             </div>
           </div>
-          <div className="flex-1 overflow-auto bg-gray-100 flex justify-center items-start">
-             <div style={{ width: deviceWidth, height: '100%', transition: 'width 0.3s ease', backgroundColor: 'white', borderLeft: deviceWidth !== '100%' ? '1px solid #ddd' : 'none', borderRight: deviceWidth !== '100%' ? '1px solid #ddd' : 'none', boxShadow: deviceWidth !== '100%' ? '0 0 10px rgba(0,0,0,0.1)' : 'none' }}>
-                <iframe
-                  ref={iframeRef}
-                  title="Preview"
-                  className="w-full h-full border-none bg-white"
-                  sandbox="allow-scripts allow-modals allow-forms allow-same-origin"
-                />
-             </div>
+
+          {/* Iframe Viewport */}
+          <div className="flex-1 overflow-auto bg-gray-100 flex justify-center items-start min-h-0">
+            <div
+              style={{
+                width: deviceWidth,
+                height: '100%',
+                transition: 'width 0.25s ease',
+                backgroundColor: 'white',
+                borderLeft: deviceWidth !== '100%' ? '1px solid #ddd' : 'none',
+                borderRight: deviceWidth !== '100%' ? '1px solid #ddd' : 'none',
+                boxShadow: deviceWidth !== '100%' ? '0 0 12px rgba(0,0,0,0.08)' : 'none',
+              }}
+            >
+              <iframe
+                ref={iframeRef}
+                title="Live Preview"
+                className="w-full h-full border-none bg-white"
+                sandbox="allow-scripts allow-modals allow-forms allow-same-origin"
+              />
+            </div>
           </div>
         </div>
       </div>
-      
+
       {/* Hidden file input for image upload */}
-      <input 
-        type="file" 
-        ref={fileInputRef} 
-        onChange={handleImageFileChange} 
-        className="hidden" 
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleImageFileChange}
+        className="hidden"
         accept="image/*"
       />
     </div>

@@ -272,16 +272,20 @@ const submitAssignment = asyncHandler(async (req, res) => {
     throw new Error('Student not found');
   }
 
-  const existing = await Submission.findOne({ assignmentId, studentId }).lean();
-  if (existing) {
-    res.status(400);
-    throw new Error('You have already submitted this assignment.');
+  const assignmentTotal = Number(assignment.totalMarks) || 100;
+
+  let submission = await Submission.findOne({ assignmentId, studentId });
+  if (submission) {
+    if (submission.status === 'graded') {
+      res.status(400);
+      throw new Error('This assignment has already been graded and cannot be resubmitted.');
+    }
   }
 
-  let fileUrl = null;
-  let filePublicId = null;
-  let originalFileName = null;
-  let fileSizeBytes = null;
+  let fileUrl = submission?.fileUrl || null;
+  let filePublicId = submission?.filePublicId || null;
+  let originalFileName = submission?.originalFileName || null;
+  let fileSizeBytes = submission?.fileSizeBytes || null;
 
   if (req.file) {
     const folder = `quiz-portal/assignments/${student.campus || 'General'}/${student.batch || 'General'}`;
@@ -297,11 +301,35 @@ const submitAssignment = asyncHandler(async (req, res) => {
       ? 'document'
       : cleanLive
       ? 'deployed'
-      : req.file
+      : req.file || fileUrl
       ? 'file'
       : 'link';
 
-  const submission = await Submission.create({
+  if (submission) {
+    submission.studentName = student.fullName;
+    submission.campus = student.campus;
+    submission.batch = student.batch;
+    submission.submissionType = subType;
+    submission.fileUrl = fileUrl;
+    submission.filePublicId = filePublicId;
+    submission.originalFileName = originalFileName;
+    submission.fileSizeBytes = fileSizeBytes;
+    submission.liveUrl = cleanLive || submission.liveUrl;
+    submission.githubUrl = cleanGithub || submission.githubUrl;
+    submission.driveLink = cleanDrive || cleanLive || submission.driveLink;
+    if (assignmentTitle) submission.assignmentTitle = assignmentTitle.trim();
+    if (assignmentDetails) submission.assignmentDetails = assignmentDetails.trim();
+    submission.isLate = isLate;
+    submission.status = isLate ? 'late' : 'submitted';
+    submission.maxMarks = assignmentTotal;
+    submission.submittedAt = Date.now();
+    await submission.save();
+    const resObj = submission.toObject();
+    resObj.assignmentTotalMarks = assignmentTotal;
+    return res.status(200).json(resObj);
+  }
+
+  submission = await Submission.create({
     assignmentId,
     studentId,
     studentName: student.fullName,
@@ -319,11 +347,13 @@ const submitAssignment = asyncHandler(async (req, res) => {
     assignmentDetails: (assignmentDetails || '').trim(),
     isLate,
     status: isLate ? 'late' : 'submitted',
-    maxMarks: assignment.totalMarks || 100,
+    maxMarks: assignmentTotal,
     submittedAt: Date.now(),
   });
 
-  res.status(200).json(submission);
+  const resObj = submission.toObject();
+  resObj.assignmentTotalMarks = assignmentTotal;
+  res.status(200).json(resObj);
 });
 
 const getMySubmissionStatus = asyncHandler(async (req, res) => {
@@ -363,13 +393,30 @@ const submitIdeAssignment = asyncHandler(async (req, res) => {
     throw new Error('Student not found');
   }
 
-  const existing = await Submission.findOne({ assignmentId, studentId }).lean();
-  if (existing) {
-    res.status(400);
-    throw new Error('You have already submitted this assignment.');
+  const assignmentTotal = Number(assignment.totalMarks) || 100;
+
+  let submission = await Submission.findOne({ assignmentId, studentId });
+  if (submission) {
+    if (submission.status === 'graded') {
+      res.status(400);
+      throw new Error('This assignment has already been graded and cannot be resubmitted.');
+    }
+    submission.studentName = student.fullName;
+    submission.campus = student.campus;
+    submission.batch = student.batch;
+    submission.submissionType = 'ide';
+    submission.projectData = projectData;
+    submission.isLate = isLate;
+    submission.status = isLate ? 'late' : 'submitted';
+    submission.maxMarks = assignmentTotal;
+    submission.submittedAt = Date.now();
+    await submission.save();
+    const resObj = submission.toObject();
+    resObj.assignmentTotalMarks = assignmentTotal;
+    return res.status(200).json(resObj);
   }
 
-  const submission = await Submission.create({
+  submission = await Submission.create({
     assignmentId,
     studentId,
     studentName: student.fullName,
@@ -379,7 +426,7 @@ const submitIdeAssignment = asyncHandler(async (req, res) => {
     projectData,
     isLate,
     status: isLate ? 'late' : 'submitted',
-    maxMarks: assignment.totalMarks || 100,
+    maxMarks: assignmentTotal,
     submittedAt: Date.now(),
     fileUrl: null,
     filePublicId: null,
@@ -387,7 +434,9 @@ const submitIdeAssignment = asyncHandler(async (req, res) => {
     fileSizeBytes: null,
   });
 
-  res.status(200).json(submission);
+  const resObj = submission.toObject();
+  resObj.assignmentTotalMarks = assignmentTotal;
+  res.status(200).json(resObj);
 });
 
 const uploadIdeImage = asyncHandler(async (req, res) => {

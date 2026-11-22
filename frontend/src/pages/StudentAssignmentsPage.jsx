@@ -12,6 +12,7 @@ import {
   Globe,
   Code2,
   MessageSquare,
+  Edit2,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -28,9 +29,16 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
   const [githubUrl, setGithubUrl] = useState('');
   const [driveLink, setDriveLink] = useState('');
   const [assignmentTitle, setAssignmentTitle] = useState('');
+  const [showEditForm, setShowEditForm] = useState(false);
 
   useEffect(() => {
     setStatus(assignment.mySubmission || null);
+    if (assignment.mySubmission) {
+      setLiveUrl(assignment.mySubmission.liveUrl || '');
+      setGithubUrl(assignment.mySubmission.githubUrl || '');
+      setDriveLink(assignment.mySubmission.driveLink || '');
+      setAssignmentTitle(assignment.mySubmission.assignmentTitle || '');
+    }
   }, [assignment.mySubmission]);
 
   const handleUpload = async () => {
@@ -68,9 +76,7 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
       );
       setStatus(data);
       setFile(null);
-      setLiveUrl('');
-      setGithubUrl('');
-      setDriveLink('');
+      setShowEditForm(false);
       if (onSubmitted) onSubmitted(assignment._id, data);
       broadcastLiveUpdate('ASSIGNMENT_SUBMITTED', {
         studentId: student.studentId,
@@ -203,10 +209,19 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
               )}
               {status.submissionType === 'ide' && (
                 <button
-                  onClick={() => setIdeAssignment({ assignment, status, readOnly: true })}
+                  onClick={() =>
+                    setIdeAssignment({
+                      assignment,
+                      status,
+                      readOnly: status.marksObtained !== null && status.marksObtained !== undefined,
+                    })
+                  }
                   className="btn-secondary w-full py-2 text-xs flex items-center justify-center gap-1.5"
                 >
-                  <BookOpen size={15} /> View Submitted Workspace
+                  <BookOpen size={15} />
+                  {status.marksObtained !== null && status.marksObtained !== undefined
+                    ? 'View Graded Workspace'
+                    : 'Edit / Update Workspace'}
                 </button>
               )}
               {status.fileUrl && (
@@ -229,7 +244,53 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
                   <ExternalLink size={15} /> View Attached Link
                 </a>
               )}
+
+              {status.marksObtained === null && !isLocked && status.submissionType !== 'ide' && (
+                <button
+                  type="button"
+                  onClick={() => setShowEditForm(!showEditForm)}
+                  className="btn-secondary w-full py-2 text-xs flex items-center justify-center gap-1.5"
+                >
+                  <Edit2 size={13} /> {showEditForm ? 'Cancel Update' : 'Update Project Link / File'}
+                </button>
+              )}
             </div>
+
+            {showEditForm && (
+              <div className="pt-3 border-t border-[var(--border)] space-y-2.5">
+                <p className="text-[11px] font-semibold text-[var(--text-secondary)]">
+                  Update your submission details below:
+                </p>
+                <div className="relative">
+                  <Globe className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={14} />
+                  <input
+                    type="url"
+                    placeholder="Live Project / Vercel URL"
+                    className="input-field pl-8 py-2 text-xs"
+                    value={liveUrl}
+                    onChange={(e) => setLiveUrl(e.target.value)}
+                  />
+                </div>
+                <div className="relative">
+                  <Code2 className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={14} />
+                  <input
+                    type="url"
+                    placeholder="GitHub Repository URL"
+                    className="input-field pl-8 py-2 text-xs"
+                    value={githubUrl}
+                    onChange={(e) => setGithubUrl(e.target.value)}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleUpload}
+                  disabled={uploading || (!file && !liveUrl.trim() && !githubUrl.trim() && !driveLink.trim())}
+                  className="btn-primary w-full py-2 text-xs disabled:opacity-40"
+                >
+                  {uploading ? `Updating...` : 'Save Updated Submission'}
+                </button>
+              </div>
+            )}
           </div>
         ) : isLocked ? (
           <button
@@ -403,8 +464,12 @@ const StudentAssignmentsPage = () => {
         `/student/assignments/${ideAssignment.assignment._id}/submit-ide/${student.studentId}`,
         { projectData }
       );
-      toast.success('Workspace submitted!');
+      toast.success('Workspace submitted successfully!');
       handleSubmittedUpdate(ideAssignment.assignment._id, data);
+      broadcastLiveUpdate('ASSIGNMENT_SUBMITTED', {
+        studentId: student.studentId,
+        assignmentId: ideAssignment.assignment._id,
+      });
       setIdeAssignment(null);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to submit workspace');
@@ -415,16 +480,23 @@ const StudentAssignmentsPage = () => {
   if (ideAssignment) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col bg-[var(--bg-primary)]">
-        <div className="flex items-center justify-between px-6 py-3 bg-[var(--bg-surface)] border-b border-[var(--border)]">
-          <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between px-3 sm:px-6 py-2.5 bg-[var(--bg-surface)] border-b border-[var(--border)] shrink-0">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             <button
               onClick={() => setIdeAssignment(null)}
-              className="text-sm font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              className="text-xs sm:text-sm font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
             >
-              ← Back to Assignments
+              ← Back
             </button>
-            <h2 className="text-base font-bold">{ideAssignment.assignment.title} Workspace</h2>
+            <h2 className="text-xs sm:text-sm font-bold truncate max-w-[200px] sm:max-w-md">
+              {ideAssignment.assignment.title}
+            </h2>
           </div>
+          {ideAssignment.readOnly && (
+            <span className="text-[11px] font-semibold text-[var(--text-muted)] bg-[var(--bg-muted)] px-2.5 py-0.5 rounded-full">
+              Read-Only
+            </span>
+          )}
         </div>
         <div className="flex-1 min-h-0">
           <WebIDE
