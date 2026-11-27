@@ -58,9 +58,17 @@ router.post('/submit', protectStudent, submitQuiz);
 router.get('/result/:resultId', protectStudent, getStudentResult);
 router.get('/check-attempt/:quizId/:studentId', protectStudent, checkAttemptStatus);
 
-// Assignment Routes
+// Assignment Routes (conditionally invoke Multer only for multipart file uploads so pure JSON link submissions never fail boundary checks)
+const optionalAssignmentUpload = (req, res, next) => {
+  const contentType = req.headers['content-type'] || '';
+  if (contentType.includes('multipart/form-data')) {
+    return assignmentUpload.single('file')(req, res, next);
+  }
+  return next();
+};
+
 router.get('/assignments/:studentId', protectStudent, getAssignmentsForStudent);
-router.post('/assignments/:id/submit/:studentId', protectStudent, assignmentUpload.single('file'), submitAssignment);
+router.post('/assignments/:id/submit/:studentId', protectStudent, optionalAssignmentUpload, submitAssignment);
 router.post('/assignments/:id/submit-ide/:studentId', protectStudent, submitIdeAssignment);
 router.post('/ide/upload-image', protectStudent, ideImageUpload.single('image'), uploadIdeImage);
 router.get('/assignments/:id/status/:studentId', protectStudent, getMySubmissionStatus);

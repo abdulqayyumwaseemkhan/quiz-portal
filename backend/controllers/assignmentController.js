@@ -243,9 +243,31 @@ const getAssignmentsForStudent = asyncHandler(async (req, res) => {
   res.json(enriched);
 });
 
+const normalizeExternalUrl = (raw) => {
+  if (!raw || typeof raw !== 'string') return '';
+  let trimmed = raw.trim().replace(/^['"]+|['"]+$/g, '');
+  if (!trimmed) return '';
+  // Block dangerous URI schemes
+  if (/^(javascript|data|vbscript):/i.test(trimmed)) return '';
+  if (!/^https?:\/\//i.test(trimmed)) {
+    if (/^(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(trimmed)) {
+      trimmed = `http://${trimmed}`;
+    } else {
+      trimmed = `https://${trimmed}`;
+    }
+  }
+  return trimmed;
+};
+
 const submitAssignment = asyncHandler(async (req, res) => {
   const { id: assignmentId, studentId } = req.params;
-  const { driveLink, liveUrl, githubUrl, assignmentTitle, assignmentDetails } = req.body;
+  const {
+    driveLink,
+    liveUrl,
+    githubUrl,
+    assignmentTitle,
+    assignmentDetails,
+  } = req.body || {};
 
   const assignment = await Assignment.findById(assignmentId).lean();
   if (!assignment) {
@@ -253,13 +275,20 @@ const submitAssignment = asyncHandler(async (req, res) => {
     throw new Error('Assignment not found');
   }
 
-  const cleanDrive = (driveLink || '').trim();
-  const cleanLive = (liveUrl || '').trim();
-  const cleanGithub = (githubUrl || '').trim();
+  const cleanDrive = normalizeExternalUrl(driveLink);
+  const cleanLive = normalizeExternalUrl(liveUrl);
+  const cleanGithub = normalizeExternalUrl(githubUrl);
 
-  if (!req.file && !cleanDrive && !cleanLive && !cleanGithub) {
+  let submission = await Submission.findOne({ assignmentId, studentId });
+  if (submission && submission.status === 'graded') {
     res.status(400);
-    throw new Error('Please upload a file or provide a live deployment link / GitHub link.');
+    throw new Error('This assignment has already been graded and cannot be resubmitted.');
+  }
+
+  const hasExistingFile = Boolean(submission?.fileUrl);
+  if (!req.file && !hasExistingFile && !cleanDrive && !cleanLive && !cleanGithub) {
+    res.status(400);
+    throw new Error('Please provide a valid live deployment link, GitHub link, Drive link, or upload a file.');
   }
 
   const isLate = new Date() > new Date(assignment.dueDate);
@@ -276,14 +305,6 @@ const submitAssignment = asyncHandler(async (req, res) => {
 
   const assignmentTotal = Number(assignment.totalMarks) || 100;
 
-  let submission = await Submission.findOne({ assignmentId, studentId });
-  if (submission) {
-    if (submission.status === 'graded') {
-      res.status(400);
-      throw new Error('This assignment has already been graded and cannot be resubmitted.');
-    }
-  }
-
   let fileUrl = submission?.fileUrl || null;
   let filePublicId = submission?.filePublicId || null;
   let originalFileName = submission?.originalFileName || null;
@@ -298,10 +319,19 @@ const submitAssignment = asyncHandler(async (req, res) => {
     fileSizeBytes = req.file.size;
   }
 
+  const nextLive = liveUrl !== undefined ? cleanLive : submission?.liveUrl || '';
+  const nextGithub = githubUrl !== undefined ? cleanGithub : submission?.githubUrl || '';
+  const nextDrive =
+    driveLink !== undefined
+      ? cleanDrive
+      : cleanLive && !submission?.driveLink
+      ? cleanLive
+      : submission?.driveLink || '';
+
   const subType =
     assignment.projectType === 'document'
       ? 'document'
-      : cleanLive
+      : nextLive
       ? 'deployed'
       : req.file || fileUrl
       ? 'file'
@@ -316,11 +346,11 @@ const submitAssignment = asyncHandler(async (req, res) => {
     submission.filePublicId = filePublicId;
     submission.originalFileName = originalFileName;
     submission.fileSizeBytes = fileSizeBytes;
-    submission.liveUrl = cleanLive || submission.liveUrl;
-    submission.githubUrl = cleanGithub || submission.githubUrl;
-    submission.driveLink = cleanDrive || cleanLive || submission.driveLink;
-    if (assignmentTitle) submission.assignmentTitle = assignmentTitle.trim();
-    if (assignmentDetails) submission.assignmentDetails = assignmentDetails.trim();
+    submission.liveUrl = nextLive;
+    submission.githubUrl = nextGithub;
+    submission.driveLink = nextDrive;
+    if (assignmentTitle !== undefined) submission.assignmentTitle = String(assignmentTitle).trim();
+    if (assignmentDetails !== undefined) submission.assignmentDetails = String(assignmentDetails).trim();
     submission.isLate = isLate;
     submission.status = isLate ? 'late' : 'submitted';
     submission.maxMarks = assignmentTotal;
@@ -342,9 +372,9 @@ const submitAssignment = asyncHandler(async (req, res) => {
     filePublicId,
     originalFileName,
     fileSizeBytes,
-    liveUrl: cleanLive,
-    githubUrl: cleanGithub,
-    driveLink: cleanDrive || cleanLive,
+    liveUrl: nextLive,
+    githubUrl: nextGithub,
+    driveLink: nextDrive,
     assignmentTitle: (assignmentTitle || '').trim(),
     assignmentDetails: (assignmentDetails || '').trim(),
     isLate,

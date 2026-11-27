@@ -134,13 +134,16 @@ export async function extractRemoteZipToProjectFiles(zipUrl, forceRefresh = fals
  * Uses in-memory caching to avoid hitting GitHub API / rate-limits repeatedly
  */
 export async function extractGitHubRepoToProjectFiles(githubUrl, forceRefresh = false) {
-  const cleanUrl = (githubUrl || '').trim();
+  let cleanUrl = (githubUrl || '').trim();
   if (!cleanUrl) return {};
+  if (!/^https?:\/\//i.test(cleanUrl)) {
+    cleanUrl = `https://${cleanUrl}`;
+  }
   if (!forceRefresh && extractionCache.has(cleanUrl)) {
     return extractionCache.get(cleanUrl);
   }
 
-  const match = cleanUrl.match(/github\.com\/([^/]+)\/([^/]+)(?:\/tree\/([^/]+))?/);
+  const match = cleanUrl.match(/github\.com\/([^/]+)\/([^/?#]+)(?:\/tree\/([^/?#]+))?/i);
   if (!match) {
     throw new Error('Invalid GitHub repository URL format');
   }
@@ -148,25 +151,98 @@ export async function extractGitHubRepoToProjectFiles(githubUrl, forceRefresh = 
   const owner = match[1];
   let repo = match[2];
   if (repo.endsWith('.git')) repo = repo.slice(0, -4);
-  const branch = match[3] || 'main';
+  const explicitBranch = match[3] || '';
 
-  // Strategy 1: Try public zipball download through github API or raw archive
-  try {
-    const zipUrl = `https://api.github.com/repos/${owner}/${repo}/zipball/${branch}`;
-    const response = await axios.get(zipUrl, {
-      responseType: 'arraybuffer',
-      timeout: 10000,
-    });
-    const files = await extractZipToProjectFiles(response.data);
-    extractionCache.set(cleanUrl, files);
-    return files;
-  } catch (err) {
-    console.warn('GitHub zipball fetch failed, falling back to raw file probes:', err.message);
+  // Strategy 1: CORS-friendly GitHub Git Trees API + raw.githubusercontent.com
+  const candidateBranches = explicitBranch
+    ? [explicitBranch, 'main', 'master']
+    : ['main', 'master'];
+
+  // Try resolving exact default_branch from repo metadata first
+  if (!explicitBranch) {
+    try {
+      const metaRes = await axios.get(`https://api.github.com/repos/${owner}/${repo}`, {
+        timeout: 6000,
+      });
+      if (metaRes.data?.default_branch && !candidateBranches.includes(metaRes.data.default_branch)) {
+        candidateBranches.unshift(metaRes.data.default_branch);
+      } else if (metaRes.data?.default_branch) {
+        candidateBranches.splice(candidateBranches.indexOf(metaRes.data.default_branch), 1);
+        candidateBranches.unshift(metaRes.data.default_branch);
+      }
+    } catch {
+      // fallback to main/master
+    }
   }
 
-  // Strategy 2: Fallback probe common starter files from jsDelivr / raw.githubusercontent.com
-  const candidateBranches = [branch, 'master', 'main'];
-  const commonFiles = ['index.html', 'style.css', 'styles.css', 'script.js', 'App.jsx', 'index.jsx', 'package.json'];
+  for (const b of candidateBranches) {
+    try {
+      const treeRes = await axios.get(
+        `https://api.github.com/repos/${owner}/${repo}/git/trees/${b}?recursive=1`,
+        { timeout: 8000 }
+      );
+      const treeEntries = (treeRes.data?.tree || []).filter((item) => {
+        if (item.type !== 'blob' || !item.path) return false;
+        if (
+          item.path.includes('node_modules/') ||
+          item.path.includes('dist/') ||
+          item.path.includes('.git/') ||
+          item.path.endsWith('package-lock.json') ||
+          item.path.endsWith('yarn.lock')
+        ) {
+          return false;
+        }
+        const ext = item.path.split('.').pop()?.toLowerCase() || '';
+        return Boolean(TEXT_EXTENSIONS[ext]);
+      });
+
+      if (treeEntries.length > 0) {
+        const filesObj = {};
+        const limitedEntries = treeEntries.slice(0, 45);
+        await Promise.all(
+          limitedEntries.map(async (entry) => {
+            try {
+              const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${b}/${entry.path}`;
+              const res = await axios.get(rawUrl, {
+                responseType: 'text',
+                transformResponse: [(d) => d],
+                timeout: 6000,
+              });
+              const ext = entry.path.split('.').pop()?.toLowerCase() || '';
+              filesObj[entry.path] = {
+                name: entry.path,
+                language: TEXT_EXTENSIONS[ext] || 'javascript',
+                content: typeof res.data === 'string' ? res.data : JSON.stringify(res.data, null, 2),
+              };
+            } catch {
+              // skip unreadable individual blob
+            }
+          })
+        );
+
+        if (Object.keys(filesObj).length > 0) {
+          extractionCache.set(cleanUrl, filesObj);
+          return filesObj;
+        }
+      }
+    } catch {
+      // try next branch or fallback probe
+    }
+  }
+
+  // Strategy 2: Direct raw file probes (works even when GitHub API rate-limit is reached)
+  const commonFiles = [
+    'index.html',
+    'style.css',
+    'styles.css',
+    'script.js',
+    'src/main.jsx',
+    'src/App.jsx',
+    'src/index.css',
+    'App.jsx',
+    'index.jsx',
+    'package.json',
+  ];
   const filesObj = {};
 
   for (const b of candidateBranches) {
@@ -174,7 +250,11 @@ export async function extractGitHubRepoToProjectFiles(githubUrl, forceRefresh = 
     for (const f of commonFiles) {
       try {
         const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${b}/${f}`;
-        const res = await axios.get(rawUrl, { timeout: 3500 });
+        const res = await axios.get(rawUrl, {
+          responseType: 'text',
+          transformResponse: [(d) => d],
+          timeout: 3500,
+        });
         if (res.data) {
           const ext = f.split('.').pop()?.toLowerCase();
           filesObj[f] = {
@@ -192,7 +272,9 @@ export async function extractGitHubRepoToProjectFiles(githubUrl, forceRefresh = 
   }
 
   if (Object.keys(filesObj).length === 0) {
-    throw new Error('Could not automatically fetch repository source files. Please ensure the repository is public.');
+    throw new Error(
+      'Could not fetch repository source files. Please verify that the GitHub repository is Public.'
+    );
   }
 
   extractionCache.set(cleanUrl, filesObj);

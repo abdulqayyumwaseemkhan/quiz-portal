@@ -26,6 +26,34 @@ import WebIDE from '../components/WebIDE/WebIDE';
 import { broadcastLiveUpdate, useLiveRefresh } from '../utils/liveSync';
 import { clientCache } from '../utils/clientCache';
 
+function ensureHttpsUrl(raw = '') {
+  if (!raw || typeof raw !== 'string') return '';
+  let trimmed = raw.trim().replace(/^['"]+|['"]+$/g, '');
+  if (!trimmed) return '';
+  if (/^(javascript|data|vbscript):/i.test(trimmed)) return '';
+  if (!/^https?:\/\//i.test(trimmed)) {
+    if (/^(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(trimmed)) {
+      trimmed = `http://${trimmed}`;
+    } else {
+      trimmed = `https://${trimmed}`;
+    }
+  }
+  return trimmed;
+}
+
+function isValidWebUrl(urlStr = '') {
+  if (!urlStr) return true;
+  try {
+    const parsed = new URL(urlStr);
+    return (
+      (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
+      (parsed.hostname.includes('.') || parsed.hostname === 'localhost')
+    );
+  } catch {
+    return false;
+  }
+}
+
 const CATEGORY_CONFIG = {
   coding: { label: 'Coding & Web App', icon: Code2 },
   research: { label: 'Research & Writing', icon: FileText },
@@ -35,6 +63,8 @@ const CATEGORY_CONFIG = {
   video: { label: 'Video Demonstration', icon: Video },
   general: { label: 'Coursework', icon: FileArchive },
 };
+
+const MAX_DIRECT_FILE_BYTES = 4 * 1024 * 1024; // 4 MB (Vercel Serverless safe payload limit)
 
 const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) => {
   const [status, setStatus] = useState(assignment.mySubmission || null);
@@ -49,6 +79,11 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
   const [showEditForm, setShowEditForm] = useState(false);
   const [expandedDesc, setExpandedDesc] = useState(false);
 
+  const categoryKey =
+    assignment.category || (assignment.projectType === 'document' ? 'research' : 'coding');
+  const catInfo = CATEGORY_CONFIG[categoryKey] || CATEGORY_CONFIG.coding;
+  const CategoryIcon = catInfo.icon || Code2;
+
   useEffect(() => {
     setStatus(assignment.mySubmission || null);
     if (assignment.mySubmission) {
@@ -60,40 +95,58 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
   }, [assignment.mySubmission]);
 
   const handleUpload = async () => {
-    const cleanLive = liveUrl.trim();
-    const cleanGithub = githubUrl.trim();
-    const cleanDrive = driveLink.trim();
+    const cleanLive = ensureHttpsUrl(liveUrl);
+    const cleanGithub = ensureHttpsUrl(githubUrl);
+    const cleanDrive = ensureHttpsUrl(driveLink);
 
     if (!file && !cleanLive && !cleanGithub && !cleanDrive) {
-      toast.error('Please enter a project link, GitHub URL, or attach a file');
+      toast.error('Please enter a project link, GitHub URL, Drive link, or attach a file');
+      return;
+    }
+
+    if (!isValidWebUrl(cleanLive) || !isValidWebUrl(cleanGithub) || !isValidWebUrl(cleanDrive)) {
+      toast.error('Please enter a valid web URL (for example: https://my-app.vercel.app)');
       return;
     }
 
     setUploading(true);
     setProgress(0);
 
-    const formData = new FormData();
-    if (file) formData.append('file', file);
-    if (assignmentTitle.trim()) formData.append('assignmentTitle', assignmentTitle.trim());
-    if (cleanLive) formData.append('liveUrl', cleanLive);
-    if (cleanGithub) formData.append('githubUrl', cleanGithub);
-    if (cleanDrive) formData.append('driveLink', cleanDrive);
+    const endpoint = `/student/assignments/${assignment._id}/submit/${student.studentId}`;
 
     try {
-      const { data } = await API.post(
-        `/student/assignments/${assignment._id}/submit/${student.studentId}`,
-        formData,
-        {
-          headers: { 'Content-Type': 'multipart/form-data' },
+      let data;
+      if (file) {
+        // Let Axios/Browser automatically attach the multipart boundary header
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('assignmentTitle', assignmentTitle.trim());
+        formData.append('liveUrl', cleanLive);
+        formData.append('githubUrl', cleanGithub);
+        formData.append('driveLink', cleanDrive);
+
+        const res = await API.post(endpoint, formData, {
           onUploadProgress: (progressEvent) => {
             if (progressEvent.total) {
               setProgress(Math.round((progressEvent.loaded * 100) / progressEvent.total));
             }
           },
-        }
-      );
+        });
+        data = res.data;
+      } else {
+        // Pure JSON submission for deployed URLs & links — fast, reliable, zero multipart overhead
+        const res = await API.post(endpoint, {
+          assignmentTitle: assignmentTitle.trim(),
+          liveUrl: cleanLive,
+          githubUrl: cleanGithub,
+          driveLink: cleanDrive,
+        });
+        data = res.data;
+      }
+
       setStatus(data);
       setFile(null);
+      setImagePreview(null);
       setShowEditForm(false);
       if (onSubmitted) onSubmitted(assignment._id, data);
       broadcastLiveUpdate('ASSIGNMENT_SUBMITTED', {
@@ -102,7 +155,7 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
       });
       toast.success('Assignment submitted successfully');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Submission failed');
+      toast.error(error.response?.data?.message || 'Submission failed. Please check your link or file.');
     } finally {
       setUploading(false);
       setProgress(0);
@@ -148,10 +201,274 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
     return <span className="academic-badge">Pending</span>;
   };
 
-  const categoryKey =
-    assignment.category || (assignment.projectType === 'document' ? 'research' : 'coding');
-  const catInfo = CATEGORY_CONFIG[categoryKey] || CATEGORY_CONFIG.coding;
-  const CategoryIcon = catInfo.icon || Code2;
+  const handleFileSelect = (e) => {
+    const selected = e.target.files?.[0];
+    if (!selected) return;
+    if (selected.size > MAX_DIRECT_FILE_BYTES) {
+      toast.error(
+        'Direct file upload limit is 4MB. For larger files, upload to Google Drive or deploy on Vercel/GitHub and share the link.'
+      );
+      e.target.value = '';
+      return;
+    }
+    setFile(selected);
+    if (selected.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = () => setImagePreview(reader.result);
+      reader.readAsDataURL(selected);
+    } else {
+      setImagePreview(null);
+    }
+  };
+
+  const renderCategoryInputs = () => (
+    <>
+      {categoryKey === 'research' && (
+        <>
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium text-[var(--text-secondary)]">
+              Google Docs / Paper Link:
+            </span>
+            <a
+              href="https://docs.new"
+              target="_blank"
+              rel="noreferrer"
+              className="text-[11px] font-semibold text-[var(--accent)] hover:underline flex items-center gap-1"
+            >
+              Open Google Docs <ExternalLink size={10} />
+            </a>
+          </div>
+          <div className="relative">
+            <FileText
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]"
+              size={14}
+            />
+            <input
+              type="text"
+              placeholder="https://docs.google.com/document/d/..."
+              className="input-field pl-8 py-2 text-xs"
+              value={driveLink || liveUrl}
+              onChange={(e) => {
+                setDriveLink(e.target.value);
+                setLiveUrl(e.target.value);
+              }}
+            />
+          </div>
+          <input
+            type="text"
+            placeholder="Research Title / Topic (Optional)"
+            className="input-field py-2 text-xs"
+            value={assignmentTitle}
+            onChange={(e) => setAssignmentTitle(e.target.value)}
+          />
+        </>
+      )}
+
+      {categoryKey === 'spreadsheet' && (
+        <>
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium text-[var(--text-secondary)]">
+              Google Sheets / Workbook Link:
+            </span>
+            <a
+              href="https://sheets.new"
+              target="_blank"
+              rel="noreferrer"
+              className="text-[11px] font-semibold text-[var(--accent)] hover:underline flex items-center gap-1"
+            >
+              Open Google Sheets <ExternalLink size={10} />
+            </a>
+          </div>
+          <div className="relative">
+            <FileSpreadsheet
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]"
+              size={14}
+            />
+            <input
+              type="text"
+              placeholder="https://docs.google.com/spreadsheets/d/..."
+              className="input-field pl-8 py-2 text-xs"
+              value={driveLink || liveUrl}
+              onChange={(e) => {
+                setDriveLink(e.target.value);
+                setLiveUrl(e.target.value);
+              }}
+            />
+          </div>
+        </>
+      )}
+
+      {categoryKey === 'presentation' && (
+        <>
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium text-[var(--text-secondary)]">
+              Google Slides / Canva / Presentation Link:
+            </span>
+            <a
+              href="https://slides.new"
+              target="_blank"
+              rel="noreferrer"
+              className="text-[11px] font-semibold text-[var(--accent)] hover:underline flex items-center gap-1"
+            >
+              Open Google Slides <ExternalLink size={10} />
+            </a>
+          </div>
+          <div className="relative">
+            <Presentation
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]"
+              size={14}
+            />
+            <input
+              type="text"
+              placeholder="https://docs.google.com/presentation/d/... or Canva URL"
+              className="input-field pl-8 py-2 text-xs"
+              value={driveLink || liveUrl}
+              onChange={(e) => {
+                setDriveLink(e.target.value);
+                setLiveUrl(e.target.value);
+              }}
+            />
+          </div>
+        </>
+      )}
+
+      {categoryKey === 'video' && (
+        <>
+          <span className="text-[11px] font-medium text-[var(--text-secondary)] block">
+            Video Link (YouTube / Loom / Google Drive / Vimeo):
+          </span>
+          <div className="relative">
+            <Video
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]"
+              size={14}
+            />
+            <input
+              type="text"
+              placeholder="https://www.youtube.com/watch?v=..."
+              className="input-field pl-8 py-2 text-xs"
+              value={liveUrl || driveLink}
+              onChange={(e) => {
+                setLiveUrl(e.target.value);
+                setDriveLink(e.target.value);
+              }}
+            />
+          </div>
+        </>
+      )}
+
+      {categoryKey === 'graphic' && (
+        <>
+          <span className="text-[11px] font-medium text-[var(--text-secondary)] block">
+            Design Link (Figma / Canva / Behance / Drive):
+          </span>
+          <div className="relative">
+            <Globe
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]"
+              size={14}
+            />
+            <input
+              type="text"
+              placeholder="https://www.figma.com/design/..."
+              className="input-field pl-8 py-2 text-xs"
+              value={liveUrl}
+              onChange={(e) => setLiveUrl(e.target.value)}
+            />
+          </div>
+        </>
+      )}
+
+      {(categoryKey === 'coding' || categoryKey === 'general') && (
+        <>
+          <div className="relative">
+            <Globe
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]"
+              size={14}
+            />
+            <input
+              type="text"
+              placeholder="Live Deployed URL (e.g. https://my-app.vercel.app)"
+              className="input-field pl-8 py-2 text-xs"
+              value={liveUrl}
+              onChange={(e) => setLiveUrl(e.target.value)}
+            />
+          </div>
+
+          <div className="relative">
+            <Code2
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]"
+              size={14}
+            />
+            <input
+              type="text"
+              placeholder="GitHub Repository URL (e.g. https://github.com/user/repo)"
+              className="input-field pl-8 py-2 text-xs"
+              value={githubUrl}
+              onChange={(e) => setGithubUrl(e.target.value)}
+            />
+          </div>
+        </>
+      )}
+
+      <label className="flex flex-col items-center justify-center w-full p-2.5 bg-[var(--bg-input)] border border-dashed border-[var(--border)] rounded-md cursor-pointer hover:border-[var(--brand-secondary)] text-xs transition-colors">
+        <div className="flex items-center gap-2 text-[var(--text-secondary)] font-medium">
+          <UploadCloud className="w-4 h-4 shrink-0" />
+          <span className="truncate">
+            {file
+              ? file.name
+              : categoryKey === 'graphic'
+              ? 'Attach Design Image (PNG, JPG, SVG, WebP — max 4MB)'
+              : categoryKey === 'spreadsheet'
+              ? 'Attach Excel / CSV File (.xlsx, .csv — max 4MB)'
+              : categoryKey === 'research'
+              ? 'Attach Document (.pdf, .docx — max 4MB)'
+              : categoryKey === 'presentation'
+              ? 'Attach Slide Deck (.pptx, .pdf — max 4MB)'
+              : categoryKey === 'video'
+              ? 'Attach Short Video Clip (max 4MB) or use Link above'
+              : 'Upload Project ZIP Archive (Optional — max 4MB)'}
+          </span>
+        </div>
+        <input
+          type="file"
+          className="hidden"
+          accept={
+            categoryKey === 'graphic'
+              ? 'image/png,image/jpeg,image/webp,image/svg+xml,image/gif'
+              : categoryKey === 'spreadsheet'
+              ? '.xlsx,.xls,.csv'
+              : categoryKey === 'research'
+              ? '.pdf,.doc,.docx,.txt'
+              : categoryKey === 'presentation'
+              ? '.pptx,.ppt,.pdf'
+              : categoryKey === 'video'
+              ? 'video/mp4,video/webm'
+              : '.zip,.pdf,.doc,.docx,.ppt,.pptx'
+          }
+          onChange={handleFileSelect}
+          disabled={uploading}
+        />
+      </label>
+
+      {imagePreview && (
+        <div className="relative rounded-md overflow-hidden border border-[var(--border)] max-h-36 flex items-center justify-center bg-[var(--bg-muted)]">
+          <img src={imagePreview} alt="Preview" className="max-h-36 object-contain" />
+        </div>
+      )}
+
+      {uploading && file && (
+        <div className="w-full bg-[var(--bg-muted)] h-1.5 rounded-sm overflow-hidden">
+          <div
+            className="h-full bg-[var(--accent)] transition-all"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      )}
+    </>
+  );
+
+  const safeStatusLiveUrl = ensureHttpsUrl(status?.liveUrl);
+  const safeStatusGithubUrl = ensureHttpsUrl(status?.githubUrl);
+  const safeStatusDriveLink = ensureHttpsUrl(status?.driveLink);
 
   return (
     <div className="card flex flex-col justify-between p-5">
@@ -226,9 +543,9 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
             )}
 
             <div className="flex flex-col gap-2">
-              {status.liveUrl && (
+              {safeStatusLiveUrl && (
                 <a
-                  href={status.liveUrl}
+                  href={safeStatusLiveUrl}
                   target="_blank"
                   rel="noreferrer"
                   className="btn-primary w-full py-2 text-xs flex items-center justify-center gap-1.5"
@@ -236,9 +553,9 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
                   <Globe size={14} /> Open Live Project <ExternalLink size={12} />
                 </a>
               )}
-              {status.githubUrl && (
+              {safeStatusGithubUrl && (
                 <a
-                  href={status.githubUrl}
+                  href={safeStatusGithubUrl}
                   target="_blank"
                   rel="noreferrer"
                   className="btn-secondary w-full py-2 text-xs flex items-center justify-center gap-1.5"
@@ -274,14 +591,14 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
                   <FileArchive size={14} /> Download Submitted File
                 </a>
               )}
-              {status.driveLink && status.driveLink !== status.liveUrl && (
+              {safeStatusDriveLink && safeStatusDriveLink !== safeStatusLiveUrl && (
                 <a
-                  href={status.driveLink}
+                  href={safeStatusDriveLink}
                   target="_blank"
                   rel="noreferrer"
                   className="btn-secondary w-full py-2 text-xs flex items-center justify-center gap-1.5"
                 >
-                  <ExternalLink size={14} /> View Attached Link
+                  <ExternalLink size={14} /> Open Submitted Link
                 </a>
               )}
 
@@ -294,7 +611,7 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
                     className="btn-secondary w-full py-2 text-xs flex items-center justify-center gap-1.5"
                   >
                     <Edit2 size={13} />{' '}
-                    {showEditForm ? 'Cancel Update' : 'Update Project Link / File'}
+                    {showEditForm ? 'Cancel Update' : 'Update Link / File'}
                   </button>
                 )}
             </div>
@@ -302,34 +619,9 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
             {showEditForm && (
               <div className="pt-3 border-t border-[var(--border)] space-y-2.5">
                 <p className="text-[11px] font-semibold text-[var(--text-secondary)]">
-                  Update your submission details below:
+                  Update your submission link or file below:
                 </p>
-                <div className="relative">
-                  <Globe
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]"
-                    size={14}
-                  />
-                  <input
-                    type="url"
-                    placeholder="Live Project / Vercel URL"
-                    className="input-field pl-8 py-2 text-xs"
-                    value={liveUrl}
-                    onChange={(e) => setLiveUrl(e.target.value)}
-                  />
-                </div>
-                <div className="relative">
-                  <Code2
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]"
-                    size={14}
-                  />
-                  <input
-                    type="url"
-                    placeholder="GitHub Repository URL"
-                    className="input-field pl-8 py-2 text-xs"
-                    value={githubUrl}
-                    onChange={(e) => setGithubUrl(e.target.value)}
-                  />
-                </div>
+                {renderCategoryInputs()}
                 <button
                   type="button"
                   onClick={handleUpload}
@@ -339,7 +631,7 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
                   }
                   className="btn-primary w-full py-2 text-xs disabled:opacity-40"
                 >
-                  {uploading ? 'Updating...' : 'Save Updated Submission'}
+                  {uploading ? 'Saving Update...' : 'Save Updated Submission'}
                 </button>
               </div>
             )}
@@ -353,261 +645,7 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
           </button>
         ) : (
           <div className="space-y-2.5">
-            {categoryKey === 'research' && (
-              <>
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-medium text-[var(--text-secondary)]">
-                    Google Docs / Paper Link:
-                  </span>
-                  <a
-                    href="https://docs.new"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[11px] font-semibold text-[var(--accent)] hover:underline flex items-center gap-1"
-                  >
-                    Open Google Docs <ExternalLink size={10} />
-                  </a>
-                </div>
-                <div className="relative">
-                  <FileText
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]"
-                    size={14}
-                  />
-                  <input
-                    type="url"
-                    placeholder="https://docs.google.com/document/d/..."
-                    className="input-field pl-8 py-2 text-xs"
-                    value={driveLink || liveUrl}
-                    onChange={(e) => {
-                      setDriveLink(e.target.value);
-                      setLiveUrl(e.target.value);
-                    }}
-                  />
-                </div>
-                <input
-                  type="text"
-                  placeholder="Research Title / Topic (Optional)"
-                  className="input-field py-2 text-xs"
-                  value={assignmentTitle}
-                  onChange={(e) => setAssignmentTitle(e.target.value)}
-                />
-              </>
-            )}
-
-            {categoryKey === 'spreadsheet' && (
-              <>
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-medium text-[var(--text-secondary)]">
-                    Google Sheets / Workbook Link:
-                  </span>
-                  <a
-                    href="https://sheets.new"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[11px] font-semibold text-[var(--accent)] hover:underline flex items-center gap-1"
-                  >
-                    Open Google Sheets <ExternalLink size={10} />
-                  </a>
-                </div>
-                <div className="relative">
-                  <FileSpreadsheet
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]"
-                    size={14}
-                  />
-                  <input
-                    type="url"
-                    placeholder="https://docs.google.com/spreadsheets/d/..."
-                    className="input-field pl-8 py-2 text-xs"
-                    value={driveLink || liveUrl}
-                    onChange={(e) => {
-                      setDriveLink(e.target.value);
-                      setLiveUrl(e.target.value);
-                    }}
-                  />
-                </div>
-              </>
-            )}
-
-            {categoryKey === 'presentation' && (
-              <>
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-medium text-[var(--text-secondary)]">
-                    Google Slides / Presentation Link:
-                  </span>
-                  <a
-                    href="https://slides.new"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[11px] font-semibold text-[var(--accent)] hover:underline flex items-center gap-1"
-                  >
-                    Open Google Slides <ExternalLink size={10} />
-                  </a>
-                </div>
-                <div className="relative">
-                  <Presentation
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]"
-                    size={14}
-                  />
-                  <input
-                    type="url"
-                    placeholder="https://docs.google.com/presentation/d/..."
-                    className="input-field pl-8 py-2 text-xs"
-                    value={driveLink || liveUrl}
-                    onChange={(e) => {
-                      setDriveLink(e.target.value);
-                      setLiveUrl(e.target.value);
-                    }}
-                  />
-                </div>
-              </>
-            )}
-
-            {categoryKey === 'video' && (
-              <>
-                <span className="text-[11px] font-medium text-[var(--text-secondary)] block">
-                  Video Link (YouTube / Loom / Drive / Vimeo):
-                </span>
-                <div className="relative">
-                  <Video
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]"
-                    size={14}
-                  />
-                  <input
-                    type="url"
-                    placeholder="https://www.youtube.com/watch?v=..."
-                    className="input-field pl-8 py-2 text-xs"
-                    value={liveUrl || driveLink}
-                    onChange={(e) => {
-                      setLiveUrl(e.target.value);
-                      setDriveLink(e.target.value);
-                    }}
-                  />
-                </div>
-              </>
-            )}
-
-            {categoryKey === 'graphic' && (
-              <>
-                <span className="text-[11px] font-medium text-[var(--text-secondary)] block">
-                  Design Link (Figma / Behance / Dribbble):
-                </span>
-                <div className="relative">
-                  <Globe
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]"
-                    size={14}
-                  />
-                  <input
-                    type="url"
-                    placeholder="https://www.figma.com/file/..."
-                    className="input-field pl-8 py-2 text-xs"
-                    value={liveUrl}
-                    onChange={(e) => setLiveUrl(e.target.value)}
-                  />
-                </div>
-              </>
-            )}
-
-            {categoryKey === 'coding' && (
-              <>
-                <div className="relative">
-                  <Globe
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]"
-                    size={14}
-                  />
-                  <input
-                    type="url"
-                    placeholder="Live Project / Vercel URL"
-                    className="input-field pl-8 py-2 text-xs"
-                    value={liveUrl}
-                    onChange={(e) => setLiveUrl(e.target.value)}
-                  />
-                </div>
-
-                <div className="relative">
-                  <Code2
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]"
-                    size={14}
-                  />
-                  <input
-                    type="url"
-                    placeholder="GitHub Repository URL"
-                    className="input-field pl-8 py-2 text-xs"
-                    value={githubUrl}
-                    onChange={(e) => setGithubUrl(e.target.value)}
-                  />
-                </div>
-              </>
-            )}
-
-            <label className="flex flex-col items-center justify-center w-full p-2.5 bg-[var(--bg-input)] border border-dashed border-[var(--border)] rounded-md cursor-pointer hover:border-[var(--brand-secondary)] text-xs transition-colors">
-              <div className="flex items-center gap-2 text-[var(--text-secondary)] font-medium">
-                <UploadCloud className="w-4 h-4 shrink-0" />
-                <span className="truncate">
-                  {file
-                    ? file.name
-                    : categoryKey === 'graphic'
-                    ? 'Attach Design Image (PNG, JPG, SVG, WebP)'
-                    : categoryKey === 'spreadsheet'
-                    ? 'Attach Excel / CSV File (.xlsx, .csv)'
-                    : categoryKey === 'research'
-                    ? 'Attach Document (.pdf, .docx)'
-                    : categoryKey === 'presentation'
-                    ? 'Attach Slide Deck (.pptx, .pdf)'
-                    : categoryKey === 'video'
-                    ? 'Attach Video File (Up to 10MB)'
-                    : 'Upload Project ZIP Archive (Optional)'}
-                </span>
-              </div>
-              <input
-                type="file"
-                className="hidden"
-                accept={
-                  categoryKey === 'graphic'
-                    ? 'image/png,image/jpeg,image/webp,image/svg+xml'
-                    : categoryKey === 'spreadsheet'
-                    ? '.xlsx,.xls,.csv'
-                    : categoryKey === 'research'
-                    ? '.pdf,.doc,.docx,.txt'
-                    : categoryKey === 'presentation'
-                    ? '.pptx,.ppt,.pdf'
-                    : categoryKey === 'video'
-                    ? 'video/mp4,video/webm'
-                    : '.zip,.pdf,.doc,.docx,.ppt,.pptx'
-                }
-                onChange={(e) => {
-                  const selected = e.target.files?.[0];
-                  if (!selected) return;
-                  if (selected.size > 10 * 1024 * 1024) {
-                    toast.error('File exceeds 10MB limit. Use a cloud link for larger files.');
-                    return;
-                  }
-                  setFile(selected);
-                  if (selected.type.startsWith('image/')) {
-                    const reader = new FileReader();
-                    reader.onload = () => setImagePreview(reader.result);
-                    reader.readAsDataURL(selected);
-                  } else {
-                    setImagePreview(null);
-                  }
-                }}
-                disabled={uploading}
-              />
-            </label>
-
-            {imagePreview && (
-              <div className="relative rounded-md overflow-hidden border border-[var(--border)] max-h-36 flex items-center justify-center bg-[var(--bg-muted)]">
-                <img src={imagePreview} alt="Preview" className="max-h-36 object-contain" />
-              </div>
-            )}
-
-            {uploading && (
-              <div className="w-full bg-[var(--bg-muted)] h-1.5 rounded-sm overflow-hidden">
-                <div
-                  className="h-full bg-[var(--accent)] transition-all"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            )}
+            {renderCategoryInputs()}
 
             <button
               type="button"
@@ -619,7 +657,9 @@ const AssignmentCard = ({ assignment, student, setIdeAssignment, onSubmitted }) 
               className="btn-primary w-full py-2 text-xs disabled:opacity-40"
             >
               {uploading
-                ? `Uploading ${progress}%...`
+                ? file
+                  ? `Uploading ${progress}%...`
+                  : 'Submitting...'
                 : isPastDue
                 ? 'Submit Late'
                 : 'Submit Assignment'}
@@ -782,7 +822,7 @@ const StudentAssignmentsPage = () => {
               Course Assignments
             </h1>
             <p className="text-sm text-[var(--text-secondary)] mt-1">
-              Submit coursework via repository link, file archive, or the built-in Web IDE
+              Submit coursework via deployed URL, GitHub repository, cloud document link, or built-in Web IDE
             </p>
           </header>
 

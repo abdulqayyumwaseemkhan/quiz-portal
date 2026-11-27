@@ -67,12 +67,32 @@ const FEEDBACK_PRESETS = [
   '❌ Incomplete deliverables. Please review guidelines.',
 ];
 
+function ensureHttpsUrl(raw = '') {
+  if (!raw || typeof raw !== 'string') return '';
+  let trimmed = raw.trim().replace(/^['"]+|['"]+$/g, '');
+  if (!trimmed) return '';
+  if (/^(javascript|data|vbscript):/i.test(trimmed)) return '';
+  if (!/^https?:\/\//i.test(trimmed)) {
+    if (/^(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(trimmed)) {
+      trimmed = `http://${trimmed}`;
+    } else {
+      trimmed = `https://${trimmed}`;
+    }
+  }
+  return trimmed;
+}
+
+function isGitHubRepoUrl(url = '') {
+  const clean = ensureHttpsUrl(url);
+  return /^https?:\/\/(www\.)?github\.com\/[^/]+\/[^/]+/i.test(clean);
+}
+
 function getVideoEmbedUrl(url) {
-  if (!url) return null;
-  const clean = String(url).trim();
+  const clean = ensureHttpsUrl(url);
+  if (!clean) return null;
 
   // YouTube
-  const ytMatch = clean.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([\w-]{11})/i);
+  const ytMatch = clean.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{11})/i);
   if (ytMatch) {
     return { type: 'youtube', embedUrl: `https://www.youtube-nocookie.com/embed/${ytMatch[1]}?rel=0`, rawUrl: clean };
   }
@@ -89,12 +109,6 @@ function getVideoEmbedUrl(url) {
     return { type: 'vimeo', embedUrl: `https://player.vimeo.com/video/${vimeoMatch[1]}`, rawUrl: clean };
   }
 
-  // Google Drive video
-  const driveMatch = clean.match(/drive\.google\.com\/file\/d\/([\w-]+)/i);
-  if (driveMatch) {
-    return { type: 'drive', embedUrl: `https://drive.google.com/file/d/${driveMatch[1]}/preview`, rawUrl: clean };
-  }
-
   // Direct MP4 / WebM
   if (/\.(mp4|webm|ogg)($|\?)/i.test(clean)) {
     return { type: 'direct', embedUrl: clean, rawUrl: clean };
@@ -104,22 +118,41 @@ function getVideoEmbedUrl(url) {
 }
 
 function getGoogleOfficeEmbedUrl(url) {
-  if (!url) return null;
-  const clean = String(url).trim();
+  const clean = ensureHttpsUrl(url);
+  if (!clean) return null;
 
   if (clean.includes('docs.google.com/document/d/')) {
-    const docId = clean.split('/document/d/')[1]?.split('/')[0];
-    if (docId) return { type: 'Google Docs', embedUrl: `https://docs.google.com/document/d/${docId}/preview` };
+    const docId = clean.split('/document/d/')[1]?.split(/[/?#]/)[0];
+    if (docId) return { type: 'Google Docs', embedUrl: `https://docs.google.com/document/d/${docId}/preview`, rawUrl: clean };
   }
 
   if (clean.includes('docs.google.com/spreadsheets/d/')) {
-    const sheetId = clean.split('/spreadsheets/d/')[1]?.split('/')[0];
-    if (sheetId) return { type: 'Google Sheets', embedUrl: `https://docs.google.com/spreadsheets/d/${sheetId}/preview?rm=minimal` };
+    const sheetId = clean.split('/spreadsheets/d/')[1]?.split(/[/?#]/)[0];
+    if (sheetId) return { type: 'Google Sheets', embedUrl: `https://docs.google.com/spreadsheets/d/${sheetId}/preview?rm=minimal`, rawUrl: clean };
   }
 
   if (clean.includes('docs.google.com/presentation/d/')) {
-    const slideId = clean.split('/presentation/d/')[1]?.split('/')[0];
-    if (slideId) return { type: 'Google Slides', embedUrl: `https://docs.google.com/presentation/d/${slideId}/preview` };
+    const slideId = clean.split('/presentation/d/')[1]?.split(/[/?#]/)[0];
+    if (slideId) return { type: 'Google Slides', embedUrl: `https://docs.google.com/presentation/d/${slideId}/preview`, rawUrl: clean };
+  }
+
+  // Figma official embed wrapper (prevents X-Frame-Options refusal)
+  if (/figma\.com\/(file|design|proto|board)\//i.test(clean)) {
+    return {
+      type: 'Figma Design',
+      embedUrl: `https://www.figma.com/embed?embed_host=lms&url=${encodeURIComponent(clean)}`,
+      rawUrl: clean,
+    };
+  }
+
+  // Canva official embed mode
+  const canvaMatch = clean.match(/canva\.com\/design\/([\w-]+)\/([\w-]+)/i);
+  if (canvaMatch) {
+    return {
+      type: 'Canva Design',
+      embedUrl: `https://www.canva.com/design/${canvaMatch[1]}/${canvaMatch[2]}/view?embed`,
+      rawUrl: clean,
+    };
   }
 
   return null;
@@ -429,25 +462,44 @@ const AssignmentSubmissionsPage = () => {
     XLSX.writeFile(wb, `assignment_submissions_${id.slice(-6)}.xlsx`);
   };
 
-  // Determine active media & preview targets
-  const candidateUrl = inspectingSub?.liveUrl || inspectingSub?.driveLink || '';
+  // Determine normalized active media & preview targets
+  const normLive = ensureHttpsUrl(inspectingSub?.liveUrl);
+  const normDrive = ensureHttpsUrl(inspectingSub?.driveLink);
+  const normGithub = ensureHttpsUrl(
+    inspectingSub?.githubUrl ||
+      (isGitHubRepoUrl(normLive) ? normLive : '') ||
+      (isGitHubRepoUrl(normDrive) ? normDrive : '')
+  );
+
+  const candidateUrl = normLive || normDrive || '';
   const videoEmbed = getVideoEmbedUrl(candidateUrl || inspectingSub?.fileUrl);
   const officeEmbed = getGoogleOfficeEmbedUrl(candidateUrl);
   const isDirectImage = isImageUrl(inspectingSub?.fileUrl, inspectingSub?.originalFileName);
 
-  const activeLiveUrl = (!videoEmbed && !officeEmbed && !isDirectImage) ? (
-    inspectingSub?.liveUrl || (
-      inspectingSub?.driveLink && !inspectingSub?.driveLink.includes('drive.google.com')
-        ? inspectingSub.driveLink
-        : ''
-    )
-  ) : '';
-
   let activeGoogleDriveEmbed = null;
-  if (!videoEmbed && !officeEmbed && inspectingSub?.driveLink && inspectingSub.driveLink.includes('drive.google.com/file/d/')) {
-    const fileId = inspectingSub.driveLink.split('/file/d/')[1]?.split('/')[0];
-    if (fileId) activeGoogleDriveEmbed = `https://drive.google.com/file/d/${fileId}/preview`;
+  let activeGoogleDriveFolderUrl = '';
+  if (!videoEmbed && !officeEmbed && candidateUrl.includes('drive.google.com')) {
+    const fileIdMatch =
+      candidateUrl.match(/\/file\/d\/([\w-]+)/i) ||
+      candidateUrl.match(/[?&]id=([\w-]+)/i);
+    if (fileIdMatch && !candidateUrl.includes('/folders/')) {
+      activeGoogleDriveEmbed = `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
+    } else if (candidateUrl.includes('/folders/')) {
+      activeGoogleDriveFolderUrl = candidateUrl;
+    }
   }
+
+  // Only embed candidateUrl as a live web app if it is NOT a GitHub repo (which blocks iframes via X-Frame-Options)
+  // and NOT a Google Drive link handled above
+  const activeLiveUrl =
+    !videoEmbed &&
+    !officeEmbed &&
+    !isDirectImage &&
+    !activeGoogleDriveEmbed &&
+    !activeGoogleDriveFolderUrl
+      ? (!isGitHubRepoUrl(normLive) && normLive) ||
+        (!isGitHubRepoUrl(normDrive) && !normDrive.includes('drive.google.com') ? normDrive : '')
+      : '';
 
   // --- Fullscreen Live Review & Grading Studio ---
   if (inspectingSub) {
@@ -541,9 +593,24 @@ const AssignmentSubmissionsPage = () => {
               </a>
             )}
 
-            {inspectingSub.githubUrl && (
+            {normGithub && !extractedProjectData && (
+              <button
+                type="button"
+                onClick={() => handleExtractGitHubSubmission(normGithub)}
+                disabled={extractingSource}
+                className="btn-secondary py-1.5 px-3 text-xs flex items-center gap-1.5 cursor-pointer"
+                title="Load GitHub repository files into Web IDE"
+              >
+                <Code2 size={14} className="text-[var(--accent)]" />
+                <span className="hidden sm:inline">
+                  {extractingSource ? 'Loading Code...' : 'Inspect Code'}
+                </span>
+              </button>
+            )}
+
+            {normGithub && (
               <a
-                href={inspectingSub.githubUrl}
+                href={normGithub}
                 target="_blank"
                 rel="noreferrer"
                 className="btn-secondary py-1.5 px-3 text-xs flex items-center gap-1.5"
@@ -592,7 +659,31 @@ const AssignmentSubmissionsPage = () => {
         <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
           {/* Live Preview Screen (Left Pane) */}
           <div className="flex-1 bg-[var(--bg-primary)] flex flex-col min-h-0 overflow-hidden border-b lg:border-b-0 lg:border-r border-[var(--border)]">
-            {videoEmbed ? (
+            {extractedProjectData || (inspectingSub.submissionType === 'ide' && inspectingSub.projectData) ? (
+              <div className="flex-1 min-h-0 flex flex-col">
+                {extractedProjectData && (
+                  <div className="px-4 py-1.5 bg-indigo-50 dark:bg-indigo-950/40 border-b border-indigo-200 dark:border-indigo-900 flex items-center justify-between text-xs text-indigo-700 dark:text-indigo-300 shrink-0">
+                    <span className="font-medium">
+                      Source code loaded in Web IDE &amp; Live Preview
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setExtractedProjectData(null)}
+                      className="text-xs font-semibold hover:underline cursor-pointer"
+                    >
+                      {activeLiveUrl ? '← Back to Live Deployed App' : 'Close Extracted Code'}
+                    </button>
+                  </div>
+                )}
+                <div className="flex-1 min-h-0">
+                  <WebIDE
+                    key={inspectingSub._id + (extractedProjectData ? '_extracted' : '')}
+                    initialProjectData={extractedProjectData || inspectingSub.projectData}
+                    readOnly={true}
+                  />
+                </div>
+              </div>
+            ) : videoEmbed ? (
               <div className="flex-1 flex flex-col bg-black min-h-0">
                 <div className="px-4 py-2 bg-[var(--bg-surface)] border-b border-[var(--border)] flex items-center justify-between text-xs shrink-0">
                   <span className="font-semibold text-rose-500 flex items-center gap-1.5">
@@ -681,12 +772,12 @@ const AssignmentSubmissionsPage = () => {
                     <FileText size={14} /> Google Office Document Review ({officeEmbed.type})
                   </span>
                   <a
-                    href={candidateUrl}
+                    href={officeEmbed.rawUrl || candidateUrl}
                     target="_blank"
                     rel="noreferrer"
                     className="btn-secondary py-1 px-2.5 text-xs flex items-center gap-1"
                   >
-                    Open Document in New Tab <ExternalLink size={11} />
+                    Open in New Tab <ExternalLink size={11} />
                   </a>
                 </div>
                 <div className="flex-1 p-2 sm:p-4">
@@ -745,8 +836,8 @@ const AssignmentSubmissionsPage = () => {
                       src={activeLiveUrl}
                       title="Student Project Live Preview"
                       className="w-full h-full border-0 bg-white"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                      sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+                      referrerPolicy="no-referrer-when-downgrade"
                     />
                   </div>
                 </div>
@@ -755,7 +846,7 @@ const AssignmentSubmissionsPage = () => {
                   <span>
                     Viewing live deployed project.{' '}
                     <span className="hidden sm:inline">
-                      If the site prevents embedding, click the link to open in a new tab.
+                      If the host restricts iframe embedding, open the live URL directly in a new tab.
                     </span>
                   </span>
                   <a
@@ -764,57 +855,87 @@ const AssignmentSubmissionsPage = () => {
                     rel="noreferrer"
                     className="text-[var(--accent)] hover:underline font-semibold flex items-center gap-1"
                   >
-                    Direct Link <ExternalLink size={11} />
+                    Open Direct URL <ExternalLink size={11} />
                   </a>
                 </div>
               </div>
-            ) : (inspectingSub.submissionType === 'ide' && inspectingSub.projectData) || extractedProjectData ? (
-              <div className="flex-1 min-h-0 flex flex-col">
-                {extractedProjectData && (
-                  <div className="px-4 py-1.5 bg-indigo-50 dark:bg-indigo-950/40 border-b border-indigo-200 dark:border-indigo-900 flex items-center justify-between text-xs text-indigo-700 dark:text-indigo-300">
-                    <span className="font-medium">Extracted archive loaded in Web IDE & Live Preview</span>
-                    <button
-                      type="button"
-                      onClick={() => setExtractedProjectData(null)}
-                      className="text-xs font-semibold hover:underline cursor-pointer"
-                    >
-                      Close Extracted Code
-                    </button>
-                  </div>
-                )}
-                <div className="flex-1 min-h-0">
-                  <WebIDE
-                    key={inspectingSub._id + (extractedProjectData ? '_extracted' : '')}
-                    initialProjectData={extractedProjectData || inspectingSub.projectData}
-                    readOnly={true}
+            ) : activeGoogleDriveEmbed ? (
+              <div className="flex-1 flex flex-col min-h-0 bg-[#121214]">
+                <div className="px-4 py-2 bg-[var(--bg-surface)] border-b border-[var(--border)] flex items-center justify-between text-xs shrink-0">
+                  <span className="font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
+                    <FileText size={14} className="text-[var(--accent)]" /> Google Drive File Preview
+                  </span>
+                  <a
+                    href={candidateUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn-secondary py-1 px-2.5 text-xs flex items-center gap-1"
+                  >
+                    Open in Google Drive <ExternalLink size={11} />
+                  </a>
+                </div>
+                <div className="flex-1 p-3 sm:p-4">
+                  <iframe
+                    src={activeGoogleDriveEmbed}
+                    width="100%"
+                    height="100%"
+                    allow="autoplay; fullscreen"
+                    title="Submission Preview"
+                    className="rounded-xl w-full h-full border-0 bg-white"
                   />
                 </div>
-              </div>
-            ) : activeGoogleDriveEmbed ? (
-              <div className="flex-1 flex flex-col p-4 bg-slate-950">
-                <iframe
-                  src={activeGoogleDriveEmbed}
-                  width="100%"
-                  height="100%"
-                  allow="autoplay"
-                  title="Submission Preview"
-                  className="rounded-xl w-full h-full border-0"
-                />
               </div>
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
                 <div className="p-4 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border)] mb-4">
-                  <FileArchive size={36} className="text-[var(--accent)]" />
+                  {normGithub && !inspectingSub.fileUrl ? (
+                    <Code2 size={36} className="text-[var(--accent)]" />
+                  ) : activeGoogleDriveFolderUrl ? (
+                    <ExternalLink size={36} className="text-[var(--accent)]" />
+                  ) : (
+                    <FileArchive size={36} className="text-[var(--accent)]" />
+                  )}
                 </div>
                 <h3 className="text-base font-bold mb-1">
-                  {inspectingSub.originalFileName || 'File / Archive Submission'}
+                  {inspectingSub.originalFileName ||
+                    (normGithub
+                      ? 'GitHub Repository Submission'
+                      : activeGoogleDriveFolderUrl
+                      ? 'Shared Cloud Folder / External Resource'
+                      : 'File / Link Submission')}
                 </h3>
-                <p className="text-xs text-[var(--text-secondary)] max-w-sm mb-4">
+                <p className="text-xs text-[var(--text-secondary)] max-w-md mb-5 leading-relaxed">
                   {inspectingSub.fileSizeBytes
                     ? `File Size: ${formatBytes(inspectingSub.fileSizeBytes)}`
-                    : 'Download the source file or extract directly to review in Web IDE.'}
+                    : normGithub
+                    ? 'Inspect repository source files directly inside the built-in Web IDE or open the repository on GitHub.'
+                    : activeGoogleDriveFolderUrl
+                    ? 'Google Drive folders open in a separate browser tab for security.'
+                    : 'Open the submitted link or extract source files to review.'}
                 </p>
                 <div className="flex flex-wrap gap-2.5 justify-center">
+                  {activeGoogleDriveFolderUrl && (
+                    <a
+                      href={activeGoogleDriveFolderUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn-primary py-2 px-4 text-xs flex items-center gap-2"
+                    >
+                      <ExternalLink size={14} /> Open Shared Google Drive Folder
+                    </a>
+                  )}
+
+                  {candidateUrl && !activeGoogleDriveFolderUrl && !normGithub && (
+                    <a
+                      href={candidateUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn-primary py-2 px-4 text-xs flex items-center gap-2"
+                    >
+                      <ExternalLink size={14} /> Open Submitted Link
+                    </a>
+                  )}
+
                   {inspectingSub.fileUrl && (
                     <a
                       href={inspectingSub.fileUrl}
@@ -840,26 +961,26 @@ const AssignmentSubmissionsPage = () => {
                       </button>
                     )}
 
-                  {inspectingSub.githubUrl && (
+                  {normGithub && (
                     <button
                       type="button"
-                      onClick={() => handleExtractGitHubSubmission(inspectingSub.githubUrl)}
+                      onClick={() => handleExtractGitHubSubmission(normGithub)}
                       disabled={extractingSource}
                       className="btn-primary py-2 px-4 text-xs flex items-center gap-2 shadow-sm cursor-pointer"
                     >
                       <Code2 size={14} />
-                      {extractingSource ? 'Fetching GitHub...' : 'Extract GitHub Code into Web IDE'}
+                      {extractingSource ? 'Fetching GitHub...' : 'Load GitHub Code into Web IDE'}
                     </button>
                   )}
 
-                  {inspectingSub.githubUrl && (
+                  {normGithub && (
                     <a
-                      href={inspectingSub.githubUrl}
+                      href={normGithub}
                       target="_blank"
                       rel="noreferrer"
                       className="btn-secondary py-2 px-4 text-xs flex items-center gap-2"
                     >
-                      <ExternalLink size={14} /> View GitHub
+                      <ExternalLink size={14} /> Open on GitHub
                     </a>
                   )}
                 </div>
@@ -1197,12 +1318,15 @@ const AssignmentSubmissionsPage = () => {
                           <span className="inline-flex items-center gap-1 font-semibold text-fuchsia-600">
                             <ImageIcon size={13} /> Graphic / Artwork Image
                           </span>
-                        ) : sub.liveUrl ? (
+                        ) : (sub.liveUrl || sub.driveLink) && !isGitHubRepoUrl(sub.liveUrl || sub.driveLink) ? (
                           <span className="inline-flex items-center gap-1 font-semibold text-emerald-600">
-                            <Globe size={13} /> Live Deployment (Vercel)
+                            <Globe size={13} />{' '}
+                            {(sub.liveUrl || sub.driveLink || '').includes('drive.google.com')
+                              ? 'Google Drive Link'
+                              : 'Live Deployed Link'}
                           </span>
                         ) : null}
-                        {sub.githubUrl && (
+                        {(sub.githubUrl || isGitHubRepoUrl(sub.liveUrl) || isGitHubRepoUrl(sub.driveLink)) && (
                           <span className="inline-flex items-center gap-1 text-[var(--text-secondary)]">
                             <Code2 size={13} /> GitHub Repo
                           </span>

@@ -909,9 +909,7 @@ export default function WebIDE({
       const formData = new FormData();
       formData.append('image', compressedFile);
 
-      const res = await API.post('/student/ide/upload-image', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const res = await API.post('/student/ide/upload-image', formData);
 
       const url = res.data.url;
       const targetKey = isReactProject && files['src/App.jsx']
