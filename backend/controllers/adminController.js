@@ -8,6 +8,7 @@ const Result = require('../models/Result');
 const Assignment = require('../models/Assignment');
 const Submission = require('../models/Submission');
 const AttendanceRecord = require('../models/AttendanceRecord');
+const PlatformSetting = require('../models/PlatformSetting');
 const jwt = require('jsonwebtoken');
 const {
   generateSecurePassword,
@@ -1124,6 +1125,43 @@ const deleteTeacher = asyncHandler(async (req, res) => {
   res.json({ message: 'Teacher account deleted successfully' });
 });
 
+// @desc    Get Practice Web IDE platform settings
+// @route   GET /api/admin/ide-settings
+const getIdeSettings = asyncHandler(async (req, res) => {
+  let settings = await PlatformSetting.findOne({ singletonKey: 'default' }).lean();
+  if (!settings) {
+    settings = { singletonKey: 'default', enableNodePracticeIde: false };
+  }
+  res.json({
+    enableNodePracticeIde: Boolean(settings.enableNodePracticeIde),
+    updatedAt: settings.updatedAt || null,
+  });
+});
+
+// @desc    Update Practice Web IDE platform settings (enable/disable Node.js & Express)
+// @route   PUT /api/admin/ide-settings
+const updateIdeSettings = asyncHandler(async (req, res) => {
+  const enableNodePracticeIde = Boolean(req.body.enableNodePracticeIde);
+  const settings = await PlatformSetting.findOneAndUpdate(
+    { singletonKey: 'default' },
+    {
+      $set: {
+        enableNodePracticeIde,
+        updatedBy: req.admin?._id || null,
+      },
+    },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  );
+
+  res.json({
+    enableNodePracticeIde: Boolean(settings.enableNodePracticeIde),
+    updatedAt: settings.updatedAt,
+    message: enableNodePracticeIde
+      ? 'Node.js & Express Practice IDE enabled for students'
+      : 'Node.js & Express Practice IDE disabled for students',
+  });
+});
+
 module.exports = {
   loginAdmin,
   verifyAdmin2FA,
@@ -1153,4 +1191,6 @@ module.exports = {
   addTeacher,
   updateTeacher,
   deleteTeacher,
+  getIdeSettings,
+  updateIdeSettings,
 };

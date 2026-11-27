@@ -13,7 +13,8 @@ const {
   submitQuiz,
   getStudentResult,
   checkAttemptStatus,
-  verifyStudentId
+  verifyStudentId,
+  getStudentIdeSettings,
 } = require('../controllers/studentController');
 
 const {
@@ -73,5 +74,8 @@ router.post('/lectures/:id/watched', protectStudent, toggleLectureWatched);
 
 // Attendance Route
 router.get('/attendance/:studentId', protectStudent, getStudentAttendance);
+
+// Practice Web IDE Feature Settings
+router.get('/ide-settings', protectStudent, getStudentIdeSettings);
 
 module.exports = router;

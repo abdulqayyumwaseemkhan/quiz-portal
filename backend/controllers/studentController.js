@@ -9,6 +9,7 @@ const Assignment = require('../models/Assignment');
 const Submission = require('../models/Submission');
 const AttendanceSession = require('../models/AttendanceSession');
 const AttendanceRecord = require('../models/AttendanceRecord');
+const PlatformSetting = require('../models/PlatformSetting');
 const cache = require('../utils/cache');
 const { hashPassword, verifyPassword, encryptStudentPassword } = require('../utils/password');
 
@@ -808,6 +809,15 @@ const getStudentDashboard = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Get Practice Web IDE feature settings for students
+// @route   GET /api/student/ide-settings
+const getStudentIdeSettings = asyncHandler(async (req, res) => {
+  const settings = await PlatformSetting.findOne({ singletonKey: 'default' }).lean();
+  res.json({
+    enableNodePracticeIde: Boolean(settings?.enableNodePracticeIde),
+  });
+});
+
 module.exports = {
   loginStudent,
   changeStudentPassword,
@@ -821,5 +831,6 @@ module.exports = {
   submitQuiz,
   getStudentResult,
   checkAttemptStatus,
-  verifyStudentId
+  verifyStudentId,
+  getStudentIdeSettings,
 };

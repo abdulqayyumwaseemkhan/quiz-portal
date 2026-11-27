@@ -71,25 +71,26 @@ export async function extractZipToProjectFiles(zipData) {
   }
 
   for (const path of entries) {
-    const relPath = prefix ? path.replace(prefix, '') : path;
+    const relPath = (prefix ? path.replace(prefix, '') : path).replace(/^\/+/, '');
     const fileName = relPath.split('/').pop();
     if (!fileName) continue;
 
     const ext = fileName.split('.').pop()?.toLowerCase() || '';
+    const storeKey = relPath || fileName;
 
     if (IMAGE_EXTENSIONS.has(ext)) {
       const base64 = await zip.files[path].async('base64');
       const mime = ext === 'jpg' ? 'jpeg' : ext;
       const dataUrl = `data:image/${mime};base64,${base64}`;
-      filesObj[fileName] = {
-        name: fileName,
+      filesObj[storeKey] = {
+        name: storeKey,
         isImage: true,
         url: dataUrl,
       };
     } else if (TEXT_EXTENSIONS[ext] || ext === '') {
       const content = await zip.files[path].async('string');
-      filesObj[fileName] = {
-        name: fileName,
+      filesObj[storeKey] = {
+        name: storeKey,
         language: TEXT_EXTENSIONS[ext] || 'javascript',
         content,
       };

@@ -29,6 +29,8 @@ const {
   addTeacher,
   updateTeacher,
   deleteTeacher,
+  getIdeSettings,
+  updateIdeSettings,
 } = require('../controllers/adminController');
 const { getAllResults, getResultDetails, gradeResultAnswers, deleteQuizResult } = require('../controllers/quizController');
 const { protectAdmin } = require('../middleware/auth');
@@ -74,5 +76,9 @@ router.post('/campuses', protectAdmin, addCampus);
 router.get('/campuses', protectAdmin, getCampuses);
 router.put('/campuses/:id', protectAdmin, updateCampus);
 router.delete('/campuses/:id', protectAdmin, deleteCampus);
+
+// Practice Web IDE feature toggle settings
+router.get('/ide-settings', protectAdmin, getIdeSettings);
+router.put('/ide-settings', protectAdmin, updateIdeSettings);
 
 module.exports = router;

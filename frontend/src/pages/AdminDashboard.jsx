@@ -22,12 +22,14 @@ import {
   Upload,
   ArrowRight,
   FileSpreadsheet,
+  Server,
+  Code2,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { exportMasterStudentReport } from '../utils/exportMasterStudentReport';
 import { clientCache } from '../utils/clientCache';
-import { useLiveRefresh } from '../utils/liveSync';
+import { broadcastLiveUpdate, useLiveRefresh } from '../utils/liveSync';
 
 const AdminDashboard = () => {
   const cached = clientCache.get('admin_dashboard');
@@ -45,6 +47,8 @@ const AdminDashboard = () => {
   const [studentsData, setStudentsData] = useState(cached?.studentsData || []);
   const [resultsData, setResultsData] = useState(cached?.resultsData || []);
   const [meta, setMeta] = useState(cached?.meta || { campuses: [], batches: [] });
+  const [nodeIdeEnabled, setNodeIdeEnabled] = useState(Boolean(cached?.nodeIdeEnabled));
+  const [togglingNodeIde, setTogglingNodeIde] = useState(false);
   const [loading, setLoading] = useState(!cached);
 
   // Duplicate quiz modal state
@@ -55,7 +59,7 @@ const AdminDashboard = () => {
     const hasCache = clientCache.has('admin_dashboard');
     if (!silent && !hasCache) setLoading(true);
     try {
-      const [quizRes, resultRes, studentRes, metaRes, lectureRes, attendanceRes, assignmentRes] =
+      const [quizRes, resultRes, studentRes, metaRes, lectureRes, attendanceRes, assignmentRes, ideRes] =
         await Promise.all([
           API.get('/quizzes'),
           API.get('/admin/results'),
@@ -64,6 +68,7 @@ const AdminDashboard = () => {
           API.get('/lectures').catch(() => ({ data: [] })),
           API.get('/attendance/sessions').catch(() => ({ data: [] })),
           API.get('/assignments').catch(() => ({ data: [] })),
+          API.get('/admin/ide-settings').catch(() => ({ data: { enableNodePracticeIde: false } })),
         ]);
 
       const newStats = {
@@ -80,11 +85,14 @@ const AdminDashboard = () => {
         batches: metaRes.data.batches || [],
       };
 
+      const enabledNode = Boolean(ideRes?.data?.enableNodePracticeIde);
+
       setQuizzes(quizRes.data);
       setResultsData(resultRes.data);
       setStudentsData(studentRes.data);
       setMeta(newMeta);
       setStats(newStats);
+      setNodeIdeEnabled(enabledNode);
 
       clientCache.set('admin_dashboard', {
         quizzes: quizRes.data,
@@ -92,6 +100,7 @@ const AdminDashboard = () => {
         studentsData: studentRes.data,
         meta: newMeta,
         stats: newStats,
+        nodeIdeEnabled: enabledNode,
       });
     } catch {
       if (!silent) toast.error('Failed to load dashboard data');
@@ -112,6 +121,29 @@ const AdminDashboard = () => {
     'STUDENT_CREATED',
     'STUDENT_DELETED',
   ]);
+
+  const handleToggleNodePracticeIde = async () => {
+    const nextValue = !nodeIdeEnabled;
+    setTogglingNodeIde(true);
+    try {
+      const { data } = await API.put('/admin/ide-settings', {
+        enableNodePracticeIde: nextValue,
+      });
+      const updatedFlag = Boolean(data.enableNodePracticeIde);
+      setNodeIdeEnabled(updatedFlag);
+      clientCache.set('practice_ide_settings', { enableNodePracticeIde: updatedFlag });
+      const prevDash = clientCache.get('admin_dashboard');
+      if (prevDash) {
+        clientCache.set('admin_dashboard', { ...prevDash, nodeIdeEnabled: updatedFlag });
+      }
+      broadcastLiveUpdate('IDE_SETTINGS_UPDATED', { enableNodePracticeIde: updatedFlag });
+      toast.success(data.message || 'Practice IDE setting updated');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update IDE setting');
+    } finally {
+      setTogglingNodeIde(false);
+    }
+  };
 
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this quiz and all its questions?')) return;
@@ -256,6 +288,60 @@ const AdminDashboard = () => {
           <StatCard title="Video Lectures" value={stats.totalLectures} icon={Video} />
           <StatCard title="Attendance" value={stats.totalAttendanceSessions} icon={CalendarCheck} />
           <StatCard title="Assignments" value={stats.totalAssignments} icon={FileArchive} />
+        </div>
+
+        {/* Practice Web IDE Environment Control */}
+        <div className="card p-4 sm:p-5 mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3.5">
+            <div className="p-2.5 rounded-xl bg-[var(--accent-subtle)] text-[var(--accent)] shrink-0">
+              <Server size={20} />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-sm sm:text-base font-bold text-[var(--text-primary)]">
+                  Practice Web IDE — Node.js &amp; Express Lab
+                </h2>
+                <span
+                  className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                    nodeIdeEnabled
+                      ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                      : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                  }`}
+                >
+                  {nodeIdeEnabled ? 'Live for Students' : 'Disabled for Students'}
+                </span>
+              </div>
+              <p className="text-xs text-[var(--text-secondary)] mt-1 leading-relaxed">
+                HTML/CSS &amp; React (Vite) practice modes are active. Toggle Node.js + Express ON whenever your batch begins backend training.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <Link
+              to="/practice-ide?stack=node&adminPreview=1"
+              className="btn-secondary text-xs py-2 px-3.5 flex items-center gap-1.5"
+            >
+              <Code2 size={14} />
+              <span>Preview Lab</span>
+            </Link>
+            <button
+              type="button"
+              disabled={togglingNodeIde}
+              onClick={handleToggleNodePracticeIde}
+              className={`text-xs font-bold py-2 px-4 rounded-lg transition-colors cursor-pointer disabled:opacity-50 ${
+                nodeIdeEnabled
+                  ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 hover:bg-rose-500/25 border border-rose-500/30'
+                  : 'btn-primary'
+              }`}
+            >
+              {togglingNodeIde
+                ? 'Updating...'
+                : nodeIdeEnabled
+                ? 'Disable for Students'
+                : 'Enable Node.js for Students'}
+            </button>
+          </div>
         </div>
 
         {/* LMS Quick Access Modules */}
