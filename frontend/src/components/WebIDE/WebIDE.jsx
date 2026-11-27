@@ -35,12 +35,21 @@ import {
   Terminal,
   Server,
   Check,
+  Wand2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import JSZip from 'jszip';
 import API from '../../api';
 import { useTheme } from '../../context/ThemeContext';
-import { registerMonacoSnippets, setupAutoCloseTags } from './monacoSnippets';
+import {
+  registerMonacoSnippets,
+  setupAutoCloseTags,
+  setMonacoWorkspaceFilesGetter,
+} from './monacoSnippets';
+import {
+  formatCodeWithPrettier,
+  registerPrettierFormatterWithMonaco,
+} from './codeFormatter';
 import { extractZipToProjectFiles } from '../../utils/zipAndRepoExtractor';
 import {
   VANILLA_STARTER_FILES,
@@ -287,6 +296,19 @@ export default function WebIDE({
   const ideContainerRef = useRef(null);
   const autoCloseCleanupRef = useRef(null);
   const inlineInputRef = useRef(null);
+  const editorRef = useRef(null);
+  const filesRef = useRef(files);
+  const activeFileRef = useRef(activeFile);
+  const [isFormatting, setIsFormatting] = useState(false);
+
+  useEffect(() => {
+    filesRef.current = files;
+    setMonacoWorkspaceFilesGetter(() => filesRef.current);
+  }, [files]);
+
+  useEffect(() => {
+    activeFileRef.current = activeFile;
+  }, [activeFile]);
 
   const explorerTree = useMemo(() => buildExplorerTree(files), [files]);
 
@@ -623,7 +645,7 @@ export default function WebIDE({
       .replace(/\.[^.]+$/, '')
       .replace(/[^a-zA-Z0-9_]/g, '');
 
-    if (language === 'javascriptreact' && baseBaseName) {
+    if ((fullPath.endsWith('.jsx') || fullPath.endsWith('.tsx')) && baseBaseName) {
       const compName = baseBaseName.charAt(0).toUpperCase() + baseBaseName.slice(1);
       starterContent = `export default function ${compName}() {\n  return (\n    <div>\n      <h2>${compName} Component</h2>\n    </div>\n  );\n}\n`;
     } else if (isNodeProject && fullPath.startsWith('routes/')) {
@@ -999,12 +1021,76 @@ export default function WebIDE({
     }
   };
 
+  const handleFormatCode = useCallback(
+    async (silentIfUnchanged = false) => {
+      if (readOnly) return;
+      const targetPath = activeFileRef.current;
+      const currentMap = filesRef.current;
+      const fileObj = currentMap?.[targetPath];
+      if (!fileObj || fileObj.isImage || fileObj.isEducational || fileObj.readOnly) return;
+
+      setIsFormatting(true);
+      try {
+        const liveValue = editorRef.current ? editorRef.current.getValue() : fileObj.content || '';
+        const { formatted, changed, unsupported } = await formatCodeWithPrettier(
+          liveValue,
+          targetPath,
+          fileObj.language
+        );
+        if (unsupported) {
+          if (!silentIfUnchanged) toast('Formatter is not applicable to this file type');
+          return;
+        }
+        if (changed) {
+          if (editorRef.current) {
+            const model = editorRef.current.getModel();
+            const pos = editorRef.current.getPosition();
+            if (model) {
+              editorRef.current.executeEdits('prettier-format', [
+                { range: model.getFullModelRange(), text: formatted },
+              ]);
+              if (pos) editorRef.current.setPosition(pos);
+            }
+          }
+          setFiles((prev) => ({
+            ...prev,
+            [targetPath]: {
+              ...prev[targetPath],
+              content: formatted,
+            },
+          }));
+          toast.success('Formatted with Prettier');
+        } else if (!silentIfUnchanged) {
+          toast.success('Code is already formatted');
+        }
+      } catch (err) {
+        const firstLine = String(err?.message || 'Syntax error').split('\n')[0];
+        toast.error(`Cannot format — fix syntax first: ${firstLine}`);
+      } finally {
+        setIsFormatting(false);
+      }
+    },
+    [readOnly]
+  );
+
   const handleEditorBeforeMount = (monaco) => {
     registerMonacoSnippets(monaco);
+    registerPrettierFormatterWithMonaco(monaco);
   };
 
   const handleEditorMount = (editor, monaco) => {
+    editorRef.current = editor;
     registerMonacoSnippets(monaco);
+    registerPrettierFormatterWithMonaco(monaco);
+
+    // VS Code shortcuts: Ctrl/Cmd + S (Format & Save) and Shift + Alt + F (Format Document)
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+      handleFormatCode(true);
+    });
+    editor.addCommand(monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyF, () => {
+      handleFormatCode(false);
+    });
+
     if (autoCloseCleanupRef.current) {
       autoCloseCleanupRef.current();
     }
@@ -1346,6 +1432,20 @@ export default function WebIDE({
             <span>{isNodeProject ? 'Run Server' : 'Run'}</span>
           </button>
 
+          {/* Prettier Format Code Button */}
+          {!readOnly && !currentFileObj?.isEducational && !currentFileObj?.isImage && (
+            <button
+              type="button"
+              disabled={isFormatting}
+              onClick={() => handleFormatCode(false)}
+              className="btn-secondary py-1.5 px-2.5 sm:px-3 text-xs font-semibold flex items-center gap-1.5 cursor-pointer shrink-0 disabled:opacity-50"
+              title="Format Code with Prettier (Shift + Alt + F / Ctrl + S)"
+            >
+              <Wand2 size={13} className="text-[var(--accent)]" />
+              <span className="hidden sm:inline">{isFormatting ? 'Formatting...' : 'Format'}</span>
+            </button>
+          )}
+
           {/* Desktop Output Visibility Toggle */}
           <button
             type="button"
@@ -1587,11 +1687,13 @@ export default function WebIDE({
                   </React.Fragment>
                 ))}
               </div>
-              {isReactProject && activeFile.startsWith('src/') && (
-                <span className="hidden sm:inline text-[10px] text-[var(--text-muted)]">
-                  ES Modules (import / export) active
-                </span>
-              )}
+              <div className="flex items-center gap-2 shrink-0">
+                {isReactProject && activeFile.startsWith('src/') && (
+                  <span className="hidden lg:inline text-[10px] text-[var(--text-muted)]">
+                    ES7+ Snippets (rafce, usf, uef) • Prettier Ready
+                  </span>
+                )}
+              </div>
             </div>
           )}
 
@@ -1637,7 +1739,12 @@ export default function WebIDE({
                 height="100%"
                 theme={monacoTheme}
                 path={activeFile}
-                language={currentFileObj?.language || detectLanguageFromPath(activeFile)}
+                language={
+                  (currentFileObj?.language || detectLanguageFromPath(activeFile)) ===
+                  'javascriptreact'
+                    ? 'javascript'
+                    : currentFileObj?.language || detectLanguageFromPath(activeFile)
+                }
                 value={currentFileObj?.content || ''}
                 onChange={handleEditorChange}
                 beforeMount={handleEditorBeforeMount}

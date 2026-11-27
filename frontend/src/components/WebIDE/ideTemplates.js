@@ -13,7 +13,6 @@ export function detectLanguageFromPath(filePath = '') {
       return 'css';
     case 'jsx':
     case 'tsx':
-      return 'javascriptreact';
     case 'js':
     case 'mjs':
     case 'cjs':

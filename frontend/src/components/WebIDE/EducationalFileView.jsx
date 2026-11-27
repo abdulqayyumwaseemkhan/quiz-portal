@@ -88,7 +88,9 @@ export default function EducationalFileView({
               height="100%"
               theme={monacoTheme}
               path={file?.name}
-              language={file?.language || 'json'}
+              language={
+                file?.language === 'javascriptreact' ? 'javascript' : file?.language || 'json'
+              }
               value={file?.content || ''}
               options={{
                 readOnly: true,
