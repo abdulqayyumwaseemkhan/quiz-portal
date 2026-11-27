@@ -44,7 +44,6 @@ import { registerMonacoSnippets, setupAutoCloseTags } from './monacoSnippets';
 import { extractZipToProjectFiles } from '../../utils/zipAndRepoExtractor';
 import {
   VANILLA_STARTER_FILES,
-  LEGACY_REACT_ASSIGNMENT_FILES,
   REACT_VITE_PRACTICE_FILES,
   NODE_EXPRESS_PRACTICE_FILES,
   detectLanguageFromPath,
@@ -54,37 +53,62 @@ import { buildReactPreviewHtml } from './reactModuleRunner';
 import { createExpressSandbox } from './nodeExpressRunner';
 import ExpressApiTester from './ExpressApiTester';
 
-function getStarterFilesForType(projectType, isPracticeMode) {
+function getStarterFilesForType(projectType) {
   if (projectType === 'node') return NODE_EXPRESS_PRACTICE_FILES;
-  if (projectType === 'react') {
-    return isPracticeMode ? REACT_VITE_PRACTICE_FILES : LEGACY_REACT_ASSIGNMENT_FILES;
-  }
+  if (projectType === 'react') return REACT_VITE_PRACTICE_FILES;
   return VANILLA_STARTER_FILES;
+}
+
+function getEducationalScaffoldOnly(templateObj = {}) {
+  const out = {};
+  Object.entries(templateObj).forEach(([k, val]) => {
+    if (val?.isEducational) out[k] = val;
+  });
+  return out;
+}
+
+// Re-hydrates Vite React or Node/Express scaffold reference files onto saved/submitted workspaces
+// without resurrecting any editable src/ files the student deleted, while leaving legacy flat projects untouched.
+function hydrateProjectWithScaffold(parsedFiles, projectType) {
+  if (!parsedFiles || typeof parsedFiles !== 'object') return parsedFiles;
+  const keys = Object.keys(parsedFiles);
+  const hasSrcTree = keys.some((k) => k.startsWith('src/'));
+  if (hasSrcTree) {
+    return {
+      ...getEducationalScaffoldOnly(REACT_VITE_PRACTICE_FILES),
+      ...parsedFiles,
+    };
+  }
+  if (projectType === 'node' || keys.includes('server.js')) {
+    return {
+      ...getEducationalScaffoldOnly(NODE_EXPRESS_PRACTICE_FILES),
+      ...parsedFiles,
+    };
+  }
+  return parsedFiles;
 }
 
 function getDefaultActiveFile(filesObj, projectType) {
   if (!filesObj) return 'index.html';
   const keys = Object.keys(filesObj).filter((k) => !filesObj[k]?.isFolderKeep);
-  if (projectType === 'node' && filesObj['server.js']) return 'server.js';
-  if (projectType === 'react') {
-    if (filesObj['src/App.jsx']) return 'src/App.jsx';
-    if (filesObj['App.jsx']) return 'App.jsx';
-  }
+  if (filesObj['src/App.jsx']) return 'src/App.jsx';
+  if ((projectType === 'node' || filesObj['server.js']) && filesObj['server.js']) return 'server.js';
+  if (projectType === 'react' && filesObj['App.jsx']) return 'App.jsx';
   if (filesObj['index.html'] && !filesObj['index.html'].isEducational) return 'index.html';
   return keys.find((k) => !filesObj[k]?.isEducational) || keys[0] || 'index.html';
 }
 
 function getDefaultOpenTabs(filesObj, projectType) {
   if (!filesObj) return [];
-  if (projectType === 'node') {
+  if (filesObj['src/App.jsx']) {
+    return ['src/App.jsx', 'src/main.jsx', 'src/index.css'].filter((k) => Boolean(filesObj[k]));
+  }
+  if (projectType === 'node' || filesObj['server.js']) {
     return ['server.js', 'routes/studentRoutes.js', 'controllers/studentController.js'].filter(
       (k) => Boolean(filesObj[k])
     );
   }
-  if (projectType === 'react') {
-    if (filesObj['src/App.jsx']) {
-      return ['src/App.jsx', 'src/main.jsx', 'src/index.css'].filter((k) => Boolean(filesObj[k]));
-    }
+  if (projectType === 'react' || filesObj['App.jsx']) {
     return ['App.jsx', 'index.jsx', 'styles.css'].filter((k) => Boolean(filesObj[k]));
   }
   return ['index.html', 'style.css', 'script.js'].filter((k) => Boolean(filesObj[k]));
@@ -177,35 +201,29 @@ export default function WebIDE({
   studentId,
   assignmentId,
   projectType = 'vanilla', // 'vanilla' | 'react' | 'node'
-  isPracticeMode: isPracticeProp,
 }) {
   const { theme } = useTheme();
   const monacoTheme = theme === 'dark' ? 'vs-dark' : 'vs';
 
-  const isPracticeMode =
-    isPracticeProp !== undefined
-      ? Boolean(isPracticeProp)
-      : String(assignmentId || '').startsWith('practice_');
-
-  // Versioned draft key for React/Node practice so Vite scaffold upgrades cleanly
-  const draftVersionSuffix = isPracticeMode && projectType !== 'vanilla' ? '_v2' : '';
+  // Versioned draft key for React/Node workspaces so Vite scaffold upgrades cleanly
+  const draftVersionSuffix = projectType !== 'vanilla' ? '_v2' : '';
   const draftKey = `ide_draft_${studentId}_${assignmentId}${draftVersionSuffix}`;
 
   const starterTemplate = useMemo(
-    () => getStarterFilesForType(projectType, isPracticeMode),
-    [projectType, isPracticeMode]
+    () => getStarterFilesForType(projectType),
+    [projectType]
   );
 
   const computedInitialFiles = useMemo(() => {
     if (initialProjectData) {
       if (typeof initialProjectData === 'string') {
         try {
-          return JSON.parse(initialProjectData);
+          return hydrateProjectWithScaffold(JSON.parse(initialProjectData), projectType);
         } catch (e) {
           console.error('Failed to parse initialProjectData', e);
         }
       } else if (typeof initialProjectData === 'object') {
-        return initialProjectData;
+        return hydrateProjectWithScaffold(initialProjectData, projectType);
       }
     }
     if (!readOnly && studentId && assignmentId) {
@@ -214,12 +232,7 @@ export default function WebIDE({
         try {
           const parsed = JSON.parse(draft);
           if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
-            // Merge educational scaffold files if practice mode so reference guides stay up to date
-            if (isPracticeMode && (projectType === 'react' || projectType === 'node')) {
-              const merged = { ...starterTemplate, ...parsed };
-              return merged;
-            }
-            return parsed;
+            return hydrateProjectWithScaffold(parsed, projectType);
           }
         } catch (e) {
           console.error('Failed to parse draft', e);
@@ -227,7 +240,7 @@ export default function WebIDE({
       }
     }
     return starterTemplate;
-  }, [initialProjectData, readOnly, studentId, assignmentId, draftKey, isPracticeMode, projectType, starterTemplate]);
+  }, [initialProjectData, readOnly, studentId, assignmentId, draftKey, projectType, starterTemplate]);
 
   const isNodeProject = projectType === 'node';
   const isReactProject =
@@ -296,10 +309,11 @@ export default function WebIDE({
         }
       }
       if (parsed && typeof parsed === 'object') {
-        setFiles(parsed);
-        const defFile = getDefaultActiveFile(parsed, projectType);
+        const hydrated = hydrateProjectWithScaffold(parsed, projectType);
+        setFiles(hydrated);
+        const defFile = getDefaultActiveFile(hydrated, projectType);
         setActiveFile(defFile);
-        setOpenTabs(getDefaultOpenTabs(parsed, projectType));
+        setOpenTabs(getDefaultOpenTabs(hydrated, projectType));
         setPreviewFile('index.html');
       }
     }
@@ -912,10 +926,7 @@ export default function WebIDE({
         toast.error('No supported web files found in ZIP', { id: toastId });
         return;
       }
-      const nextFiles =
-        isPracticeMode && (isReactProject || isNodeProject)
-          ? { ...starterTemplate, ...extracted }
-          : extracted;
+      const nextFiles = hydrateProjectWithScaffold(extracted, projectType);
       setFiles(nextFiles);
       const first = getDefaultActiveFile(nextFiles, projectType);
       setActiveFile(first);
@@ -972,7 +983,14 @@ export default function WebIDE({
     if (readOnly || typeof onSubmit !== 'function') return;
     setIsSubmitting(true);
     try {
-      await onSubmit(files);
+      // Strip static read-only educational scaffold files to keep MongoDB payload compact
+      const leanFiles = {};
+      Object.entries(files).forEach(([k, val]) => {
+        if (val && !val.isEducational) {
+          leanFiles[k] = val;
+        }
+      });
+      await onSubmit(Object.keys(leanFiles).length > 0 ? leanFiles : files);
       if (studentId && assignmentId) {
         localStorage.removeItem(draftKey);
       }
