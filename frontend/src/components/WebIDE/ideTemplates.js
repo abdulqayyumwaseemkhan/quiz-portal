@@ -1,4 +1,4 @@
-// Starter workspaces, language helpers, and educational scaffold metadata for WebIDE
+// Starter workspaces, language helpers, and simple English educational scaffold guides for WebIDE
 
 export function detectLanguageFromPath(filePath = '') {
   const clean = filePath.split('/').pop()?.toLowerCase() || '';
@@ -41,9 +41,9 @@ export const VANILLA_STARTER_FILES = {
 <body>
   <main class="card">
     <span class="badge">HTML5 • CSS3 • ES6+</span>
-    <h1>Hello Web Developer!</h1>
+    <h1>Hello Web Developer</h1>
     <p>Edit <code>index.html</code>, <code>style.css</code>, and <code>script.js</code> to build your project.</p>
-    <button id="actionBtn">Click Me (0)</button>
+    <button id="actionBtn">Click Counter (0)</button>
   </main>
 </body>
 </html>`,
@@ -58,61 +58,59 @@ export const VANILLA_STARTER_FILES = {
 }
 
 body {
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   min-height: 100vh;
   display: grid;
   place-items: center;
-  background: #f8fafc;
-  color: #0f172a;
+  background: #f4f6f8;
+  color: #273444;
   padding: 24px;
 }
 
 .card {
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
+  border: 1px solid #e3e8ed;
+  border-radius: 8px;
   padding: 32px;
   max-width: 460px;
   width: 100%;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
 }
 
 .badge {
   display: inline-block;
   font-size: 11px;
-  font-weight: 700;
-  color: #2563eb;
-  background: #eff6ff;
+  font-weight: 600;
+  color: #526f91;
+  background: #eef2f6;
   padding: 4px 10px;
-  border-radius: 999px;
+  border-radius: 4px;
   margin-bottom: 12px;
 }
 
 h1 {
-  font-size: 24px;
+  font-size: 22px;
   margin-bottom: 8px;
 }
 
 p {
-  color: #64748b;
+  color: #697789;
   line-height: 1.6;
   margin-bottom: 20px;
   font-size: 14px;
 }
 
 button {
-  background: #2563eb;
+  background: #526f91;
   color: #ffffff;
   border: none;
-  padding: 10px 18px;
-  border-radius: 8px;
+  padding: 9px 16px;
+  border-radius: 6px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s ease;
 }
 
 button:hover {
-  background: #1d4ed8;
+  background: #435c7a;
 }
 `,
   },
@@ -125,7 +123,7 @@ const btn = document.getElementById('actionBtn');
 if (btn) {
   btn.addEventListener('click', () => {
     clicks += 1;
-    btn.textContent = \`Click Me (\${clicks})\`;
+    btn.textContent = \`Click Counter (\${clicks})\`;
     console.log('Button clicked:', clicks);
   });
 }
@@ -133,7 +131,7 @@ if (btn) {
   },
 };
 
-// Kept for backward compatibility with flat assignment templates
+// Kept for backward compatibility with legacy flat assignment submissions
 export const LEGACY_REACT_ASSIGNMENT_FILES = {
   'index.html': {
     name: 'index.html',
@@ -143,16 +141,16 @@ export const LEGACY_REACT_ASSIGNMENT_FILES = {
   'styles.css': {
     name: 'styles.css',
     language: 'css',
-    content: 'body {\n  font-family: sans-serif;\n  padding: 20px;\n}\n\n.App {\n  text-align: center;\n}\n\nh1 {\n  color: #2563eb;\n}',
+    content: 'body {\n  font-family: sans-serif;\n  padding: 20px;\n}\n\n.App {\n  text-align: center;\n}',
   },
   'App.jsx': {
     name: 'App.jsx',
-    language: 'javascriptreact',
-    content: 'import React, { useState } from "react";\n\nexport default function App() {\n  const [count, setCount] = useState(0);\n  \n  return (\n    <div className="App">\n      <h1>Hello React!</h1>\n      <button onClick={() => setCount(c => c + 1)}>\n        Count is {count}\n      </button>\n    </div>\n  );\n}\n',
+    language: 'javascript',
+    content: 'import React, { useState } from "react";\n\nexport default function App() {\n  const [count, setCount] = useState(0);\n  return (\n    <div className="App">\n      <h1>Hello React</h1>\n      <button onClick={() => setCount(c => c + 1)}>Count is {count}</button>\n    </div>\n  );\n}\n',
   },
   'index.jsx': {
     name: 'index.jsx',
-    language: 'javascriptreact',
+    language: 'javascript',
     content: 'import React from "react";\nimport { createRoot } from "react-dom/client";\nimport App from "./App.jsx";\n\nconst root = createRoot(document.getElementById("root"));\nroot.render(<App />);\n',
   },
 };
@@ -165,19 +163,19 @@ export const REACT_VITE_PRACTICE_FILES = {
     readOnly: true,
     guide: {
       badge: 'Installed Dependencies Folder (Auto-Generated)',
-      title: 'node_modules/ — External Packages Directory',
+      title: 'node_modules/ — Third-Party Packages Directory',
       summary:
-        'Jab aap terminal me "npm install" chalate hain, to React, Vite, Oxlint aur tamam libraries ka code is folder me download hota hai.',
+        'When you run "npm install" in a real project, npm downloads React, Vite, Oxlint, and all required libraries into the node_modules folder.',
       whyUsed: [
-        'Is folder me hazaron helper packages aur unki internal files hoti hain (jaise react, react-dom, vite, lucide-react).',
-        'Aap is folder ke andar kabhi bhi khud se code edit nahi karte — ye 100% npm/pnpm manage karta hai.',
-        'Iska size aksar 150MB–500MB hota hai, is liye ise GitHub par upload NAHI kiya jata (.gitignore me rakha jata hai).',
+        'Stores the source code of external libraries listed in your package.json (such as react, react-dom, and vite).',
+        'Managed automatically by npm — developers never manually edit files inside node_modules.',
+        'Because this folder can contain thousands of files, it is excluded from Git using .gitignore.',
       ],
       keyPoints: [
-        'Agar node_modules delete ho jaye, to sirf "npm install" likhne se package.json dekh kar dobara ban jata hai.',
-        'Jab aap "import { useState } from \'react\'" likhte hain, bundler use isi node_modules folder se uthata hai.',
+        'If you delete node_modules on your computer, running "npm install" recreates it automatically from package.json.',
+        'When you write "import { useState } from \'react\'", the bundler resolves React from this folder.',
       ],
-      proTip: 'Practice karne ke liye aapko node_modules chherne ki zaroorat nahi — apna tamam React code "src/" folder ke andar likhein!',
+      proTip: 'Leave node_modules untouched and write all of your React components and folders inside the "src/" directory.',
     },
     content: `{
   "name": "react",
@@ -197,17 +195,17 @@ export const REACT_VITE_PRACTICE_FILES = {
     readOnly: true,
     guide: {
       badge: 'Build Tool Package (Read-Only)',
-      title: 'node_modules/vite — Vite Frontend Build Tool',
+      title: 'node_modules/vite — Vite Development Server & Bundler',
       summary:
-        'Vite modern React projects ka super-fast development server aur production bundler hai.',
+        'Vite is a fast modern build tool that runs your React project during development and bundles it for production deployment.',
       whyUsed: [
-        'Development ke dauran code save karte hi browser ko milliseconds me update karta hai (Hot Module Replacement / HMR).',
-        'Production deploy ke waqt aapke JSX aur CSS files ko optimize aur minify kar ke "dist/" folder banata hai.',
+        'Starts a local development server in milliseconds and updates the browser instantly when you edit code (Hot Module Replacement).',
+        'Optimizes, minifies, and bundles your JSX and CSS files into static production files when you run "npm run build".',
       ],
       keyPoints: [
-        'Purane Create-React-App (CRA) ki jagah ab industry me Vite standard ban chuka hai.',
+        'Vite has replaced older tools like Create React App (CRA) as the modern standard for React projects.',
       ],
-      proTip: 'Vite ki settings root par maujood "vite.config.js" file se control hoti hain.',
+      proTip: 'You can customize how Vite behaves using the "vite.config.js" file in the project root.',
     },
     content: `{
   "name": "vite",
@@ -224,25 +222,25 @@ export const REACT_VITE_PRACTICE_FILES = {
       badge: 'Static Public Assets Folder',
       title: 'public/ — Unprocessed Static Files',
       summary:
-        '"public/" folder me wo static files rakhi jati hain jinhein bina kisi bundling ya naam badle seedha root URL ("/") se serve karna ho.',
+        'The "public/" folder holds static files (such as favicons, logos, or robots.txt) that are served directly from the root URL "/" without bundling.',
       whyUsed: [
-        'Favicon (favicon.ico / vite.svg), robots.txt, manifest.json, ya aisi public PDFs/images jo direct "/logo.png" URL par chahiye hon.',
-        'Public folder ki files Vite ke JavaScript bundle me process nahi hotin, balke build ke waqt as-is copy ho jati hain.',
+        'Ideal for browser icons (favicon.ico, vite.svg), manifest files, or static documents that need a fixed URL.',
+        'Files inside public/ are copied directly to the final build folder without being transformed by Vite.',
       ],
       keyPoints: [
-        'Component-specific images ko aam tor par "src/assets/" me rakh kar import kiya jata hai.',
-        'Root-level browser icons aur static files ke liye "public/" best jagah hai.',
+        'Images used inside specific React components are usually placed inside "src/assets/" and imported in JSX.',
+        'Global site icons referenced in index.html belong in "public/".',
       ],
-      proTip: 'Is Web IDE me aap Explorer ke Upload Image button se images upload kar ke apne JSX me use kar sakte hain.',
+      proTip: 'You can upload images directly into your workspace using the Upload Image icon in the Explorer toolbar.',
     },
     content: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="64" height="64">
-  <circle cx="16" cy="16" r="14" fill="#2563EB" />
+  <rect width="32" height="32" rx="6" fill="#526F91" />
   <path d="M10 16l4 4 8-8" stroke="#FFFFFF" stroke-width="3" fill="none" stroke-linecap="round" />
 </svg>`,
   },
   'src/main.jsx': {
     name: 'src/main.jsx',
-    language: 'javascriptreact',
+    language: 'javascript',
     isProtectedEntry: true,
     content: `import React, { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -267,166 +265,89 @@ createRoot(document.getElementById('root')).render(
 
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: #f8fafc;
-  color: #0f172a;
-  line-height: 1.5;
+  background-color: #f4f6f8;
+  color: #273444;
+  line-height: 1.6;
 }
 
-.app-shell {
-  max-width: 760px;
-  margin: 0 auto;
-  padding: 28px 20px;
+.app-container {
+  max-width: 680px;
+  margin: 40px auto;
+  padding: 0 20px;
 }
 
-.navbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.card {
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  padding: 14px 20px;
-  border-radius: 12px;
-  margin-bottom: 24px;
+  border: 1px solid #e3e8ed;
+  border-radius: 8px;
+  padding: 28px;
 }
 
-.brand {
-  font-weight: 800;
-  font-size: 16px;
-  color: #2563eb;
-}
-
-.tag {
-  font-size: 12px;
-  font-weight: 600;
-  background: #eff6ff;
-  color: #1d4ed8;
-  padding: 4px 10px;
-  border-radius: 999px;
-}
-
-.hero-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  padding: 24px;
-  margin-bottom: 20px;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
-}
-
-.hero-card h1 {
-  font-size: 24px;
+.card h1 {
+  font-size: 22px;
   margin-bottom: 8px;
 }
 
-.hero-card p {
-  color: #64748b;
+.card p {
+  color: #697789;
   font-size: 14px;
+  margin-bottom: 20px;
 }
 
-.counter-box {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  padding: 22px;
+.actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.btn-group {
-  display: flex;
-  gap: 8px;
+  gap: 10px;
 }
 
 .btn {
-  border: 1px solid #cbd5e1;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid #d0d8e0;
   background: #ffffff;
-  color: #0f172a;
-  padding: 8px 14px;
-  border-radius: 8px;
+  color: #273444;
   font-weight: 600;
   cursor: pointer;
 }
 
 .btn-primary {
-  background: #2563eb;
-  border-color: #2563eb;
+  background: #526f91;
+  border-color: #526f91;
   color: #ffffff;
 }
 
 .btn-primary:hover {
-  background: #1d4ed8;
+  background: #435c7a;
 }
 `,
   },
   'src/App.jsx': {
     name: 'src/App.jsx',
-    language: 'javascriptreact',
+    language: 'javascript',
     content: `import { useState } from 'react';
-import Navbar from './components/Navbar.jsx';
-import CounterCard from './components/CounterCard.jsx';
 
 export default function App() {
   const [count, setCount] = useState(0);
 
   return (
-    <div className="app-shell">
-      <Navbar title="React + Vite Workspace" badge="src/ Ready" />
-
-      <section className="hero-card">
-        <h1>Welcome to Your React Playground</h1>
+    <main className="app-container">
+      <section className="card">
+        <h1>Vite + React Workspace</h1>
         <p>
-          Create folders & components inside <code>src/</code> (just like VS Code) and
-          use standard <code>import</code> &amp; <code>export</code> statements!
+          Edit <code>src/App.jsx</code> or create your own folders (such as{' '}
+          <code>components/</code>) and files inside <code>src/</code> to build your React application.
         </p>
-      </section>
 
-      <CounterCard
-        count={count}
-        onIncrement={() => setCount((c) => c + 1)}
-        onReset={() => setCount(0)}
-      />
-    </div>
-  );
-}
-`,
-  },
-  'src/components/Navbar.jsx': {
-    name: 'src/components/Navbar.jsx',
-    language: 'javascriptreact',
-    content: `export default function Navbar({ title, badge }) {
-  return (
-    <header className="navbar">
-      <span className="brand">{title}</span>
-      {badge && <span className="tag">{badge}</span>}
-    </header>
-  );
-}
-`,
-  },
-  'src/components/CounterCard.jsx': {
-    name: 'src/components/CounterCard.jsx',
-    language: 'javascriptreact',
-    content: `export default function CounterCard({ count, onIncrement, onReset }) {
-  return (
-    <div className="counter-box">
-      <div>
-        <h3 style={{ fontSize: '16px', marginBottom: '4px' }}>Interactive Component State</h3>
-        <p style={{ fontSize: '13px', color: '#64748b' }}>
-          Current Count: <strong>{count}</strong>
-        </p>
-      </div>
-      <div className="btn-group">
-        <button className="btn" onClick={onReset}>
-          Reset
-        </button>
-        <button className="btn btn-primary" onClick={onIncrement}>
-          Increment +1
-        </button>
-      </div>
-    </div>
+        <div className="actions">
+          <button className="btn btn-primary" onClick={() => setCount((c) => c + 1)}>
+            Count: {count}
+          </button>
+          <button className="btn" onClick={() => setCount(0)}>
+            Reset
+          </button>
+        </div>
+      </section>
+    </main>
   );
 }
 `,
@@ -437,22 +358,22 @@ export default function App() {
     isEducational: true,
     readOnly: true,
     guide: {
-      badge: 'Environment Configuration (Read-Only Guide)',
-      title: '.env — Environment Variables & API Keys',
+      badge: 'Environment Variables (Read-Only Guide)',
+      title: '.env — Environment Configuration File',
       summary:
-        '".env" file me API URLs, public config keys, aur environment-specific settings rakhi jati hain taake unhein code me hardcode na karna pare.',
+        'The ".env" file stores environment-specific values like API base URLs and public configuration keys outside your source code.',
       whyUsed: [
-        'Local computer (localhost) aur Live server (production) ke API URLs alag hote hain — .env se bina code badle URL switch ho jata hai.',
-        'Vite projects me har frontend variable ka naam "VITE_" se shuru hona zaroori hai (maslan VITE_API_URL), aur code me "import.meta.env.VITE_API_URL" se milta hai.',
-        'Secret keys wali .env file ko kabhi GitHub par push nahi kiya jata!',
+        'Lets you use different API URLs for local development (localhost) and live production servers without changing your code.',
+        'In Vite projects, frontend variables must start with "VITE_" (for example, VITE_API_URL) and are read via "import.meta.env.VITE_API_URL".',
+        'Real .env files containing private keys should never be uploaded to public GitHub repositories.',
       ],
       keyPoints: [
-        'Frontend React browser me chalta hai, is liye private database passwords kabhi frontend .env me nahi rakhte — wo sirf Backend (.env) me rakhe jate hain.',
+        'Never put private database passwords or secret server keys inside a frontend React .env file because frontend code runs in the user\'s browser.',
       ],
-      proTip: 'Team members ke liye aam tor par ek ".env.example" file banayi jati hai jisme sirf dummy keys likhi hoti hain.',
+      proTip: 'Teams usually commit a safe ".env.example" file with placeholder values so other developers know which variables are needed.',
     },
     content: `# Vite Frontend Environment Variables
-VITE_APP_NAME="BanoQabil React App"
+VITE_APP_NAME="React Academic App"
 VITE_API_BASE_URL="https://api.example.com/v1"
 `,
   },
@@ -462,19 +383,19 @@ VITE_API_BASE_URL="https://api.example.com/v1"
     isEducational: true,
     readOnly: true,
     guide: {
-      badge: 'Git Version Control Config (Read-Only Guide)',
+      badge: 'Git Version Control (Read-Only Guide)',
       title: '.gitignore — Files Ignored by Git',
       summary:
-        '".gitignore" Git ko batata hai ke kaunse folders aur files GitHub par upload (commit/push) NAHI karne.',
+        'The ".gitignore" file tells Git which folders and files should NOT be tracked or uploaded when you push your project to GitHub.',
       whyUsed: [
-        'node_modules/ (bohat bhari hota hai aur npm install se khud ban jata hai).',
-        'dist/ (production build output jo deploy ke waqt generate hota hai).',
-        '.env (jisme sensitive API keys aur credentials hote hain).',
+        'Skips heavy auto-generated folders like "node_modules/" and build output folders like "dist/".',
+        'Prevents sensitive environment files like ".env" from accidentally leaking online.',
+        'Keeps your Git repository clean, fast, and free of temporary OS/editor files.',
       ],
       keyPoints: [
-        'Har line par ek file ya folder pattern likha jata hai (jaise *.log ya .DS_Store).',
+        'Each line specifies a file name, folder name, or wildcard pattern (such as *.log) for Git to ignore.',
       ],
-      proTip: 'Project shuru karte hi sab se pehle check karein ke ".env" aur "node_modules" aapki .gitignore me maujood hon!',
+      proTip: 'Always double-check that "node_modules" and ".env" are listed in .gitignore before making your first Git commit.',
     },
     content: `# Dependencies
 node_modules
@@ -483,7 +404,7 @@ node_modules
 dist
 dist-ssr
 
-# Environment secrets
+# Environment files
 .env
 .env.local
 .env.*.local
@@ -500,19 +421,19 @@ dist-ssr
     isEducational: true,
     readOnly: true,
     guide: {
-      badge: 'Ultra-Fast Code Linter (Read-Only Guide)',
+      badge: 'Fast Code Linter (Read-Only Guide)',
       title: '.oxlintrc.json — Oxlint Configuration',
       summary:
-        'Oxlint (Oxidation Compiler Linter) ek modern, Rust-based JavaScript/React linter hai jo code likhte waqt ghaltiyan aur bugs foran pakarta hai.',
+        'Oxlint is an ultra-fast JavaScript and React linter written in Rust that scans your code to catch bugs, typos, and bad practices early.',
       whyUsed: [
-        'Unused variables, missing React hook dependencies, duplicate keys, aur undefined variables ko run karne se pehle hi highlight kar deta hai.',
-        'Traditional linters ke muqable me 50x se 100x zyada fast chalta hai — bare enterprise Vite/React projects me milliseconds me check mukammal karta hai.',
+        'Detects unused variables, missing React key props, broken imports, and invalid hook calls before you even run the app.',
+        'Runs 50x–100x faster than traditional linters, making code checks nearly instant in modern Vite projects.',
       ],
       keyPoints: [
-        '"plugins": ["react", "jsx-a11y", "import"] enable karne se JSX aur import/export ki ghaltiyan bhi pakri jati hain.',
-        'Terminal me "npx oxlint" chala kar poore project ki health check ki jati hai.',
+        'Enables specialized rule plugins for "react", "import", and accessibility ("jsx-a11y").',
+        'In a local terminal, running "npx oxlint" checks your entire codebase in milliseconds.',
       ],
-      proTip: 'Oxlint aur ESLint mil kar aapke React code ko clean, bug-free aur professional standard par rakhte hain.',
+      proTip: 'Using a linter like Oxlint alongside Prettier keeps your code both bug-free (Linter) and cleanly formatted (Prettier).',
     },
     content: `{
   "$schema": "./node_modules/oxlint/configuration_schema.json",
@@ -535,18 +456,18 @@ dist-ssr
     isEducational: true,
     readOnly: true,
     guide: {
-      badge: 'Code Quality Rules (Read-Only Guide)',
-      title: 'eslint.config.js — ESLint Flat Config',
+      badge: 'Code Quality Config (Read-Only Guide)',
+      title: 'eslint.config.js — ESLint Rules Configuration',
       summary:
-        'Vite React templates me ESLint code style, React Hooks ke rules (useState/useEffect), aur Fast Refresh compatibility check karne ke liye aata hai.',
+        'ESLint analyzes your JavaScript and JSX files to enforce coding standards and ensure React Hooks (like useState and useEffect) are used properly.',
       whyUsed: [
-        'React Hooks ko conditional if-block ke andar likhne jaisi common mistakes se rokta hai.',
-        'Team me sab developers ka code ek hi clean pattern follow karta hai.',
+        'Prevents subtle bugs such as calling React Hooks inside loops or conditional if-statements.',
+        'Ensures every developer on a team follows consistent JavaScript best practices.',
       ],
       keyPoints: [
-        'Modern ESLint v9+ me purane ".eslintrc" ki jagah "eslint.config.js" (Flat Config) istemal hota hai.',
+        'Modern ESLint (v9+) uses this single "eslint.config.js" flat configuration file instead of older ".eslintrc" files.',
       ],
-      proTip: 'VS Code me ESLint extension install ho to editor ke andar hi red/yellow squiggly lines me madad mil jati hai.',
+      proTip: 'In VS Code, the ESLint extension reads this file to underline potential code issues directly in the editor.',
     },
     content: `import js from '@eslint/js';
 import globals from 'globals';
@@ -580,18 +501,18 @@ export default [
     readOnly: true,
     guide: {
       badge: 'Vite Root HTML Shell (Read-Only Guide)',
-      title: 'index.html — Single Page Application (SPA) Entry',
+      title: 'index.html — Single Page Application Entry Point',
       summary:
-        'React ek Single Page Application (SPA) hoti hai: browser sab se pehle sirf ye ek "index.html" load karta hai jisme <div id="root"></div> khali container hota hai.',
+        'React apps are Single Page Applications (SPAs). The browser loads this single index.html file, which provides an empty <div id="root"></div> container.',
       whyUsed: [
-        'Iske andar <script type="module" src="/src/main.jsx"></script> likha hota hai jo React engine ko start karta hai.',
-        'src/main.jsx is "#root" div ko pakar kar aapka poora <App /> component uske andar render kar deta hai.',
-        'Google Fonts, page <title>, aur meta tags isi file ke <head> me lagaye jate hain.',
+        'Loads "/src/main.jsx" via a <script type="module"> tag to boot your React application.',
+        'React attaches itself to <div id="root"></div> and dynamically renders all your components inside it.',
+        'Used to set the browser tab <title>, favicon, and external <link> tags such as Google Fonts.',
       ],
       keyPoints: [
-        'Vite me index.html "public/" ke andar nahi balke project ke bilkul bahar (root) par hoti hai.',
+        'In Vite, index.html sits at the root of the project rather than inside the public/ folder.',
       ],
-      proTip: 'HTML UI likhne ke liye index.html me nahi balke "src/App.jsx" aur "src/components/" ke JSX components me likhein!',
+      proTip: 'Build your user interface inside "src/App.jsx" and your own component files in "src/" instead of writing HTML directly in index.html.',
     },
     content: `<!doctype html>
 <html lang="en">
@@ -599,7 +520,7 @@ export default [
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React Practice App</title>
+    <title>Vite + React App</title>
   </head>
   <body>
     <div id="root"></div>
@@ -615,21 +536,21 @@ export default [
     readOnly: true,
     guide: {
       badge: 'Project Manifest (Read-Only Guide)',
-      title: 'package.json — Project Blueprint, Scripts & Dependencies',
+      title: 'package.json — Project Metadata, Scripts & Dependencies',
       summary:
-        'Har Node.js aur React project ka ID card "package.json" hota hai — isme project ka naam, terminal commands (scripts), aur installed libraries ki list hoti hai.',
+        'Every Node.js and React project has a package.json file at its root. It defines your project name, terminal commands (scripts), and installed packages.',
       whyUsed: [
-        '"scripts": terminal shortcuts jaise "npm run dev" (local server chalana), "npm run build" (production bundle banana), aur "npm run lint" (code check karna).',
-        '"dependencies": wo packages jo live website chalne ke liye chahiye (react, react-dom, lucide-react, react-router-dom).',
-        '"devDependencies": wo tools jo sirf coding/building ke waqt chahiye (vite, oxlint, eslint).',
+        '"scripts": Defines commands like "npm run dev" (start dev server), "npm run build" (create production bundle), and "npm run lint".',
+        '"dependencies": Lists libraries needed at runtime in the browser (such as react, react-dom, react-router-dom, lucide-react).',
+        '"devDependencies": Lists tools only needed during development and building (such as vite, oxlint, and eslint).',
       ],
       keyPoints: [
-        'Is Web IDE me react, react-dom, lucide-react, aur react-router-dom pehle se pre-configured hain — aap seedha import kar sakte hain!',
+        'In this Web IDE, react, react-dom, lucide-react, and react-router-dom are already pre-configured and ready to import.',
       ],
-      proTip: 'Jab aap GitHub se koi React repo clone karte hain, sab se pehle package.json dekh kar pata chalta hai ke project me kaunsi libraries aur scripts use hui hain.',
+      proTip: 'Whenever you open an unfamiliar project on GitHub, read package.json first to understand its tech stack and scripts.',
     },
     content: `{
-  "name": "react-vite-practice",
+  "name": "react-vite-workspace",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -660,27 +581,27 @@ export default [
     readOnly: true,
     guide: {
       badge: 'Dependency Lockfile (Auto-Generated)',
-      title: 'package-lock.json — Exact Version Lockfile',
+      title: 'package-lock.json — Exact Dependency Version Lock',
       summary:
-        'Jab package.json me "^19.0.0" likha hota hai to uska matlab "19.x ka koi bhi minor update" hota hai — jabke package-lock.json har sub-package ka exact version aur checksum lock kar deti hai.',
+        'While package.json allows flexible version ranges (like ^19.0.0), package-lock.json records the exact version and download integrity hash of every installed package.',
       whyUsed: [
-        'Guarantee deti hai ke aapke laptop, aapke dost ke laptop, aur Vercel/Netlify server par bilkul 100% same package versions install hon.',
-        '"Mere computer par chal raha tha magar server par toot gaya" wale masle ko khatam karti hai.',
+        'Guarantees that every teammate and deployment server installs the exact same package versions.',
+        'Prevents unexpected bugs caused by minor third-party library updates.',
       ],
       keyPoints: [
-        'Ise kabhi hath se edit nahi karte; npm install chalane par npm khud update karta hai.',
-        'node_modules ke bar-aks, package-lock.json ko GitHub par ZAROOR commit kiya jata hai!',
+        'Generated and updated automatically by npm — you never edit this file manually.',
+        'Unlike node_modules, package-lock.json SHOULD be committed to Git.',
       ],
-      proTip: 'Production deployments me "npm ci" command isi package-lock.json ko parh kar fast aur exact install karti hai.',
+      proTip: 'Cloud hosts like Vercel and GitHub Actions use package-lock.json via "npm ci" for fast, reproducible builds.',
     },
     content: `{
-  "name": "react-vite-practice",
+  "name": "react-vite-workspace",
   "version": "0.1.0",
   "lockfileVersion": 3,
   "requires": true,
   "packages": {
     "": {
-      "name": "react-vite-practice",
+      "name": "react-vite-workspace",
       "version": "0.1.0",
       "dependencies": {
         "react": "^19.0.0",
@@ -697,17 +618,17 @@ export default [
     readOnly: true,
     guide: {
       badge: 'Bundler Config (Read-Only Guide)',
-      title: 'vite.config.js — Vite Bundler Configuration',
+      title: 'vite.config.js — Vite Build & Plugin Configuration',
       summary:
-        'Ye file Vite ko batati hai ke aapke project me React JSX plugin, path aliases ("@/"), ya server proxy kaise kaam karenge.',
+        'This file configures how Vite compiles JSX, resolves folder path aliases, and runs the local development server.',
       whyUsed: [
-        '@vitejs/plugin-react enable karta hai taake JSX transform aur Fast Refresh kaam kare.',
-        'Path aliases (maslan "@" -> "/src") aur backend API proxy ("/api" -> "http://localhost:5000") yahin configure kiye jate hain.',
+        'Registers "@vitejs/plugin-react" so JSX syntax and React Fast Refresh work seamlessly.',
+        'Configures clean import aliases (such as "@" pointing to "/src") and local API proxy rules.',
       ],
       keyPoints: [
-        'Is Practice IDE me "@" alias ("@/components/...") pehle se aapke liye active hai!',
+        'The "@/" alias (for example, import Card from "@/components/Card") is already enabled for you in this Web IDE.',
       ],
-      proTip: 'Tailwind CSS v4 ya custom build plugins bhi isi plugins: [react()] array me add kiye jate hain.',
+      proTip: 'In full-stack projects, developers often add a "server.proxy" rule here to forward "/api" requests to their Express backend.',
     },
     content: `import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -733,32 +654,29 @@ export default defineConfig({
     readOnly: true,
     guide: {
       badge: 'Project Documentation (Read-Only Guide)',
-      title: 'README.md — Project Overview & Setup Instructions',
+      title: 'README.md — Project Documentation & Setup Guide',
       summary:
-        'README.md aapke project ka front-page manual hota hai jo GitHub repository kholte hi sab se neeche khubsurat formatted انداز me nazar aata hai.',
+        'README.md is the front-page documentation of a software repository, written in Markdown and displayed automatically on GitHub.',
       whyUsed: [
-        'Batata hai ke project kya karta hai, kaunsi technologies (React, Vite, Tailwind, Express) use hui hain, aur local computer par kaise run karna hai.',
-        'Recruiters aur teachers aapka GitHub khol kar sab se pehle README.md dekhte hain.',
+        'Explains what the project does, which technologies were used, and how another developer can install and run it.',
+        'Helps instructors, teammates, and employers quickly understand your work.',
       ],
       keyPoints: [
-        'Markdown (.md) syntax use karta hai: # Heading, **Bold**, ```bash code blocks```, aur screenshots.',
+        'Uses Markdown syntax (# Headings, **Bold**, bullet lists, and fenced code blocks).',
       ],
-      proTip: 'Apne har portfolio project me clear features list, live demo link, aur setup commands README.md me zaroor likhein!',
+      proTip: 'Always include a clear description, feature list, and setup commands in the README.md of your portfolio projects.',
     },
-    content: `# React + Vite Practice Workspace
+    content: `# React + Vite Workspace
 
-Welcome to the interactive React playground!
-
-## Folder Structure
+## Project Structure
 - \`src/main.jsx\` — Application entry point
-- \`src/App.jsx\` — Root component
-- \`src/components/\` — Reusable UI components
-- \`src/index.css\` — Global styles
+- \`src/App.jsx\` — Main root component
+- \`src/index.css\` — Global stylesheet
 
-## How to Practice
-1. Create new folders or \`.jsx\` / \`.js\` / \`.css\` files inside \`src/\`.
-2. Export components using \`export default\` or named \`export\`.
-3. Import them anywhere in \`src/App.jsx\` and click **Run Code**!
+## Getting Started
+1. Use the **New Folder** or **New File** icons on \`src/\` to organize your own folders (e.g., \`src/components/\`) and \`.jsx\` files.
+2. Export components with \`export default\` or named \`export\`, and import them into \`src/App.jsx\`.
+3. Type ES7+ shortcuts like \`rafce\`, \`usf\`, or \`uef\`, use **Format** for Prettier formatting, and click **Run** to preview!
 `,
   },
 };
@@ -771,17 +689,17 @@ export const NODE_EXPRESS_PRACTICE_FILES = {
     readOnly: true,
     guide: {
       badge: 'Backend Dependencies Folder (Read-Only)',
-      title: 'node_modules/ — Installed Backend Packages',
+      title: 'node_modules/ — Installed Node.js Packages',
       summary:
-        'Node.js backend me "npm install express cors dotenv" chalane par Express framework aur uske helper packages is folder me store hote hain.',
+        'When you run "npm install express cors dotenv" in a backend project, npm downloads Express and all supporting libraries into node_modules.',
       whyUsed: [
-        'Express routing engine, body-parser, cors aur dotenv ki code libraries yahin maujood hoti hain.',
-        'GitHub par push karte waqt ise .gitignore ke zariye skip kiya jata hai.',
+        'Holds the code for Express routing, middleware helpers, CORS, and environment loaders.',
+        'Excluded from Git repositories using .gitignore because npm can recreate it anytime from package.json.',
       ],
       keyPoints: [
-        'Jab aap server.js me "const express = require(\'express\')" likhte hain, Node.js use isi folder se load karta hai.',
+        'When you call require(\'express\') in server.js, Node.js loads Express from this directory.',
       ],
-      proTip: 'Apne API routes "routes/" me aur business logic "controllers/" folder me likhein!',
+      proTip: 'Organize your API endpoints in "routes/" and keep request handling logic clean inside "controllers/".',
     },
     content: `{
   "name": "express",
@@ -825,7 +743,7 @@ app.get('/', (req, res) => {
 app.use('/api/students', studentRoutes);
 
 app.listen(PORT, () => {
-  console.log(\`🚀 Express server running on http://localhost:\${PORT}\`);
+  console.log(\`Express server listening on http://localhost:\${PORT}\`);
 });
 `,
   },
@@ -852,7 +770,7 @@ module.exports = router;
   'controllers/studentController.js': {
     name: 'controllers/studentController.js',
     language: 'javascript',
-    content: `// In-memory mock database for practice
+    content: `// In-memory dataset for REST API practice
 let students = [
   { id: '101', name: 'Ayesha Khan', batch: 'Batch 4', course: 'MERN Stack' },
   { id: '102', name: 'Bilal Ahmed', batch: 'Batch 4', course: 'Backend Node.js' },
@@ -924,18 +842,18 @@ exports.deleteStudent = (req, res) => {
     isEducational: true,
     readOnly: true,
     guide: {
-      badge: 'Backend Environment Secrets (Read-Only Guide)',
-      title: '.env — Server Port, Database URI & JWT Secrets',
+      badge: 'Backend Environment Variables (Read-Only Guide)',
+      title: '.env — Server Port, Database URI & Secret Keys',
       summary:
-        'Backend Node.js server me PORT, MongoDB connection string, aur JWT_SECRET hamesha .env file me rakhe jate hain aur "process.env" se read hote hain.',
+        'In Node.js backends, sensitive configuration values such as PORT, database connection strings, and JWT secrets are stored in .env and read via process.env.',
       whyUsed: [
-        'Database passwords aur API secrets ko source code se alag aur mehfooz rakhta hai.',
-        'dotenv package ("require(\'dotenv\').config()") in variables ko process.env me load karta hai.',
+        'Keeps database credentials and signing keys secure and separate from application code.',
+        'Loaded at startup using the dotenv package: require(\'dotenv\').config().',
       ],
       keyPoints: [
-        'Is sandbox me PORT=5000 aur NODE_ENV=development automatically process.env me available hain.',
+        'PORT=5000 and NODE_ENV=development are automatically available on process.env in this sandbox.',
       ],
-      proTip: 'Production deployment (Vercel, Render, Railway) par .env upload karne ke bajaye dashboard ke Environment Variables tab me paste karte hain.',
+      proTip: 'On cloud platforms like Vercel, Render, or Railway, add environment variables in the hosting dashboard rather than uploading .env.',
     },
     content: `PORT=5000
 NODE_ENV=development
@@ -949,13 +867,13 @@ JWT_SECRET=super_secret_practice_key_change_in_prod
     readOnly: true,
     guide: {
       badge: 'Git Ignore Rules (Read-Only Guide)',
-      title: '.gitignore — Backend Ignored Files',
-      summary: 'Node.js backend me node_modules aur .env ko Git tracking se bahar rakhta hai.',
+      title: '.gitignore — Excluded Backend Files',
+      summary: 'Prevents Git from uploading node_modules/, .env secrets, and log files to GitHub.',
       whyUsed: [
-        'Secret keys (.env) leak hone se bachata hai aur repository ko lightweight rakhta hai.',
+        'Protects private backend credentials and keeps repository size small.',
       ],
-      keyPoints: ['node_modules/, .env, logs/, aur coverage/ hamesha ignore kiye jate hain.'],
-      proTip: 'Agar ghalti se .env commit ho jaye to foran apni database/API keys rotate (change) karein.',
+      keyPoints: ['Always ignore node_modules/, .env, and *.log in backend repositories.'],
+      proTip: 'If a secret key is ever committed to Git by mistake, rotate (replace) that secret immediately.',
     },
     content: `node_modules/
 .env
@@ -971,12 +889,12 @@ JWT_SECRET=super_secret_practice_key_change_in_prod
       badge: 'Backend Linter Config (Read-Only Guide)',
       title: '.oxlintrc.json — Oxlint for Node.js & Express',
       summary:
-        'Backend routes aur controllers me unhandled errors, unused variables, aur unreachable code ko catch karta hai.',
+        'Checks Node.js routes, controllers, and middleware for syntax mistakes, unused variables, and unreachable code.',
       whyUsed: [
-        'API crash hone se pehle syntax aur logic bugs pakar leta hai.',
+        'Catches backend bugs early before an API endpoint fails at runtime.',
       ],
-      keyPoints: ['Node.js globals aur CommonJS/ESM dono ko support karta hai.'],
-      proTip: 'CI/CD pipelines me deploy se pehle oxlint chalana best practice hai.',
+      keyPoints: ['Supports both CommonJS (require/module.exports) and ES Modules (import/export).'],
+      proTip: 'Run your linter before deploying backend changes to production.',
     },
     content: `{
   "plugins": ["node", "import"],
@@ -994,14 +912,14 @@ JWT_SECRET=super_secret_practice_key_change_in_prod
       badge: 'Backend Manifest (Read-Only Guide)',
       title: 'package.json — Node.js & Express Configuration',
       summary:
-        'Express server ka entry file ("main": "server.js"), start scripts, aur backend packages define karta hai.',
+        'Defines the backend entry file ("main": "server.js"), start scripts, and server dependencies.',
       whyUsed: [
-        '"npm start" production me node server.js chalata hai aur "npm run dev" nodemon ke sath auto-restart server chalata hai.',
+        '"npm start" runs node server.js in production, while "npm run dev" uses nodemon to auto-restart on file changes.',
       ],
       keyPoints: [
-        'express, cors, aur dotenv har REST API project ki bunyadi dependencies hain.',
+        'express, cors, and dotenv form the core foundation of most Node.js REST APIs.',
       ],
-      proTip: 'Right side par maujood API Tester me endpoints click kar ke apne Express routes ko live test karein!',
+      proTip: 'Use the Express API Tester on the right panel to send GET, POST, and DELETE requests to your routes.',
     },
     content: `{
   "name": "express-backend-practice",
@@ -1030,17 +948,17 @@ JWT_SECRET=super_secret_practice_key_change_in_prod
     readOnly: true,
     guide: {
       badge: 'API Documentation (Read-Only Guide)',
-      title: 'README.md — Backend API Guide',
-      summary: 'Backend REST API ke endpoints, request body format, aur status codes document karta hai.',
+      title: 'README.md — REST API Reference',
+      summary: 'Documents your available API routes, HTTP methods, request body fields, and response formats.',
       whyUsed: [
-        'Frontend developers isi documentation ko dekh kar axios/fetch calls likhte hain.',
+        'Helps frontend developers integrate quickly with your backend endpoints.',
       ],
-      keyPoints: ['Har endpoint ka HTTP Method (GET, POST, PUT, DELETE) aur sample JSON zaroor likhein.'],
-      proTip: 'Naye folders ya route files banayein aur server.js me require() kar ke test karein!',
+      keyPoints: ['Document each route\'s HTTP method (GET, POST, PUT, DELETE) and sample JSON payload.'],
+      proTip: 'Create new route and controller files and mount them in server.js to expand your API.',
     },
     content: `# Node.js + Express Practice Lab
 
-Write real Express routes, middleware, and controllers and test them with the built-in **API Tester**!
+Write Express routes, middleware, and controllers and test them live with the built-in **API Tester**.
 
 ## Default Endpoints
 - \`GET /\` — API status check

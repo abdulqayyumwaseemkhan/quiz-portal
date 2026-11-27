@@ -109,7 +109,7 @@ export default function EducationalFileView({
           <div className="max-w-2xl mx-auto space-y-4">
             {/* Hero Explanation Card */}
             <div className="card p-5 sm:p-6">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-[var(--accent-subtle)] text-[var(--accent)] mb-3">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-semibold bg-[var(--accent-subtle)] text-[var(--accent)] mb-3">
                 <Sparkles size={12} />
                 {guide.badge}
               </span>
@@ -125,8 +125,8 @@ export default function EducationalFileView({
             {Array.isArray(guide.whyUsed) && guide.whyUsed.length > 0 && (
               <div className="card p-5">
                 <h3 className="text-sm font-bold text-[var(--text-primary)] mb-3 flex items-center gap-2">
-                  <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
-                  Ye File / Folder Kyun Use Hota Hai?
+                  <CheckCircle2 size={16} className="text-[var(--status-success)] shrink-0" />
+                  Why Is This File / Folder Used?
                 </h3>
                 <ul className="space-y-2.5">
                   {guide.whyUsed.map((point, idx) => (

@@ -382,10 +382,10 @@ const QuizAttemptPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6">
+      <div className="student-portal min-h-screen flex flex-col items-center justify-center p-6">
         <div className="w-full max-w-2xl space-y-4">
-          <div className="h-16 rounded-2xl bg-[var(--bg-muted)] animate-pulse" />
-          <div className="h-80 rounded-2xl bg-[var(--bg-muted)] animate-pulse" />
+          <div className="h-16 rounded-md bg-[var(--bg-surface)] border border-[var(--border)] animate-pulse" />
+          <div className="h-80 rounded-md bg-[var(--bg-surface)] border border-[var(--border)] animate-pulse" />
         </div>
       </div>
     );
@@ -398,27 +398,27 @@ const QuizAttemptPage = () => {
   const unansweredCount = Math.max(0, questions.length - answeredCount);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="student-portal min-h-screen flex flex-col">
       {/* Offline Alert Banner */}
       {isOffline && (
-        <div className="bg-amber-500 text-amber-950 px-4 py-2.5 text-xs font-semibold flex items-center justify-center gap-2 sticky top-0 z-[60] shadow-md animate-pulse">
+        <div className="academic-badge-warning border-b px-4 py-2.5 text-xs font-semibold flex items-center justify-center gap-2 sticky top-0 z-[60]">
           <WifiOff size={16} />
-          <span>Internet disconnected. Your quiz timer is frozen and answers are saved locally. Reconnect to resume.</span>
+          <span>Internet disconnected. Your quiz timer is paused and answers are saved locally. Reconnect to resume.</span>
         </div>
       )}
 
-      <header className="bg-[var(--bg-surface)] px-4 sm:px-8 py-3.5 sticky top-0 z-50 flex flex-wrap justify-between items-center gap-3 border-b border-[var(--border)]">
+      <header className="bg-[var(--bg-sidebar)] text-[var(--sidebar-text)] px-4 sm:px-8 py-3 sticky top-0 z-50 flex flex-wrap justify-between items-center gap-3 border-b border-[var(--sidebar-border)]">
         <div>
-          <h2 className="text-base sm:text-lg font-bold truncate max-w-xs sm:max-w-md">
+          <h2 className="text-sm sm:text-base font-bold text-white truncate max-w-xs sm:max-w-md">
             {quiz?.title}
           </h2>
-          <p className="text-xs text-[var(--text-secondary)]">
-            Question {currentIdx + 1} of {questions.length} • Answered {answeredCount}/{questions.length}
+          <p className="text-xs text-[var(--sidebar-muted)]">
+            Question {currentIdx + 1} of {questions.length} · Answered {answeredCount}/{questions.length}
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="hidden sm:inline-flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+          <span className="hidden sm:inline-flex items-center gap-1.5 text-xs text-[var(--sidebar-muted)]">
             <Cloud size={14} />
             {syncState === 'saving'
               ? 'Saving...'
@@ -428,15 +428,15 @@ const QuizAttemptPage = () => {
           </span>
 
           <div
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-mono text-base sm:text-lg font-bold ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-mono text-sm sm:text-base font-bold border ${
               isOffline
-                ? 'bg-amber-500/15 text-amber-600'
+                ? 'academic-badge-warning'
                 : timeLeft < 60
-                ? 'bg-rose-500/15 text-rose-600 animate-pulse'
-                : 'bg-[var(--bg-muted)] text-[var(--text-primary)]'
+                ? 'academic-badge-danger animate-pulse'
+                : 'bg-[var(--sidebar-hover)] border-[var(--sidebar-border)] text-white'
             }`}
           >
-            <Clock size={18} />
+            <Clock size={16} />
             <span>{isOffline ? 'PAUSED' : getFormatTime(timeLeft)}</span>
           </div>
         </div>
@@ -455,12 +455,12 @@ const QuizAttemptPage = () => {
                 key={q._id}
                 type="button"
                 onClick={() => setCurrentIdx(idx)}
-                className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
+                className={`w-8 h-8 rounded-md text-xs font-semibold transition-colors cursor-pointer ${
                   isCurrent
-                    ? 'bg-[var(--accent)] text-white'
+                    ? 'btn-primary p-0'
                     : isAnswered
-                    ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
-                    : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] border border-[var(--border)]'
+                    ? 'academic-badge-success border justify-center'
+                    : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] border border-[var(--border)] hover:bg-[var(--bg-hover)]'
                 }`}
               >
                 {idx + 1}
@@ -469,38 +469,30 @@ const QuizAttemptPage = () => {
           })}
         </div>
 
-        <div className="card p-6 sm:p-8">
+        <div className="card p-6 sm:p-7">
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-3">
-              <span className={`inline-block px-2.5 py-1 rounded-md text-xs font-semibold ${
-                currentQuestion?.type === 'code'
-                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-                  : currentQuestion?.type === 'long'
-                  ? 'bg-purple-500/15 text-purple-600 dark:text-purple-400'
-                  : currentQuestion?.type === 'short'
-                  ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
-                  : 'bg-[var(--bg-muted)] text-[var(--text-secondary)]'
-              }`}>
+              <span className="academic-badge academic-badge-info">
                 {currentQuestion?.type === 'code'
-                  ? `Coding Challenge (${currentQuestion?.codeLanguage === 'react' ? 'React' : currentQuestion?.codeLanguage === 'javascript' ? 'JavaScript' : 'HTML/CSS'})`
+                  ? `Coding Task (${currentQuestion?.codeLanguage === 'react' ? 'React' : currentQuestion?.codeLanguage === 'javascript' ? 'JavaScript' : 'HTML/CSS'})`
                   : currentQuestion?.type === 'long'
-                  ? 'Long Question / Theory'
+                  ? 'Long Answer'
                   : currentQuestion?.type === 'short'
-                  ? 'Short Question'
+                  ? 'Short Answer'
                   : 'Multiple Choice'}
               </span>
-              <span className="text-xs text-[var(--text-secondary)]">
-                • {currentQuestion?.marks} {currentQuestion?.marks === 1 ? 'Mark' : 'Marks'}
+              <span className="text-xs text-[var(--text-secondary)] font-medium">
+                · {currentQuestion?.marks} {currentQuestion?.marks === 1 ? 'Mark' : 'Marks'}
               </span>
             </div>
-            <h3 className="text-lg sm:text-xl font-bold leading-snug">
+            <h3 className="text-base sm:text-lg font-bold leading-relaxed text-[var(--text-primary)]">
               {currentQuestion?.questionText}
             </h3>
           </div>
 
           {/* MCQ Question Rendering */}
           {currentQuestion?.type === 'mcq' && (
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {(currentQuestion.options || []).map((opt, i) => {
                 const isSelected = selectedAnswer === opt;
                 return (
@@ -508,21 +500,21 @@ const QuizAttemptPage = () => {
                     key={i}
                     type="button"
                     onClick={() => handleAnswerSelect(opt)}
-                    className={`w-full text-left p-4 rounded-xl border transition-all flex items-center justify-between gap-3 ${
+                    className={`w-full text-left p-3.5 rounded-md border transition-colors flex items-center justify-between gap-3 cursor-pointer ${
                       isSelected
                         ? 'border-[var(--accent)] bg-[var(--accent-subtle)] text-[var(--text-primary)] font-semibold'
-                        : 'border-[var(--border)] bg-[var(--bg-surface)] hover:bg-[var(--bg-muted)]'
+                        : 'border-[var(--border)] bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] text-[var(--text-primary)]'
                     }`}
                   >
-                    <span className="text-sm sm:text-base">{opt}</span>
+                    <span className="text-sm">{opt}</span>
                     <div
-                      className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
+                      className={`w-4 h-4 rounded-sm border flex items-center justify-center shrink-0 ${
                         isSelected
-                          ? 'bg-[var(--accent)] border-[var(--accent)] text-white'
+                          ? 'bg-[var(--accent)] border-[var(--accent)] text-[var(--btn-primary-text)]'
                           : 'border-[var(--border)]'
                       }`}
                     >
-                      {isSelected && <CheckCircle2 size={13} />}
+                      {isSelected && <CheckCircle2 size={12} />}
                     </div>
                   </button>
                 );
@@ -614,8 +606,8 @@ const QuizAttemptPage = () => {
               </div>
 
               {codeTab === 'code' ? (
-                <div className="rounded-xl border border-[var(--border)] bg-[#0b1220] overflow-hidden">
-                  <div className="p-2 bg-[#080d17] border-b border-slate-800 flex justify-between items-center text-[11px] text-slate-400 font-mono">
+                <div className="rounded-md border border-[var(--border)] bg-[#1B222B] overflow-hidden">
+                  <div className="p-2 bg-[#171F29] border-b border-[#35414E] flex justify-between items-center text-[11px] text-[#A4AFBC] font-mono">
                     <span>
                       {currentQuestion.codeLanguage === 'react'
                         ? 'React JSX Component'
@@ -623,14 +615,14 @@ const QuizAttemptPage = () => {
                         ? 'JavaScript'
                         : 'index.html (HTML & CSS)'}
                     </span>
-                    <span className="text-[10px] text-slate-500">Supports Tab Indentation</span>
+                    <span className="text-[10px]">Supports Tab Indentation</span>
                   </div>
                   <textarea
                     value={selectedAnswer}
                     onChange={(e) => handleAnswerSelect(e.target.value)}
                     onKeyDown={handleCodeKeyDown}
                     placeholder="// Write your code solution here..."
-                    className="w-full h-80 p-4 font-mono text-xs sm:text-sm bg-transparent text-slate-100 resize-y focus:outline-none leading-relaxed"
+                    className="w-full h-80 p-4 font-mono text-xs sm:text-sm bg-transparent text-[#E6EBF1] resize-y focus:outline-none leading-relaxed"
                     spellCheck="false"
                   />
                 </div>

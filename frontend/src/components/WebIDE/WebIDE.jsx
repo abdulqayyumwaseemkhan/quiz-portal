@@ -214,8 +214,8 @@ export default function WebIDE({
   const { theme } = useTheme();
   const monacoTheme = theme === 'dark' ? 'vs-dark' : 'vs';
 
-  // Versioned draft key for React/Node workspaces so Vite scaffold upgrades cleanly
-  const draftVersionSuffix = projectType !== 'vanilla' ? '_v2' : '';
+  // Versioned draft key for React/Node workspaces so clean src/ scaffold upgrades cleanly
+  const draftVersionSuffix = projectType !== 'vanilla' ? '_v3' : '';
   const draftKey = `ide_draft_${studentId}_${assignmentId}${draftVersionSuffix}`;
 
   const starterTemplate = useMemo(
@@ -271,9 +271,9 @@ export default function WebIDE({
   const [mobileTab, setMobileTab] = useState('code'); // 'files' | 'code' | 'preview'
   const [lastBlobUrl, setLastBlobUrl] = useState('');
 
-  // Tree expansion state (src, src/components, routes, controllers, middleware expanded by default)
+  // Tree expansion state (src, routes, controllers, middleware expanded by default)
   const [expandedFolders, setExpandedFolders] = useState(
-    () => new Set(['src', 'src/components', 'routes', 'controllers', 'middleware'])
+    () => new Set(['src', 'routes', 'controllers', 'middleware'])
   );
 
   // Inline VS Code create/rename state (replaces window.prompt for desktop + mobile!)
@@ -1507,7 +1507,7 @@ export default function WebIDE({
               type="button"
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+              className="btn-primary py-1.5 px-3 sm:px-4 text-xs font-bold flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
               title="Save & Submit Assignment Workspace"
             >
               <Save size={13} />

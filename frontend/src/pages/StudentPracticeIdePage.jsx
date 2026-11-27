@@ -98,8 +98,8 @@ const StudentPracticeIdePage = () => {
       'Reset this playground workspace back to its starter files? Your custom edits in this stack will be cleared.'
     );
     if (!confirmed) return;
-    const suffix = projectType !== 'vanilla' ? '_v2' : '';
-    localStorage.removeItem(`ide_draft_${workspaceOwnerId}_practice_${projectType}${suffix}`);
+    localStorage.removeItem(`ide_draft_${workspaceOwnerId}_practice_${projectType}_v3`);
+    localStorage.removeItem(`ide_draft_${workspaceOwnerId}_practice_${projectType}_v2`);
     localStorage.removeItem(`ide_draft_${workspaceOwnerId}_practice_${projectType}`);
     setResetKey((k) => k + 1);
     toast.success('Workspace reset to default starter structure!');
@@ -108,66 +108,66 @@ const StudentPracticeIdePage = () => {
   if (!student && !admin) return null;
 
   return (
-    <div className="flex flex-col h-[100dvh] overflow-hidden bg-[var(--bg-primary)]">
+    <div className="student-portal flex flex-col h-[100dvh] overflow-hidden">
       {student && !isAdminPreviewParam ? (
-        <StudentNavbar student={student} />
+        <StudentNavbar student={student} compact />
       ) : (
-        <div className="px-4 py-2 bg-[var(--bg-header)] border-b border-[var(--border)] flex items-center justify-between text-xs shrink-0">
+        <div className="px-4 h-12 bg-[var(--bg-sidebar)] text-[var(--sidebar-text)] border-b border-[var(--sidebar-border)] flex items-center justify-between text-xs shrink-0">
           <Link
             to="/admin/dashboard"
-            className="inline-flex items-center gap-1.5 font-bold text-[var(--accent)] hover:underline"
+            className="inline-flex items-center gap-1.5 font-semibold text-white hover:underline"
           >
             <ArrowLeft size={14} />
             <span>Back to Admin Dashboard</span>
           </Link>
-          <span className="px-2.5 py-0.5 rounded-full font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400">
+          <span className="academic-badge academic-badge-warning">
             Admin IDE Preview Mode
           </span>
         </div>
       )}
 
-      {/* Compact Responsive Stack Header Bar */}
-      <div className="px-3 sm:px-6 py-2 bg-[var(--bg-surface)] border-b border-[var(--border)] flex flex-wrap items-center justify-between gap-2 shrink-0">
+      {/* Compact Responsive Stack Sub-Header */}
+      <div className="px-3 sm:px-5 py-2 bg-[var(--bg-surface)] border-b border-[var(--border)] flex flex-wrap items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="p-1.5 sm:p-2 rounded-xl bg-[var(--accent-subtle)] text-[var(--accent)] shrink-0">
-            <Code2 size={17} />
+          <div className="p-1.5 rounded bg-[var(--accent-subtle)] text-[var(--accent)] shrink-0">
+            <Code2 size={16} />
           </div>
           <div className="min-w-0">
             <h1 className="text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate">
               Practice Web IDE
             </h1>
             <p className="text-[11px] text-[var(--text-secondary)] hidden md:block truncate">
-              VS Code–style playground with multi-folder imports, project config guides &amp; auto-save
+              Multi-file code workspace with Prettier formatter, ES7+ snippets &amp; auto-save
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 max-w-full overflow-x-auto no-scrollbar">
           {/* Stack Switcher */}
-          <div className="flex items-center bg-[var(--bg-muted)] p-0.5 rounded-lg border border-[var(--border)] text-xs shrink-0">
+          <div className="flex items-center bg-[var(--bg-muted)] p-0.5 rounded-md border border-[var(--border)] text-xs shrink-0">
             <button
               type="button"
               onClick={() => setProjectType('vanilla')}
-              className={`px-2.5 sm:px-3 py-1 rounded-md font-semibold transition-colors flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+              className={`px-2.5 sm:px-3 py-1 rounded font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
                 projectType === 'vanilla'
-                  ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-xs font-bold'
+                  ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] font-semibold border border-[var(--border)]'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               }`}
             >
-              <Code2 size={13} className="text-orange-500" />
+              <Code2 size={13} />
               <span>HTML / CSS</span>
             </button>
 
             <button
               type="button"
               onClick={() => setProjectType('react')}
-              className={`px-2.5 sm:px-3 py-1 rounded-md font-semibold transition-colors flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+              className={`px-2.5 sm:px-3 py-1 rounded font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
                 projectType === 'react'
-                  ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-xs font-bold'
+                  ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] font-semibold border border-[var(--border)]'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               }`}
             >
-              <Layers size={13} className="text-cyan-500" />
+              <Layers size={13} />
               <span>React (Vite)</span>
             </button>
 
@@ -175,16 +175,16 @@ const StudentPracticeIdePage = () => {
               <button
                 type="button"
                 onClick={() => setProjectType('node')}
-                className={`px-2.5 sm:px-3 py-1 rounded-md font-semibold transition-colors flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                className={`px-2.5 sm:px-3 py-1 rounded font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
                   projectType === 'node'
-                    ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-xs font-bold'
+                    ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] font-semibold border border-[var(--border)]'
                     : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                 }`}
               >
-                <Server size={13} className="text-emerald-500" />
+                <Server size={13} />
                 <span>Node + Express</span>
                 {!nodeEnabled && isAdminUser && (
-                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold">
+                  <span className="text-[9px] px-1.5 py-0.2 rounded academic-badge-warning font-semibold">
                     Hidden
                   </span>
                 )}
@@ -211,7 +211,6 @@ const StudentPracticeIdePage = () => {
           studentId={workspaceOwnerId}
           assignmentId={`practice_${projectType}`}
           projectType={projectType}
-          isPracticeMode={true}
         />
       </div>
     </div>

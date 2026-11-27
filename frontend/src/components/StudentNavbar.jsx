@@ -20,13 +20,14 @@ import {
   Shield,
   RotateCcw,
   Code2,
+  GraduationCap,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import api from '../api';
 import { broadcastLiveUpdate, subscribeLiveUpdate } from '../utils/liveSync';
 import { clientCache } from '../utils/clientCache';
 
-const StudentNavbar = ({ student }) => {
+const StudentNavbar = ({ student, compact = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
@@ -51,7 +52,6 @@ const StudentNavbar = ({ student }) => {
   const [savingPassword, setSavingPassword] = useState(false);
   const [feedback, setFeedback] = useState({ type: '', message: '' });
 
-  // Sync state whenever student prop updates
   useEffect(() => {
     if (student) {
       setProfileData((prev) => ({ ...prev, ...student }));
@@ -60,7 +60,6 @@ const StudentNavbar = ({ student }) => {
     }
   }, [student]);
 
-  // Immediately reflect profile updates across open tabs & modals
   useEffect(() => {
     const unsubscribe = subscribeLiveUpdate((event) => {
       if (event?.type === 'STUDENT_PROFILE_UPDATED' && event.payload) {
@@ -81,13 +80,19 @@ const StudentNavbar = ({ student }) => {
 
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    { name: 'Lectures', path: '/student-lectures', icon: Video },
-    { name: 'Quizzes', path: '/quizzes', icon: BookOpen },
+    { name: 'Video Lectures', path: '/student-lectures', icon: Video },
+    { name: 'Quizzes & Exams', path: '/quizzes', icon: BookOpen },
     { name: 'Assignments', path: '/student-assignments', icon: FileArchive },
-    { name: 'Web IDE', path: '/practice-ide', icon: Code2 },
-    { name: 'Attendance', path: '/student-attendance', icon: CalendarCheck },
-    { name: 'Notes', path: '/student-notes', icon: FileText },
+    { name: 'Practice Web IDE', path: '/practice-ide', icon: Code2 },
+    { name: 'Attendance Record', path: '/student-attendance', icon: CalendarCheck },
+    { name: 'Course Notes', path: '/student-notes', icon: FileText },
   ];
+
+  const currentNavItem =
+    navItems.find((item) => location.pathname.startsWith(item.path)) ||
+    (location.pathname.startsWith('/result')
+      ? { name: 'Assessment Result' }
+      : { name: 'Academic Portal' });
 
   const fetchLatestProfile = async () => {
     try {
@@ -106,12 +111,10 @@ const StudentNavbar = ({ student }) => {
 
   const handleOpenProfileModal = () => {
     setFeedback({ type: '', message: '' });
-    // Pre-fill with the best available data immediately
     const currentActive = profileData.studentId ? profileData : student || {};
     setEmail(currentActive.email || '');
     setContact(currentActive.contact || '');
     setProfileModalOpen(true);
-    // Fetch latest fresh data from DB
     fetchLatestProfile();
   };
 
@@ -182,165 +185,270 @@ const StudentNavbar = ({ student }) => {
 
   return (
     <>
-      <nav className="sticky top-0 z-40 bg-[var(--bg-header)] border-b border-[var(--border)]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-between h-16">
-            <Link to="/dashboard" className="flex items-center gap-2.5">
-              <div className="bg-[var(--brand-blue)] p-2 rounded-xl text-white shadow-sm">
-                <BookOpen size={18} />
+      {/* Top Academic Bar:
+          - In compact mode (Web IDE): visible on all screen sizes using Sidebar Academic Slate (#26374A / #171F29)
+          - In standard mode: mobile/tablet bar (< lg) in Academic Slate, desktop top header bar (lg:pl-60) on surface */}
+      {compact ? (
+        <header className="h-12 bg-[var(--bg-sidebar)] text-[var(--sidebar-text)] border-b border-[var(--sidebar-border)] px-3 sm:px-5 flex items-center justify-between shrink-0 z-40">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsOpen(true)}
+              className="p-1.5 rounded text-[var(--sidebar-muted)] hover:text-white hover:bg-[var(--sidebar-hover)] transition-colors cursor-pointer"
+              title="Open Navigation Menu"
+            >
+              <Menu size={18} />
+            </button>
+            <Link to="/dashboard" className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded bg-[#526F91] flex items-center justify-center text-white">
+                <GraduationCap size={16} />
               </div>
-              <div>
-                <span className="text-base font-bold text-[var(--text-primary)] tracking-tight block leading-none">
-                  BanoQabil
-                </span>
-                <span className="text-[11px] text-[var(--text-muted)] font-medium">
-                  Student LMS
-                </span>
-              </div>
+              <span className="text-sm font-semibold tracking-tight text-white">
+                BanoQabil <span className="text-[var(--sidebar-muted)] font-normal hidden sm:inline">| Academic LMS</span>
+              </span>
             </Link>
+          </div>
 
-            {/* Desktop Nav */}
-            <div className="hidden lg:flex items-center gap-1">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = location.pathname.startsWith(item.path);
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                      isActive
-                        ? 'bg-[var(--brand-blue)] text-white shadow-sm'
-                        : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]'
-                    }`}
-                  >
-                    <Icon size={15} /> {item.name}
-                  </Link>
-                );
-              })}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="p-1.5 rounded border border-[var(--sidebar-border)] text-[var(--sidebar-muted)] hover:text-white hover:bg-[var(--sidebar-hover)] transition-colors cursor-pointer"
+              title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
+            <button
+              type="button"
+              onClick={handleOpenProfileModal}
+              className="px-2.5 py-1 rounded border border-[var(--sidebar-border)] text-xs text-[var(--sidebar-text)] hover:bg-[var(--sidebar-hover)] flex items-center gap-1.5 cursor-pointer"
+            >
+              <User size={13} className="text-[var(--brand-accent)]" />
+              <span className="hidden sm:inline font-medium">{activeUser.fullName || 'Student'}</span>
+            </button>
+          </div>
+        </header>
+      ) : (
+        <>
+          {/* Mobile & Tablet Header (< lg) */}
+          <header className="lg:hidden sticky top-0 z-40 h-14 bg-[var(--bg-sidebar)] text-[var(--sidebar-text)] border-b border-[var(--sidebar-border)] px-4 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setIsOpen(true)}
+                className="p-1.5 rounded text-[var(--sidebar-muted)] hover:text-white hover:bg-[var(--sidebar-hover)]"
+                aria-label="Open navigation menu"
+              >
+                <Menu size={20} />
+              </button>
+              <Link to="/dashboard" className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded bg-[#526F91] flex items-center justify-center text-white">
+                  <GraduationCap size={16} />
+                </div>
+                <span className="text-sm font-semibold tracking-tight text-white">
+                  BanoQabil LMS
+                </span>
+              </Link>
             </div>
 
-            <div className="hidden md:flex items-center gap-2.5">
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={toggleTheme}
-                className="p-2 rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors"
-                title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+                className="p-2 rounded border border-[var(--sidebar-border)] text-[var(--sidebar-muted)] hover:text-white hover:bg-[var(--sidebar-hover)]"
+                aria-label="Toggle theme"
               >
                 {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
               </button>
-
               <button
                 type="button"
                 onClick={handleOpenProfileModal}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--bg-hover)] text-left transition-colors"
-                title="Account Details & Password Settings"
-              >
-                <User size={15} className="text-[var(--text-muted)]" />
-                <div>
-                  <p className="text-xs font-semibold text-[var(--text-primary)] leading-tight">
-                    {activeUser.fullName || 'Student'}
-                  </p>
-                  <p className="text-[10px] font-mono text-[var(--text-muted)] leading-tight">
-                    {activeUser.studentId || ''}
-                  </p>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="p-2 rounded-lg text-rose-500 hover:bg-rose-500/10 transition-colors"
-                title="Sign out"
-              >
-                <LogOut size={17} />
-              </button>
-            </div>
-
-            {/* Mobile actions */}
-            <div className="flex lg:hidden items-center gap-1.5">
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className="p-2 rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
-                aria-label="Toggle theme"
-              >
-                {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
-              </button>
-              <button
-                type="button"
-                onClick={handleOpenProfileModal}
-                className="p-2 rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
+                className="p-2 rounded border border-[var(--sidebar-border)] text-[var(--sidebar-muted)] hover:text-white hover:bg-[var(--sidebar-hover)]"
                 aria-label="Account settings"
               >
-                <User size={17} />
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsOpen(!isOpen)}
-                className="p-2 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
-                aria-label="Toggle menu"
-              >
-                {isOpen ? <X size={20} /> : <Menu size={20} />}
+                <User size={16} />
               </button>
             </div>
-          </div>
+          </header>
+
+          {/* Desktop Top Academic Header Bar (lg+) */}
+          <header className="hidden lg:flex sticky top-0 z-30 h-14 lg:pl-60 bg-[var(--bg-header)] border-b border-[var(--border)]">
+            <div className="flex-1 max-w-6xl mx-auto px-6 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-semibold text-[var(--text-primary)]">
+                  {currentNavItem.name}
+                </span>
+                {(activeUser.campus || activeUser.batch) && (
+                  <span className="academic-badge">
+                    {activeUser.campus}
+                    {activeUser.campus && activeUser.batch ? ' · ' : ''}
+                    {activeUser.batch}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  className="btn-secondary py-1.5 px-2.5 text-xs flex items-center gap-1.5"
+                  title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                >
+                  {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+                  <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleOpenProfileModal}
+                  className="btn-secondary py-1.5 px-3 text-xs flex items-center gap-2"
+                  title="Student Profile & Security Settings"
+                >
+                  <User size={14} className="text-[var(--text-secondary)]" />
+                  <span className="font-medium text-[var(--text-primary)]">
+                    {activeUser.fullName || 'Student'}
+                  </span>
+                  {activeUser.studentId && (
+                    <span className="font-mono text-[11px] text-[var(--text-secondary)] border-l border-[var(--border)] pl-2">
+                      {activeUser.studentId}
+                    </span>
+                  )}
+                </button>
+              </div>
+            </div>
+          </header>
+        </>
+      )}
+
+      {/* Slide-over Backdrop (Mobile/Tablet or Compact IDE Drawer) */}
+      {isOpen && (
+        <div
+          className={`fixed inset-0 z-50 bg-black/50 ${compact ? '' : 'lg:hidden'}`}
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+
+      {/* Academic University Sidebar (#26374A in Light Mode / #171F29 in Dark Mode) */}
+      <aside
+        className={`fixed top-0 left-0 z-50 h-screen w-60 bg-[var(--bg-sidebar)] text-[var(--sidebar-text)] border-r border-[var(--sidebar-border)] flex flex-col transition-transform duration-200 ${
+          compact
+            ? isOpen
+              ? 'translate-x-0'
+              : '-translate-x-full'
+            : isOpen
+            ? 'translate-x-0'
+            : '-translate-x-full lg:translate-x-0'
+        }`}
+      >
+        {/* Institution Header */}
+        <div className="h-14 px-5 border-b border-[var(--sidebar-border)] flex items-center justify-between shrink-0">
+          <Link
+            to="/dashboard"
+            onClick={() => setIsOpen(false)}
+            className="flex items-center gap-2.5"
+          >
+            <div className="w-8 h-8 rounded bg-[#526F91] flex items-center justify-center text-white shrink-0">
+              <GraduationCap size={18} />
+            </div>
+            <div>
+              <span className="text-sm font-bold tracking-tight text-white block leading-none">
+                BanoQabil
+              </span>
+              <span className="text-[11px] text-[var(--sidebar-muted)] font-medium block mt-0.5">
+                Student Portal
+              </span>
+            </div>
+          </Link>
+
+          <button
+            type="button"
+            onClick={() => setIsOpen(false)}
+            className={`${
+              compact ? 'inline-flex' : 'lg:hidden'
+            } p-1 rounded text-[var(--sidebar-muted)] hover:text-white`}
+            aria-label="Close sidebar"
+          >
+            <X size={18} />
+          </button>
         </div>
 
-        {/* Mobile Drawer */}
-        {isOpen && (
-          <div className="lg:hidden bg-[var(--bg-surface)] border-t border-[var(--border)] px-4 py-3 space-y-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname.startsWith(item.path);
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  onClick={() => setIsOpen(false)}
-                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                    isActive
-                      ? 'bg-[var(--brand-blue)] text-white font-semibold'
-                      : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
-                  }`}
-                >
-                  <Icon size={17} /> {item.name}
-                </Link>
-              );
-            })}
-            <div className="pt-2 mt-2 border-t border-[var(--border)] flex items-center justify-between px-2">
-              <div>
-                <p className="text-xs font-semibold text-[var(--text-primary)]">{activeUser.fullName}</p>
-                <p className="text-[11px] font-mono text-[var(--text-muted)]">ID: {activeUser.studentId}</p>
-              </div>
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-500 hover:bg-rose-500/10"
+        {/* Navigation Links */}
+        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+          <p className="px-2.5 pb-1.5 text-[10px] font-semibold uppercase tracking-widest text-[var(--sidebar-muted)]/80">
+            Academic Menu
+          </p>
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = location.pathname.startsWith(item.path);
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                onClick={() => setIsOpen(false)}
+                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-md text-[13px] transition-colors ${
+                  isActive
+                    ? 'bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] font-semibold border-l-2 border-[#A0B5C8]'
+                    : 'text-[var(--sidebar-muted)] hover:bg-[var(--sidebar-hover)] hover:text-white font-medium'
+                }`}
               >
-                <LogOut size={15} /> Sign Out
-              </button>
+                <Icon size={16} className="shrink-0" />
+                <span>{item.name}</span>
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Bottom Student Account Footer */}
+        <div className="p-3.5 border-t border-[var(--sidebar-border)] space-y-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              setIsOpen(false);
+              handleOpenProfileModal();
+            }}
+            className="w-full px-2.5 py-2 rounded-md hover:bg-[var(--sidebar-hover)] text-left flex items-center gap-2.5 transition-colors cursor-pointer"
+          >
+            <div className="w-8 h-8 rounded bg-[var(--sidebar-hover)] border border-[var(--sidebar-border)] flex items-center justify-center text-[var(--brand-accent)] shrink-0">
+              <User size={15} />
             </div>
-          </div>
-        )}
-      </nav>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-white truncate">
+                {activeUser.fullName || 'Student'}
+              </p>
+              <p className="text-[11px] font-mono text-[var(--sidebar-muted)] truncate">
+                ID: {activeUser.studentId || '—'}
+              </p>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md text-xs font-medium text-[#E09F9E] hover:bg-white/5 hover:text-[#F2B8B6] border border-[var(--sidebar-border)] transition-colors cursor-pointer"
+          >
+            <LogOut size={14} />
+            <span>Sign Out</span>
+          </button>
+        </div>
+      </aside>
 
       {/* Account & Password Settings Modal */}
       {profileModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+        <div className="student-portal fixed inset-0 z-50 bg-black/55 flex items-center justify-center p-4">
           <div className="card max-w-lg w-full p-6 space-y-5 max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-[var(--border)] pb-3">
               <div>
-                <h2 className="text-base font-bold text-[var(--text-primary)]">Student Profile & Settings</h2>
-                <p className="text-xs text-[var(--text-muted)]">
-                  View registered details, update contact info, or change password
+                <h2 className="text-base font-bold text-[var(--text-primary)]">
+                  Student Profile &amp; Account Security
+                </h2>
+                <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+                  Review enrollment details, update contact information, or change password
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setProfileModalOpen(false)}
-                className="p-1.5 rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-muted)]"
+                className="p-1.5 rounded text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] cursor-pointer"
               >
                 <X size={18} />
               </button>
@@ -348,10 +456,10 @@ const StudentNavbar = ({ student }) => {
 
             {feedback.message && (
               <div
-                className={`p-3 rounded-lg text-xs font-medium flex items-center gap-2 border ${
+                className={`p-3 rounded-md text-xs font-medium flex items-center gap-2 border ${
                   feedback.type === 'success'
-                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500'
-                    : 'bg-rose-500/10 border-rose-500/30 text-rose-500'
+                    ? 'academic-badge-success'
+                    : 'academic-badge-danger'
                 }`}
               >
                 {feedback.type === 'success' ? <Check size={15} /> : <AlertCircle size={15} />}
@@ -359,60 +467,63 @@ const StudentNavbar = ({ student }) => {
               </div>
             )}
 
-            {/* Current Enrolled Details Card */}
-            <div className="p-4 rounded-xl bg-[var(--bg-muted)] border border-[var(--border)] space-y-3">
+            <div className="p-4 rounded-md bg-[var(--bg-muted)] border border-[var(--border)] space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
-                  Registered Profile Details
+                <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
+                  Enrollment Record
                 </span>
-                <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-[var(--bg-surface)] border border-[var(--border)] text-[var(--text-secondary)]">
+                <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-[var(--bg-surface)] border border-[var(--border)] text-[var(--text-primary)]">
                   {activeUser.studentId || 'ID'}
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 <div>
-                  <span className="text-[var(--text-muted)] block text-[11px]">Full Name</span>
+                  <span className="text-[var(--text-secondary)] block text-[11px]">Full Name</span>
                   <span className="font-semibold text-[var(--text-primary)]">
                     {activeUser.fullName || '—'}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[var(--text-muted)] block text-[11px]">Campus & Batch</span>
+                  <span className="text-[var(--text-secondary)] block text-[11px]">
+                    Campus &amp; Batch
+                  </span>
                   <span className="font-semibold text-[var(--text-primary)]">
                     {activeUser.campus || '—'} · {activeUser.batch || '—'}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[var(--text-muted)] block text-[11px] flex items-center gap-1">
+                  <span className="text-[var(--text-secondary)] flex items-center gap-1 text-[11px]">
                     <Mail size={12} /> Registered Email
                   </span>
                   <span className="font-mono text-[var(--text-primary)] truncate block">
-                    {activeUser.email || <em className="text-[var(--text-muted)]">Not provided</em>}
+                    {activeUser.email || (
+                      <em className="text-[var(--text-secondary)]">Not provided</em>
+                    )}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[var(--text-muted)] block text-[11px] flex items-center gap-1">
+                  <span className="text-[var(--text-secondary)] flex items-center gap-1 text-[11px]">
                     <Phone size={12} /> Registered Contact
                   </span>
                   <span className="font-mono text-[var(--text-primary)] block">
-                    {activeUser.contact || <em className="text-[var(--text-muted)]">Not provided</em>}
+                    {activeUser.contact || (
+                      <em className="text-[var(--text-secondary)]">Not provided</em>
+                    )}
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Edit Contact Information Form */}
             <form onSubmit={handleSaveProfile} className="space-y-3 pt-1">
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
                   Update Contact Information
                 </h3>
                 <button
                   type="button"
                   onClick={handleResetFormToCurrent}
-                  className="text-[11px] text-[var(--text-muted)] hover:text-[var(--text-primary)] flex items-center gap-1 underline"
-                  title="Revert to current record"
+                  className="text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center gap-1 underline cursor-pointer"
                 >
                   <RotateCcw size={11} /> Reset
                 </button>
@@ -423,7 +534,10 @@ const StudentNavbar = ({ student }) => {
                   Email Address
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={15} />
+                  <Mail
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]"
+                    size={15}
+                  />
                   <input
                     type="email"
                     value={email}
@@ -439,7 +553,10 @@ const StudentNavbar = ({ student }) => {
                   Phone / WhatsApp Contact
                 </label>
                 <div className="relative">
-                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={15} />
+                  <Phone
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]"
+                    size={15}
+                  />
                   <input
                     type="text"
                     value={contact}
@@ -450,16 +567,22 @@ const StudentNavbar = ({ student }) => {
                 </div>
               </div>
 
-              <button type="submit" disabled={savingProfile} className="btn-secondary w-full text-xs py-2">
-                {savingProfile ? 'Saving Changes...' : 'Save Updated Contact Info'}
+              <button
+                type="submit"
+                disabled={savingProfile}
+                className="btn-secondary w-full text-xs py-2"
+              >
+                {savingProfile ? 'Saving Changes...' : 'Save Contact Details'}
               </button>
             </form>
 
-            {/* Change Password Form */}
-            <form onSubmit={handleChangePassword} className="space-y-3 pt-4 border-t border-[var(--border)]">
+            <form
+              onSubmit={handleChangePassword}
+              className="space-y-3 pt-4 border-t border-[var(--border)]"
+            >
               <div className="flex items-center gap-2">
                 <Shield size={15} className="text-[var(--text-secondary)]" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
                   Change Password
                 </h3>
               </div>
@@ -509,7 +632,11 @@ const StudentNavbar = ({ student }) => {
                 </div>
               </div>
 
-              <button type="submit" disabled={savingPassword} className="btn-primary w-full text-xs py-2.5">
+              <button
+                type="submit"
+                disabled={savingPassword}
+                className="btn-primary w-full text-xs py-2.5"
+              >
                 {savingPassword ? 'Updating...' : 'Update Password'}
               </button>
             </form>
